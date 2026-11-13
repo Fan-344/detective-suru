@@ -1,0 +1,647 @@
+[
+  {
+    "id": "group",
+    "title": "永和四樓",
+    "members": [
+      "jingwen",
+      "aze",
+      "zonghan",
+      "pinyu"
+    ],
+    "unread": 31,
+    "history": [
+      {
+        "from": "pinyu",
+        "when": "較早",
+        "text": "誰又把啤酒加冰塊倒在紙杯裡"
+      },
+      {
+        "from": "pinyu",
+        "when": "較早",
+        "text": "噁心"
+      },
+      {
+        "from": "zonghan",
+        "when": "較早",
+        "text": "哈哈，是我。啤酒加冰塊才順口，妳不懂。",
+        "item": "say_zh_beer"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "我不喝啤酒 不要看我"
+      },
+      {
+        "from": "zonghan",
+        "when": "較早",
+        "text": "各位，鑰匙都先交給我保管，月底我統一還給房東。之後要回去拿東西，再跟我約時間開門就好🙏",
+        "item": "say_zh_keys"
+      },
+      {
+        "from": "pinyu",
+        "when": "較早",
+        "text": "收到"
+      },
+      {
+        "from": "aze",
+        "when": "較早",
+        "text": "ok"
+      },
+      {
+        "from": "zonghan",
+        "when": "上週四 20:14",
+        "text": "各位，跟大家報告一下，押金的部分房東說要扣修繕費，牆面和浴室都算進去，算下來是拿不回來了。我有再爭取，但對方態度蠻硬的，不好意思😅",
+        "item": "say_zh_deposit"
+      },
+      {
+        "from": "pinyu",
+        "when": "上週四 20:16",
+        "text": "蛤？？？"
+      },
+      {
+        "from": "pinyu",
+        "when": "上週四 20:16",
+        "text": "全部喔"
+      },
+      {
+        "from": "pinyu",
+        "when": "上週四 20:17",
+        "text": "也太扯"
+      },
+      {
+        "from": "aze",
+        "when": "上週四 20:20",
+        "text": "是喔"
+      },
+      {
+        "from": "aze",
+        "when": "上週四 20:20",
+        "text": "算了啦"
+      },
+      {
+        "from": "jingwen",
+        "when": "上週四 20:31",
+        "text": "辛苦你了宗翰🥺"
+      },
+      {
+        "from": "jingwen",
+        "when": "上週四 20:31",
+        "text": "老房子嘛 沒辦法"
+      },
+      {
+        "from": "yiqing",
+        "when": "上週四 20:45",
+        "text": "好喔"
+      },
+      {
+        "from": "jingwen",
+        "when": "週五 16:34",
+        "text": "我到台中了～～"
+      },
+      {
+        "from": "jingwen",
+        "when": "週五 16:34",
+        "text": "明天簽書會"
+      },
+      {
+        "from": "jingwen",
+        "when": "週五 16:35",
+        "text": "好緊張🥺"
+      },
+      {
+        "from": "pinyu",
+        "when": "週五 16:50",
+        "text": "得獎作家還會緊張喔"
+      },
+      {
+        "from": "aze",
+        "when": "週五 17:02",
+        "text": "加油"
+      },
+      {
+        "from": "zonghan",
+        "when": "週五 17:10",
+        "text": "靖雯加油，明天一定順利！"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 16:10",
+        "text": "欸 我手機等下送修 這兩天找不到我正常"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 16:12",
+        "text": "蛤 又怎麼了"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 16:13",
+        "text": "電池 一下就沒電"
+      },
+      {
+        "from": "jingwen",
+        "when": "週六 16:35",
+        "text": "簽完了～～"
+      },
+      {
+        "from": "jingwen",
+        "when": "週六 16:35",
+        "text": "手要斷了😂"
+      },
+      {
+        "from": "jingwen",
+        "when": "週六 16:36",
+        "text": "謝謝今天有來的大家（沒有人來）🥺"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 17:20",
+        "text": "剛交完班 恭喜大作家"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 17:20",
+        "text": "我今天小夜 十二點才下班"
+      },
+      {
+        "from": "zonghan",
+        "when": "週六 18:05",
+        "text": "靖雯恭喜！今天帶看排得比較滿，改天再幫妳慶祝🙏"
+      },
+      {
+        "from": "aze",
+        "when": "週六 21:55",
+        "text": "內湖下超大",
+        "image": {
+          "description": "從室內隔著落地窗往外拍。窗上全是雨水，外面的路燈糊成一片。窗邊看得到婚宴的圓桌和桌花的一角。"
+        },
+        "item": "say_aze_rain"
+      },
+      {
+        "from": "aze",
+        "when": "週六 21:56",
+        "text": "還有一小時才收工"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 22:10",
+        "text": "好險我在室內"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 10:20",
+        "text": "阿晴手機修好沒"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 10:20",
+        "text": "昨天傳宵夜給她都沒讀"
+      },
+      {
+        "from": "aze",
+        "when": "週日 11:05",
+        "text": "還沒吧"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 11:06",
+        "text": "靖雯咧 簽完就消失"
+      },
+      {
+        "from": "aze",
+        "when": "週日 11:08",
+        "text": "雯昨天快三點才睡",
+        "item": "say_aze_wen"
+      },
+      {
+        "from": "aze",
+        "when": "週日 11:08",
+        "text": "讓她睡"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 11:10",
+        "text": "好啦"
+      },
+      {
+        "from": "jingwen",
+        "when": "週日 13:30",
+        "text": "我醒了🥹"
+      },
+      {
+        "from": "jingwen",
+        "when": "週日 13:30",
+        "text": "昨天太累 整個斷電"
+      },
+      {
+        "from": "jingwen",
+        "when": "週日 13:31",
+        "text": "晴手機還沒好嗎"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 13:40",
+        "text": "還沒 她都沒讀"
+      },
+      {
+        "from": "zonghan",
+        "when": "週日 14:10",
+        "text": "各位，提醒一下，貨運這幾天會到舊家收箱子，東西還沒整理完的再跟我約時間開門。"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 14:15",
+        "text": "收到"
+      },
+      {
+        "from": "aze",
+        "when": "週日 14:30",
+        "text": "ok"
+      },
+      {
+        "from": "pinyu",
+        "when": "週一 09:05",
+        "text": "阿晴"
+      },
+      {
+        "from": "pinyu",
+        "when": "週一 09:05",
+        "text": "妳手機到底修好沒"
+      },
+      {
+        "from": "pinyu",
+        "when": "週一 09:06",
+        "text": "兩天了欸"
+      },
+      {
+        "from": "jingwen",
+        "when": "週一 11:20",
+        "text": "對耶 晴好安靜"
+      },
+      {
+        "from": "jingwen",
+        "when": "週一 11:20",
+        "text": "她是不是又趕稿趕到失蹤😂"
+      },
+      {
+        "from": "pinyu",
+        "when": "週一 12:40",
+        "text": "她趕稿也會回貼圖好嗎"
+      },
+      {
+        "from": "pinyu",
+        "when": "週一 12:41",
+        "text": "不對勁"
+      },
+      {
+        "from": "aze",
+        "when": "週一 13:02",
+        "text": "修手機哪有那麼快"
+      }
+    ]
+  },
+  {
+    "id": "dm_pinyu",
+    "title": "品妤",
+    "members": [
+      "pinyu"
+    ],
+    "unread": 5,
+    "history": [
+      {
+        "from": "pinyu",
+        "when": "較早",
+        "text": "這個月班表 自己看",
+        "image": {
+          "description": "一張護理站排班表的翻拍。品妤那一列，週六的格子寫著「小夜 16–24」。"
+        }
+      },
+      {
+        "from": "pinyu",
+        "when": "較早",
+        "text": "不要再問我哪天有空"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "好喔"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "［貓貼圖］"
+      },
+      {
+        "from": "pinyu",
+        "when": "週四 12:30",
+        "text": "欸妳搬完有沒有好好吃飯"
+      },
+      {
+        "from": "pinyu",
+        "when": "週四 12:31",
+        "text": "不要跟我說咖啡算一餐"
+      },
+      {
+        "from": "yiqing",
+        "when": "週四 12:40",
+        "text": "有啦"
+      },
+      {
+        "from": "yiqing",
+        "when": "週四 12:40",
+        "text": "咖啡不算喔"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 15:40",
+        "text": "欸阿妤 你今天小夜喔"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 15:42",
+        "text": "對啦 十二點下班"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 15:42",
+        "text": "幹嘛 要來探班喔"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 15:44",
+        "text": "沒有啦 問一下"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 15:45",
+        "text": "我手機等下送修 修好再找你"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 23:05",
+        "text": "小夜的宵夜 羨慕嗎",
+        "image": {
+          "description": "休息室的桌上放著一盒打開的滷味和兩杯手搖飲。畫面右下角有一隻伸進來的手，正要拿竹籤，手腕上戴著銀色金屬錶帶、藍色錶面的錶。"
+        },
+        "item": "say_py_snack"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 23:06",
+        "text": "啊忘了妳沒手機"
+      },
+      {
+        "from": "pinyu",
+        "when": "週六 23:06",
+        "text": "修好再羨慕"
+      },
+      {
+        "from": "pinyu",
+        "when": "週日 10:18",
+        "text": "修好沒"
+      },
+      {
+        "from": "pinyu",
+        "when": "週一 09:03",
+        "text": "沈以晴 妳給我回"
+      }
+    ]
+  },
+  {
+    "id": "dm_zonghan",
+    "title": "宗翰",
+    "members": [
+      "zonghan"
+    ],
+    "unread": 1,
+    "history": [
+      {
+        "from": "yiqing",
+        "when": "週四 21:10",
+        "text": "翰哥 明天晚上可以幫我開門嗎"
+      },
+      {
+        "from": "yiqing",
+        "when": "週四 21:10",
+        "text": "我要回去整理箱子"
+      },
+      {
+        "from": "zonghan",
+        "when": "週四 21:25",
+        "text": "OK的，明天我七點前可以過去開門，但開完要趕去帶看，妳走的時候把門帶上就好。"
+      },
+      {
+        "from": "yiqing",
+        "when": "週四 21:26",
+        "text": "好喔 謝謝"
+      },
+      {
+        "from": "yiqing",
+        "when": "週五 21:50",
+        "text": "翰哥 明天晚上可以再開一次嗎"
+      },
+      {
+        "from": "yiqing",
+        "when": "週五 21:50",
+        "text": "還沒整理完"
+      },
+      {
+        "from": "zonghan",
+        "when": "週五 22:05",
+        "text": "OK的，明天我帶看到九點，結束直接過去，大概九點多到。",
+        "item": "say_zh_open"
+      },
+      {
+        "from": "yiqing",
+        "when": "週五 22:06",
+        "text": "好喔"
+      },
+      {
+        "from": "zonghan",
+        "when": "週日 11:40",
+        "text": "以晴，昨天的事我想當面再跟妳說明一次，有些細節妳可能誤會了。手機修好回我一下，時間我都可以配合🙏",
+        "item": "say_zh_sunday"
+      }
+    ]
+  },
+  {
+    "id": "dm_jingwen",
+    "title": "靖雯",
+    "members": [
+      "jingwen"
+    ],
+    "unread": 0,
+    "history": [
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "晴～～"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "檔案我要怎麼拿呀"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "編輯在催了🥺"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "你直接登我的雲端看 密碼一樣是那個",
+        "item": "say_yq_password"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "收到！！"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "妳是天使🫶"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "晴！！"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "得獎了得獎了得獎了"
+      },
+      {
+        "from": "jingwen",
+        "when": "較早",
+        "text": "我在發抖🥹"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "欸 恭喜"
+      },
+      {
+        "from": "yiqing",
+        "when": "上週三 22:15",
+        "text": "欸靖 想跟你聊書的事",
+        "item": "say_yq_book"
+      },
+      {
+        "from": "jingwen",
+        "when": "上週三 22:40",
+        "text": "好呀～"
+      },
+      {
+        "from": "jingwen",
+        "when": "上週三 22:40",
+        "text": "怎麼了嗎"
+      },
+      {
+        "from": "jingwen",
+        "when": "上週三 22:41",
+        "text": "我這週都在跑宣傳 下週好不好🥺"
+      },
+      {
+        "from": "yiqing",
+        "when": "上週三 22:50",
+        "text": "好喔"
+      }
+    ]
+  },
+  {
+    "id": "dm_aze",
+    "title": "阿澤",
+    "members": [
+      "aze"
+    ],
+    "unread": 0,
+    "history": [
+      {
+        "from": "aze",
+        "when": "較早",
+        "text": "這張光不錯吧",
+        "image": {
+          "description": "逆光的窗邊，桌上一杯喝到一半的咖啡，杯緣有一圈亮邊。"
+        }
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "欸 好看"
+      },
+      {
+        "from": "aze",
+        "when": "較早",
+        "text": "下次拍你"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "不要"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "［貓貼圖］"
+      },
+      {
+        "from": "aze",
+        "when": "較早",
+        "text": "工作室搬好了"
+      },
+      {
+        "from": "aze",
+        "when": "較早",
+        "text": "泰順街 巷子裡白色鐵門那間",
+        "item": "say_aze_studio"
+      },
+      {
+        "from": "yiqing",
+        "when": "較早",
+        "text": "好喔 改天去看"
+      },
+      {
+        "from": "aze",
+        "when": "週五 22:40",
+        "text": "明天內湖拍婚禮 八點開始",
+        "item": "say_aze_wedding"
+      },
+      {
+        "from": "aze",
+        "when": "週五 22:40",
+        "text": "之前有空"
+      },
+      {
+        "from": "yiqing",
+        "when": "週五 22:48",
+        "text": "好喔 那喝咖啡"
+      },
+      {
+        "from": "aze",
+        "when": "週五 22:49",
+        "text": "老樣子 拿鐵",
+        "item": "say_aze_latte"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 15:50",
+        "text": "我手機等下送修"
+      },
+      {
+        "from": "yiqing",
+        "when": "週六 15:50",
+        "text": "六點半老地方 我沒手機喔 不見不散",
+        "item": "say_yq_meet"
+      },
+      {
+        "from": "aze",
+        "when": "週六 15:53",
+        "text": "好",
+        "item": "say_aze_ok"
+      }
+    ]
+  }
+]

@@ -1,0 +1,190 @@
+[
+  {
+    "id": "jingwen",
+    "name": "靖雯",
+    "style": "一次連發三四則短訊、帶表情符號和「～」、叫以晴「晴」、從不直接問",
+    "startLevel": 0,
+    "ladder": [
+      {
+        "level": 1,
+        "id": "probe",
+        "onEnter": [
+          "cov_jw_dm"
+        ]
+      },
+      {
+        "level": 2,
+        "id": "offer_visit",
+        "onEnter": [
+          "msg_jw_visit"
+        ]
+      },
+      {
+        "level": 3,
+        "id": "doorbell",
+        "onEnter": [
+          "msg_jw_downstairs"
+        ]
+      },
+      {
+        "level": 4,
+        "id": "login",
+        "onEnter": [
+          "sys_login_prompt"
+        ]
+      },
+      {
+        "level": 5,
+        "id": "ask_pinyu",
+        "onEnter": [
+          "msg_py_asked"
+        ]
+      },
+      {
+        "level": 6,
+        "id": "found_hospital",
+        "onEnter": [
+          "ev_end_found"
+        ]
+      }
+    ],
+    "genericReplies": [
+      [
+        "蛤？",
+        "晴妳在說什麼呀😂"
+      ],
+      [
+        "等等 我沒跟上🥺",
+        "什麼意思嘛"
+      ],
+      [
+        "？？",
+        "妳是不是傳錯人了啦"
+      ]
+    ]
+  },
+  {
+    "id": "aze",
+    "name": "阿澤",
+    "style": "字最少、幾乎不用標點、「蛤」「是喔」「哈哈」、打「你」、只有他叫靖雯「雯」",
+    "startLevel": 0,
+    "ladder": [
+      {
+        "level": 1,
+        "id": "avoid",
+        "onEnter": [
+          "cov_aze_dm"
+        ]
+      },
+      {
+        "level": 2,
+        "id": "probe_anger",
+        "onEnter": [
+          "msg_aze_angry"
+        ]
+      },
+      {
+        "level": 3,
+        "id": "confess_or_tipoff",
+        "onEnter": [
+          "msg_aze_confess",
+          "msg_aze_tipoff"
+        ]
+      }
+    ],
+    "genericReplies": [
+      [
+        "蛤"
+      ],
+      [
+        "什麼"
+      ],
+      [
+        "你在說什麼",
+        "哈哈"
+      ]
+    ]
+  },
+  {
+    "id": "zonghan",
+    "name": "宗翰",
+    "style": "一長則講完、標點打完整、業務腔、只用 🙏 和 😅、叫以晴「以晴」",
+    "startLevel": 0,
+    "ladder": [
+      {
+        "level": 1,
+        "id": "plead",
+        "onEnter": [
+          "cov_zh_dm"
+        ]
+      },
+      {
+        "level": 2,
+        "id": "refund",
+        "onEnter": [
+          "msg_zh_refund"
+        ]
+      },
+      {
+        "level": 3,
+        "id": "preempt_group",
+        "onEnter": [
+          "msg_zh_group"
+        ]
+      }
+    ],
+    "genericReplies": [
+      [
+        "以晴，不好意思，我不太確定妳指的是什麼，可以再說清楚一點嗎？"
+      ],
+      [
+        "哈哈，這個我真的沒印象，妳是不是記成別人了？"
+      ],
+      [
+        "這部分我不太清楚，妳要不要問問其他人？"
+      ]
+    ]
+  },
+  {
+    "id": "pinyu",
+    "name": "品妤",
+    "style": "連發、「？？？」、會講粗話、不用表情符號、關心用罵的、叫以晴「阿晴」",
+    "startLevel": 0,
+    "ladder": [
+      {
+        "level": 1,
+        "id": "message",
+        "onEnter": [
+          "cov_py_dm"
+        ]
+      },
+      {
+        "level": 2,
+        "id": "call",
+        "onEnter": [
+          "msg_py_call"
+        ]
+      },
+      {
+        "level": 3,
+        "id": "come_over",
+        "onEnter": [
+          "msg_py_come"
+        ]
+      }
+    ],
+    "genericReplies": [
+      [
+        "蛤？？？"
+      ],
+      [
+        "妳在講什麼",
+        "摔到頭喔"
+      ],
+      [
+        "是在哈囉",
+        "講人話"
+      ]
+    ]
+  }
+]

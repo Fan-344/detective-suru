@@ -1,0 +1,766 @@
+[
+  {
+    "id": "cov_py_group",
+    "kind": "message",
+    "thread": "group",
+    "from": "pinyu",
+    "text": [
+      "蛤？？？",
+      "妳摔下樓梯？？？",
+      "有沒有撞到頭",
+      "有沒有去照"
+    ]
+  },
+  {
+    "id": "cov_zh_group",
+    "kind": "message",
+    "thread": "group",
+    "from": "zonghan",
+    "text": [
+      "以晴，人沒事最重要。舊家那個樓梯本來就陡，妳好好休息，箱子的事不用急，貨運那邊我來喬時間🙏"
+    ]
+  },
+  {
+    "id": "cov_aze_group",
+    "kind": "message",
+    "thread": "group",
+    "from": "aze",
+    "text": [
+      "蛤",
+      "難怪週六放我鴿子"
+    ],
+    "reveals": [
+      "say_aze_stoodup"
+    ]
+  },
+  {
+    "id": "cov_jw_group",
+    "kind": "message",
+    "thread": "group",
+    "from": "jingwen",
+    "text": [
+      "天啊晴！！",
+      "嚇死我",
+      "人沒事就好🥺"
+    ]
+  },
+  {
+    "id": "cov_py_dm",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "妳現在一個人在家？？？",
+      "有沒有吐",
+      "頭會不會暈"
+    ],
+    "options": [
+      {
+        "id": "calm",
+        "text": "沒吐 不暈 就屁股痛",
+        "reply": [
+          "屁股痛是在哈囉",
+          "好啦",
+          "有不舒服馬上跟我講 我說真的"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": -1
+          }
+        }
+      },
+      {
+        "id": "sleepy",
+        "text": "想睡 晚點回你",
+        "reply": [
+          "撞到頭不准一直睡",
+          "兩小時後給我回一個字"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          }
+        }
+      },
+      {
+        "id": "offvoice",
+        "text": "我沒事！妳不用擔心～",
+        "reply": [
+          "？？？",
+          "妳什麼時候開始用驚嘆號了"
+        ],
+        "signal": {
+          "readDelay": "已讀後過了很久"
+        },
+        "effects": {
+          "ladder": {
+            "pinyu": 1
+          },
+          "flags": {
+            "pinyu_noticed_voice": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cov_zh_dm",
+    "kind": "message",
+    "thread": "dm_zonghan",
+    "from": "zonghan",
+    "text": [
+      "以晴，人平安就好。另外想問一下，週六晚上我們聊的那件事，妳還有印象嗎？方便的話，我想找時間當面跟妳說明。"
+    ],
+    "options": [
+      {
+        "id": "forgot",
+        "text": "什麼事",
+        "reply": [
+          "哈哈，沒什麼，小事情，妳先把身體養好，其他的之後再說。"
+        ],
+        "effects": {
+          "ladder": {
+            "zonghan": -1
+          }
+        }
+      },
+      {
+        "id": "remember",
+        "text": "我記得 押金的事",
+        "reply": [
+          "以晴，這件事我真的可以解釋，不是妳想的那樣。我們認識這麼多年了，給我一點時間，先不要跟其他人提，好嗎？🙏"
+        ],
+        "signal": {
+          "typingStops": true
+        },
+        "effects": {
+          "ladder": {
+            "zonghan": 1
+          }
+        }
+      },
+      {
+        "id": "later",
+        "text": "我再想一下",
+        "reply": [
+          "OK的，不急，妳想好隨時跟我說，時間我都配合。"
+        ],
+        "effects": {
+          "ladder": {
+            "zonghan": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cov_aze_dm",
+    "kind": "message",
+    "thread": "dm_aze",
+    "from": "aze",
+    "text": [
+      "欸",
+      "你還好嗎"
+    ],
+    "options": [
+      {
+        "id": "fine",
+        "text": "還好 就有點痛",
+        "reply": [
+          "是喔",
+          "那你休息"
+        ],
+        "effects": {
+          "ladder": {
+            "aze": 0
+          }
+        }
+      },
+      {
+        "id": "sorry",
+        "text": "欸 週六抱歉喔",
+        "reply": [
+          "沒啦",
+          "沒事"
+        ],
+        "signal": {
+          "readDelay": "已讀後隔了幾分鐘"
+        },
+        "effects": {
+          "ladder": {
+            "aze": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cov_jw_dm",
+    "kind": "message",
+    "delay": 3,
+    "thread": "dm_jingwen",
+    "from": "jingwen",
+    "text": [
+      "晴～～",
+      "妳真的還好嗎🥺",
+      "那週三還約嗎",
+      "不行的話改天也可以啦 妳先養傷"
+    ],
+    "options": [
+      {
+        "id": "vague",
+        "text": "週三再看看 頭有點昏",
+        "reply": [
+          "好好好",
+          "妳先休息 不要勉強🫶"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": 0
+          }
+        }
+      },
+      {
+        "id": "forgot",
+        "text": "週三要幹嘛",
+        "reply": [
+          "沒事啦～",
+          "就說好要吃個飯嘛",
+          "妳先把頭顧好😂"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": -1
+          }
+        }
+      },
+      {
+        "id": "keep",
+        "text": "約啊 我有東西要給你看",
+        "reply": [
+          "什麼東西呀"
+        ],
+        "signal": {
+          "typingStops": true,
+          "readDelay": "已讀後隔了很久"
+        },
+        "effects": {
+          "ladder": {
+            "jingwen": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_aze_after_admit",
+    "kind": "message",
+    "thread": "dm_aze",
+    "from": "aze",
+    "text": [
+      "你不要生氣"
+    ],
+    "options": [
+      {
+        "id": "who",
+        "text": "誰叫你問那些的",
+        "reply": [
+          "……",
+          "是雯叫我去問的 她想先知道你手上有什麼",
+          "我以為她只是想跟你好好談"
+        ],
+        "signal": {
+          "typingStops": true
+        },
+        "reveals": [
+          "say_aze_asked"
+        ],
+        "effects": {
+          "ladder": {
+            "aze": 1
+          }
+        }
+      },
+      {
+        "id": "consequence",
+        "text": "你知道你跟她講完之後發生什麼事嗎",
+        "reply": [
+          "什麼意思",
+          "你不是說你是滑倒"
+        ],
+        "signal": {
+          "readDelay": "已讀後隔了很久"
+        },
+        "effects": {
+          "ladder": {
+            "aze": 1
+          },
+          "flags": {
+            "aze_understands": true
+          }
+        }
+      },
+      {
+        "id": "drop",
+        "text": "沒事",
+        "reply": [
+          "是喔",
+          "那就好"
+        ],
+        "effects": {
+          "ladder": {
+            "aze": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_jw_visit",
+    "kind": "message",
+    "thread": "dm_jingwen",
+    "from": "jingwen",
+    "text": [
+      "晴～",
+      "我明天剛好會經過妳那邊",
+      "帶點吃的去看妳好不好🥺"
+    ],
+    "options": [
+      {
+        "id": "mom",
+        "text": "我媽在 不方便",
+        "reply": [
+          "啊阿姨在喔",
+          "那我不吵 妳好好休息🫶"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": -1
+          }
+        }
+      },
+      {
+        "id": "mess",
+        "text": "不用啦 家裡很亂",
+        "reply": [
+          "我又不是沒看過妳亂",
+          "好啦 那妳缺什麼跟我說"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": 0
+          }
+        }
+      },
+      {
+        "id": "ok",
+        "text": "好喔",
+        "reply": [
+          "那我明天過去"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_jw_downstairs",
+    "kind": "message",
+    "thread": "dm_jingwen",
+    "from": "jingwen",
+    "text": [
+      "晴",
+      "我在妳家樓下 按門鈴沒人應耶",
+      "妳不是在家躺著嗎"
+    ],
+    "reveals": [
+      "say_jw_doorbell"
+    ],
+    "options": [
+      {
+        "id": "asleep",
+        "text": "睡著了 沒聽到",
+        "reply": [
+          "那妳現在開一下",
+          "我東西放了就走"
+        ],
+        "signal": {
+          "readDelay": "馬上已讀"
+        },
+        "effects": {
+          "ladder": {
+            "jingwen": 1
+          }
+        }
+      },
+      {
+        "id": "moms",
+        "text": "我後來回我媽家了",
+        "reply": [
+          "蛤 妳怎麼沒講",
+          "好啦 東西我掛門把上"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": 0
+          }
+        }
+      },
+      {
+        "id": "why",
+        "text": "你怎麼突然跑來",
+        "reply": [
+          "擔心妳啊",
+          "所以妳現在在哪"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "sys_login_prompt",
+    "kind": "system",
+    "once": true,
+    "title": "登入確認",
+    "lines": [
+      "有人正在另一台裝置上登入你的帳號。",
+      "位置：台北市大安區附近",
+      "如果不是你本人，請選擇「不允許」。"
+    ],
+    "reveals": [
+      "rec_login"
+    ],
+    "options": [
+      {
+        "id": "deny",
+        "label": "不允許",
+        "effects": {
+          "ladder": {
+            "jingwen": 1
+          },
+          "flags": {
+            "jingwen_knows_phone_active": true
+          }
+        }
+      }
+    ],
+    "onTimeout": {
+      "ladder": {
+        "jingwen": 0
+      }
+    }
+  },
+  {
+    "id": "msg_py_asked",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "欸",
+      "靖雯剛剛問我能不能幫忙查妳在哪間醫院",
+      "她說妳其實住院了？？？",
+      "沈以晴妳到底在哪"
+    ],
+    "reveals": [
+      "say_py_asked"
+    ],
+    "options": [
+      {
+        "id": "stop",
+        "text": "阿妤 先不要幫她查 拜託",
+        "reply": [
+          "……",
+          "好 我不查",
+          "但妳欠我一個解釋"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": -1,
+            "pinyu": 1
+          },
+          "flags": {
+            "pinyu_alerted": true
+          }
+        }
+      },
+      {
+        "id": "deny",
+        "text": "沒有住院啦 她想太多",
+        "reply": [
+          "那妳拍一張妳家天花板給我",
+          "現在"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 1
+          }
+        }
+      },
+      {
+        "id": "ignore",
+        "text": "晚點跟你說",
+        "reply": [
+          "又晚點",
+          "我先幫她問一下好了 反正我也想知道"
+        ],
+        "effects": {
+          "ladder": {
+            "jingwen": 1,
+            "pinyu": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_aze_angry",
+    "kind": "message",
+    "thread": "dm_aze",
+    "from": "aze",
+    "text": [
+      "欸",
+      "你是不是在生我的氣"
+    ],
+    "options": [
+      {
+        "id": "no",
+        "text": "沒有啊",
+        "reply": [
+          "是喔",
+          "那就好"
+        ],
+        "effects": {
+          "ladder": {
+            "aze": -1
+          }
+        }
+      },
+      {
+        "id": "guess",
+        "text": "你覺得呢",
+        "reply": [
+          "……"
+        ],
+        "signal": {
+          "typingStops": true
+        },
+        "effects": {
+          "ladder": {
+            "aze": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_aze_confess",
+    "kind": "message",
+    "thread": "dm_aze",
+    "from": "aze",
+    "when": {
+      "flags": {
+        "aze_understands": true
+      }
+    },
+    "text": [
+      "我跟你講一件事",
+      "週六我去見你 是雯叫我去的",
+      "她想知道你手上有什麼 我就跟她說了 iPad 還有你晚上要帶去舊家",
+      "我以為她只是想找你談",
+      "對不起"
+    ],
+    "reveals": [
+      "say_aze_admit",
+      "say_aze_asked"
+    ]
+  },
+  {
+    "id": "msg_aze_tipoff",
+    "kind": "message",
+    "thread": "dm_aze",
+    "from": "aze",
+    "when": {
+      "flags": {
+        "aze_understands": false
+      }
+    },
+    "text": [
+      "抱歉",
+      "我先不回了"
+    ],
+    "signal": {
+      "readDelay": "之後他的訊息都顯示未讀"
+    },
+    "effects": {
+      "ladder": {
+        "jingwen": 2
+      }
+    }
+  },
+  {
+    "id": "msg_zh_refund",
+    "kind": "message",
+    "thread": "dm_zonghan",
+    "from": "zonghan",
+    "text": [
+      "以晴，妳的那一份我剛剛轉過去了，妳確認一下。其他人的部分我會自己處理，這件事就到這裡，好嗎？🙏"
+    ],
+    "reveals": [
+      "say_zh_refund"
+    ],
+    "options": [
+      {
+        "id": "take",
+        "text": "好喔",
+        "reply": [
+          "謝謝妳體諒。改天請妳吃飯。"
+        ],
+        "effects": {
+          "ladder": {
+            "zonghan": -1
+          },
+          "flags": {
+            "took_refund": true
+          }
+        }
+      },
+      {
+        "id": "refuse",
+        "text": "那其他人的呢",
+        "reply": [
+          "以晴，我說了我會處理。妳這樣逼我，對大家都沒有好處。"
+        ],
+        "signal": {
+          "readDelay": "已讀後隔了很久"
+        },
+        "effects": {
+          "ladder": {
+            "zonghan": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_zh_group",
+    "kind": "message",
+    "thread": "group",
+    "from": "zonghan",
+    "text": [
+      "各位，押金的事要跟大家更正。房東後來有退，我這陣子周轉比較緊，先挪用了，原本就打算月底前補給大家。以晴週六有來問我，中間可能有些誤會。這幾天我會把錢轉給每個人，造成困擾很抱歉🙏"
+    ],
+    "reveals": [
+      "say_zh_admit"
+    ],
+    "effects": {
+      "flags": {
+        "deposit_public": true
+      }
+    }
+  },
+  {
+    "id": "msg_py_call",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "［未接來電］",
+      "接電話",
+      "沈以晴接電話"
+    ],
+    "options": [
+      {
+        "id": "sleep",
+        "text": "在睡 晚點打給你",
+        "reply": [
+          "幾點",
+          "妳講一個時間"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          }
+        }
+      },
+      {
+        "id": "throat",
+        "text": "不想講話 打字就好",
+        "reply": [
+          "摔到樓梯關嘴巴什麼事",
+          "妳很怪"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 1
+          }
+        }
+      },
+      {
+        "id": "cat",
+        "text": "［貓貼圖］",
+        "reply": [
+          "……好啦",
+          "會傳貓就還活著"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_py_come",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "我下班直接過去",
+      "不要跟我說不用"
+    ],
+    "options": [
+      {
+        "id": "notHome",
+        "text": "我不在家",
+        "reply": [
+          "那妳在哪",
+          "沈以晴"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          },
+          "flags": {
+            "pinyu_alerted": true
+          }
+        }
+      },
+      {
+        "id": "tomorrow",
+        "text": "明天好不好 今天真的想睡",
+        "reply": [
+          "明天我白班",
+          "下班就去 妳不准跑"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "ev_end_found",
+    "kind": "ending",
+    "ending": "end_found"
+  }
+]

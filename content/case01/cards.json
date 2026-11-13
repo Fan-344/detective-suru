@@ -1,0 +1,83 @@
+[
+  {
+    "id": "card_latte",
+    "title": "那杯拿鐵",
+    "say": "欸 週六咖啡店那杯拿鐵是誰的"
+  },
+  {
+    "id": "card_deposit",
+    "title": "押金確認單",
+    "say": "鞋櫃上那張確認單 上面寫全額返還",
+    "targets": [
+      "zonghan"
+    ]
+  },
+  {
+    "id": "card_market",
+    "title": "夜市沒下雨",
+    "say": "欸 你限動的夜市怎麼沒下雨 那天台中不是下很大"
+  },
+  {
+    "id": "card_ipad",
+    "title": "iPad 的位置",
+    "say": "我的舊 iPad 怎麼會在泰順街那邊"
+  },
+  {
+    "id": "card_bag",
+    "title": "牛皮紙袋",
+    "say": "翰哥 你那天走的時候有看到我的牛皮紙袋嗎",
+    "thread": "group",
+    "targets": [
+      "zonghan"
+    ],
+    "availableWhen": {
+      "seen": [
+        "rcp_2016"
+      ]
+    }
+  },
+  {
+    "id": "card_wen",
+    "title": "「雯」",
+    "say": "欸 阿澤怎麼知道靖幾點睡",
+    "sayTo": {
+      "aze": "欸 你怎麼知道靖幾點睡"
+    },
+    "targets": [
+      "aze",
+      "pinyu"
+    ],
+    "availableWhen": {
+      "seen": [
+        "say_aze_wen"
+      ]
+    }
+  },
+  {
+    "id": "card_watch",
+    "title": "照片裡的手",
+    "say": "欸 宵夜照片角落那隻手是誰",
+    "targets": [
+      "pinyu",
+      "zonghan"
+    ],
+    "availableWhen": {
+      "seen": [
+        "say_py_snack"
+      ]
+    }
+  },
+  {
+    "id": "card_leave",
+    "title": "幾點走的",
+    "say": "翰哥 你週六幾點走的",
+    "targets": [
+      "zonghan"
+    ],
+    "availableWhen": {
+      "seen": [
+        "say_zh_open"
+      ]
+    }
+  }
+]

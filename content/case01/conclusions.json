@@ -1,0 +1,130 @@
+[
+  {
+    "id": "coma",
+    "text": "以晴昏迷住院",
+    "routes": [
+      [
+        "sms_icu"
+      ],
+      [
+        "call_hospital_missed",
+        "call_mom_missed"
+      ]
+    ]
+  },
+  {
+    "id": "aze_met_her",
+    "text": "阿澤週六其實見過以晴",
+    "routes": [
+      [
+        "rcp_1842",
+        "say_aze_latte"
+      ],
+      [
+        "say_yq_meet",
+        "say_aze_ok",
+        "say_aze_stoodup"
+      ],
+      [
+        "say_aze_admit"
+      ]
+    ]
+  },
+  {
+    "id": "zonghan_deposit",
+    "text": "宗翰吞了押金",
+    "routes": [
+      [
+        "say_zh_deposit",
+        "ph_deposit"
+      ],
+      [
+        "note_todo",
+        "say_zh_sunday"
+      ],
+      [
+        "say_zh_admit"
+      ]
+    ]
+  },
+  {
+    "id": "illustrations",
+    "text": "小說的插圖是以晴畫的",
+    "routes": [
+      [
+        "ph_compare"
+      ],
+      [
+        "ph_fileinfo_cover",
+        "ph_fileinfo_inner"
+      ],
+      [
+        "say_yq_book"
+      ]
+    ]
+  },
+  {
+    "id": "jingwen_not_taichung",
+    "text": "靖雯週六晚上不在台中",
+    "routes": [
+      [
+        "mo_sat_market",
+        "wx_taichung_sat"
+      ],
+      [
+        "fd_ipad"
+      ],
+      [
+        "rec_login"
+      ]
+    ]
+  },
+  {
+    "id": "time_window",
+    "text": "案發的時間範圍",
+    "routes": [
+      [
+        "rcp_2207"
+      ],
+      [
+        "sms_er"
+      ],
+      [
+        "say_zh_left"
+      ]
+    ]
+  },
+  {
+    "id": "zonghan_cleared",
+    "text": "宗翰當晚不可能動手",
+    "routes": [
+      [
+        "say_py_snack"
+      ],
+      [
+        "say_zh_linkou"
+      ],
+      [
+        "say_py_dating",
+        "ph_roster"
+      ]
+    ]
+  },
+  {
+    "id": "couple",
+    "text": "阿澤和靖雯是一對",
+    "routes": [
+      [
+        "say_aze_wen"
+      ],
+      [
+        "fd_ipad",
+        "say_aze_studio"
+      ],
+      [
+        "rec_login",
+        "say_aze_studio"
+      ]
+    ]
+  }
+]

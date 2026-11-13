@@ -1,0 +1,64 @@
+[
+  {
+    "statement": "say_aze_stoodup",
+    "record": "rcp_1842",
+    "result": "conflict",
+    "unlocks": [
+      "card_latte"
+    ]
+  },
+  {
+    "statement": "say_yq_meet",
+    "record": "rcp_1842",
+    "result": "match"
+  },
+  {
+    "statement": "say_zh_deposit",
+    "record": "ph_deposit",
+    "result": "conflict",
+    "unlocks": [
+      "card_deposit"
+    ]
+  },
+  {
+    "statement": "say_zh_sunday",
+    "record": "note_todo",
+    "result": "match"
+  },
+  {
+    "statement": "say_zh_open",
+    "record": "rcp_2131",
+    "result": "match"
+  },
+  {
+    "statement": "mo_sat_market",
+    "record": "wx_taichung_sat",
+    "result": "conflict",
+    "unlocks": [
+      "card_market"
+    ]
+  },
+  {
+    "statement": "say_aze_rain",
+    "record": "wx_daan_sat",
+    "result": "match"
+  },
+  {
+    "statement": "say_py_snack",
+    "record": "ph_roster",
+    "result": "match"
+  },
+  {
+    "statement": "say_yq_book",
+    "record": "ph_compare",
+    "result": "match"
+  },
+  {
+    "statement": "say_aze_studio",
+    "record": "fd_ipad",
+    "result": "match",
+    "unlocks": [
+      "card_ipad"
+    ]
+  }
+]

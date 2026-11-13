@@ -1,0 +1,266 @@
+[
+  {
+    "card": "card_latte",
+    "target": "aze",
+    "tone": "evasive",
+    "reply": [
+      "……",
+      "你幹嘛現在講這個",
+      "好啦我們有見面"
+    ],
+    "signal": {
+      "typingStops": true
+    },
+    "reveals": [
+      "say_aze_admit"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      }
+    },
+    "triggers": [
+      "msg_aze_after_admit"
+    ]
+  },
+  {
+    "card": "card_latte",
+    "target": "jingwen",
+    "tone": "evasive",
+    "reply": [
+      "蛤 什麼拿鐵😂",
+      "妳跟誰去喝咖啡呀"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了幾分鐘"
+    },
+    "effects": {
+      "ladder": {
+        "jingwen": 1
+      }
+    }
+  },
+  {
+    "card": "card_latte",
+    "target": "pinyu",
+    "tone": "engaged",
+    "reply": [
+      "妳又不喝拿鐵",
+      "跟誰",
+      "阿澤喔"
+    ]
+  },
+  {
+    "card": "card_deposit",
+    "target": "zonghan",
+    "tone": "evasive",
+    "reply": [
+      "以晴，妳聽我說，房東確實有退，錢現在在我這邊。我最近有一筆周轉卡住，本來就打算月底前補給大家，不是要吞掉。這件事拜託先不要在群組講，給我幾天，好嗎？🙏"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_zh_admit"
+    ],
+    "effects": {
+      "ladder": {
+        "zonghan": 1
+      }
+    }
+  },
+  {
+    "card": "card_market",
+    "target": "jingwen",
+    "tone": "evasive",
+    "reply": [
+      "有嗎",
+      "我那邊還好耶",
+      "妳躺著還有力氣查天氣喔😂"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久"
+    },
+    "reveals": [
+      "say_jw_dry"
+    ],
+    "effects": {
+      "ladder": {
+        "jingwen": 1
+      }
+    }
+  },
+  {
+    "card": "card_market",
+    "target": "aze",
+    "tone": "evasive",
+    "reply": [
+      "……",
+      "我不知道",
+      "你問她"
+    ],
+    "signal": {
+      "typingStops": true
+    },
+    "effects": {
+      "ladder": {
+        "aze": 1
+      }
+    }
+  },
+  {
+    "card": "card_market",
+    "target": "pinyu",
+    "tone": "engaged",
+    "reply": [
+      "對欸 那天不是全台都在下",
+      "她運氣那麼好喔"
+    ]
+  },
+  {
+    "card": "card_ipad",
+    "target": "aze",
+    "tone": "engaged",
+    "reply": [
+      "蛤",
+      "我這邊沒有你的 iPad 啊",
+      "……等一下"
+    ],
+    "signal": {
+      "typingStops": true
+    },
+    "reveals": [
+      "say_aze_noipad"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      },
+      "flags": {
+        "aze_doubts": true
+      }
+    }
+  },
+  {
+    "card": "card_ipad",
+    "target": "jingwen",
+    "tone": "evasive",
+    "reply": [
+      "泰順街？",
+      "我不知道耶",
+      "會不會是定位亂跳呀"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_jw_glitch"
+    ],
+    "effects": {
+      "ladder": {
+        "jingwen": 2
+      }
+    }
+  },
+  {
+    "card": "card_bag",
+    "target": "zonghan",
+    "tone": "engaged",
+    "reply": [
+      "以晴，有，我走的時候紙袋還在鞋櫃上，我有印象。妳找不到嗎？"
+    ],
+    "others": [
+      {
+        "from": "jingwen",
+        "reply": [],
+        "signal": {
+          "typingStops": true,
+          "noReply": true
+        }
+      }
+    ],
+    "reveals": [
+      "say_zh_bag"
+    ],
+    "effects": {
+      "ladder": {
+        "jingwen": 1
+      }
+    },
+    "triggers": [
+      "sys_login_prompt"
+    ]
+  },
+  {
+    "card": "card_wen",
+    "target": "aze",
+    "tone": "evasive",
+    "reply": [
+      "蛤",
+      "什麼雯",
+      "打錯啦"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了幾分鐘"
+    },
+    "reveals": [
+      "say_aze_typo"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      }
+    }
+  },
+  {
+    "card": "card_wen",
+    "target": "pinyu",
+    "tone": "engaged",
+    "reply": [
+      "對欸",
+      "他幹嘛叫那麼親",
+      "我以為只有我覺得怪"
+    ]
+  },
+  {
+    "card": "card_watch",
+    "target": "pinyu",
+    "tone": "evasive",
+    "reply": [
+      "……",
+      "妳眼睛也太利",
+      "好啦是宗翰 我們在一起一陣子了",
+      "本來想等妳也有對象再講 怕妳覺得只剩妳一個"
+    ],
+    "signal": {
+      "typingStops": true
+    },
+    "reveals": [
+      "say_py_dating"
+    ]
+  },
+  {
+    "card": "card_watch",
+    "target": "zonghan",
+    "tone": "engaged",
+    "reply": [
+      "哈哈，被妳發現了。那天離開之後我去林口找品妤，待到她下班。這件事我們本來想晚一點再跟大家說，先幫我保密，好嗎？😅"
+    ],
+    "reveals": [
+      "say_zh_linkou"
+    ]
+  },
+  {
+    "card": "card_leave",
+    "target": "zonghan",
+    "tone": "engaged",
+    "reply": [
+      "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子，手也好好的。怎麼了嗎？"
+    ],
+    "reveals": [
+      "say_zh_left"
+    ]
+  }
+]

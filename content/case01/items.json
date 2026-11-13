@@ -1,0 +1,698 @@
+[
+  {
+    "id": "sms_repair_done",
+    "app": "sms",
+    "kind": "record",
+    "when": "週六 18:20",
+    "title": "快修通訊",
+    "body": "【快修通訊】您送修的手機已完成電池更換並通過開機測試，可於營業時間內至大安店取件，尾款於取件時支付。"
+  },
+  {
+    "id": "sms_er",
+    "app": "sms",
+    "kind": "record",
+    "when": "週六 23:40",
+    "title": "景和綜合醫院急診",
+    "body": "【景和綜合醫院急診】沈以晴女士於 23:12 由救護車送抵本院急診。檢傷紀錄：樓梯跌落。發生地：新北市永和區，公寓四樓往三樓樓梯間。本簡訊依病歷登記之聯絡電話發送，家屬請攜帶證件至急診櫃檯。",
+    "fields": [
+      {
+        "label": "到院時間",
+        "value": "週六 23:12"
+      },
+      {
+        "label": "到院方式",
+        "value": "救護車"
+      },
+      {
+        "label": "檢傷紀錄",
+        "value": "樓梯跌落"
+      },
+      {
+        "label": "發生地",
+        "value": "新北市永和區，公寓四樓往三樓樓梯間"
+      }
+    ]
+  },
+  {
+    "id": "sms_icu",
+    "app": "sms",
+    "kind": "record",
+    "when": "週日 08:40",
+    "title": "景和綜合醫院",
+    "body": "【景和綜合醫院】沈以晴女士家屬您好，病人已於今日轉入加護病房。探視時間為每日 11:00 及 19:00。"
+  },
+  {
+    "id": "note_instruction",
+    "app": "notes",
+    "kind": "record",
+    "when": "週六 16:20",
+    "title": "給助理",
+    "body": "如果我兩天沒回來解鎖，你就醒來。\n先不要讓任何人知道你在。\n今晚我要一個人去問一個人一件事。\n我不確定對方會怎麼反應。\n也不確定還能相信誰。\n查清楚，再決定交給誰。"
+  },
+  {
+    "id": "note_todo",
+    "app": "notes",
+    "kind": "record",
+    "when": "週六",
+    "title": "週六",
+    "body": "16:30 送修手機\n18:30 阿澤\n印東西\n舊家整理箱子\n宗翰 押金"
+  },
+  {
+    "id": "note_questions",
+    "app": "notes",
+    "kind": "record",
+    "when": "週五 約23:50",
+    "title": "要問的",
+    "body": "1. 為什麼不說\n2. 你本來打算瞞到什麼時候\n3. 你要自己講，還是我講"
+  },
+  {
+    "id": "rcp_1628",
+    "app": "receipts",
+    "kind": "record",
+    "when": "週六 16:28",
+    "title": "快修通訊 大安店",
+    "body": "電池更換訂金 ×1",
+    "fields": [
+      {
+        "label": "金額",
+        "value": "500 元"
+      },
+      {
+        "label": "載具",
+        "value": "信用卡"
+      }
+    ]
+  },
+  {
+    "id": "rcp_1705",
+    "app": "receipts",
+    "kind": "record",
+    "when": "週六 17:05",
+    "title": "日日超商 捷運站內門市",
+    "body": "悠遊卡加值 ×1",
+    "fields": [
+      {
+        "label": "金額",
+        "value": "500 元"
+      },
+      {
+        "label": "載具",
+        "value": "信用卡"
+      }
+    ]
+  },
+  {
+    "id": "rcp_1842",
+    "app": "receipts",
+    "kind": "record",
+    "when": "週六 18:42",
+    "title": "慢火咖啡（大安）",
+    "body": "美式 ×1、拿鐵 ×1、肉桂捲 ×1",
+    "fields": [
+      {
+        "label": "金額",
+        "value": "380 元"
+      },
+      {
+        "label": "載具",
+        "value": "信用卡"
+      }
+    ]
+  },
+  {
+    "id": "rcp_2016",
+    "app": "receipts",
+    "kind": "record",
+    "when": "週六 20:16",
+    "title": "公館快印（公館）",
+    "body": "A3 彩色輸出 ×6、牛皮紙袋 ×1",
+    "fields": [
+      {
+        "label": "金額",
+        "value": "195 元"
+      },
+      {
+        "label": "載具",
+        "value": "信用卡"
+      }
+    ]
+  },
+  {
+    "id": "rcp_2131",
+    "app": "receipts",
+    "kind": "record",
+    "when": "週六 21:31",
+    "title": "日日超商 永和門市",
+    "body": "啤酒 ×4、冰塊 ×1、紙杯 ×1",
+    "fields": [
+      {
+        "label": "金額",
+        "value": "227 元"
+      },
+      {
+        "label": "載具",
+        "value": "信用卡"
+      }
+    ]
+  },
+  {
+    "id": "rcp_2207",
+    "app": "receipts",
+    "kind": "record",
+    "when": "週六 22:07",
+    "title": "日日超商 永和門市",
+    "body": "輕便雨衣 ×1、OK 繃 ×1",
+    "fields": [
+      {
+        "label": "金額",
+        "value": "94 元"
+      },
+      {
+        "label": "載具",
+        "value": "信用卡"
+      }
+    ]
+  },
+  {
+    "id": "ph_roster",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "班表",
+    "body": "品妤傳來的當月班表。",
+    "image": {
+      "description": "一張護理站排班表的翻拍。品妤那一列，週六的格子寫著「小夜 16–24」。"
+    }
+  },
+  {
+    "id": "ph_boxes",
+    "app": "photos",
+    "kind": "record",
+    "when": "週五 20:12",
+    "title": "紙箱",
+    "body": "舊家的紙箱。",
+    "image": {
+      "description": "空了大半的客廳，地上疊著七八個封到一半的紙箱，箱子側面用麥克筆寫著「畫具」「書」「雜」。"
+    }
+  },
+  {
+    "id": "ph_ipad",
+    "app": "photos",
+    "kind": "record",
+    "when": "週五 20:15",
+    "title": "舊 iPad",
+    "body": "放在紙箱上的舊 iPad。",
+    "image": {
+      "description": "一台邊角磨損的舊 iPad 放在打開的紙箱上，螢幕亮著，旁邊是一條纏成一團的充電線。"
+    }
+  },
+  {
+    "id": "ph_fileinfo_cover",
+    "app": "photos",
+    "kind": "record",
+    "when": "週五 20:31",
+    "title": "檔案資訊（一）",
+    "body": "繪圖 App 的檔案資訊截圖。",
+    "image": {
+      "description": "繪圖 App 的檔案資訊頁。檔名「封面_定稿」，圖層 47 個，建立日期 2023 年 3 月，建立裝置是這台 iPad。"
+    }
+  },
+  {
+    "id": "ph_fileinfo_inner",
+    "app": "photos",
+    "kind": "record",
+    "when": "週五 20:32",
+    "title": "檔案資訊（二）",
+    "body": "繪圖 App 的檔案資訊截圖。",
+    "image": {
+      "description": "繪圖 App 的檔案資訊頁。檔名「內頁_03」，圖層 31 個，建立日期 2023 年 4 月，建立裝置是這台 iPad。"
+    }
+  },
+  {
+    "id": "ph_compare",
+    "app": "photos",
+    "kind": "record",
+    "when": "週五 20:40",
+    "title": "並排",
+    "body": "並排截圖。",
+    "image": {
+      "description": "左右並排的兩張圖。左邊是繪圖 App 裡一張沒上色的草稿；右邊是一本攤開的小說，印著一幅插圖。兩邊的構圖和線條相同。"
+    }
+  },
+  {
+    "id": "ph_deposit",
+    "app": "photos",
+    "kind": "record",
+    "when": "週五 21:05",
+    "title": "確認單",
+    "body": "玄關鞋櫃上的一張紙。",
+    "image": {
+      "description": "玄關鞋櫃上的一張 A4 表單，標題是「點交暨押金返還確認單」。點交日期是上週三，「押金全額返還」的方框打了勾，後面填了金額。承租代表人的簽名欄簽著宗翰的名字。"
+    }
+  },
+  {
+    "id": "call_jw_1602",
+    "app": "phone",
+    "kind": "record",
+    "when": "週六 16:02",
+    "title": "靖雯",
+    "body": "撥出，通話 2 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥出"
+      },
+      {
+        "label": "通話時間",
+        "value": "2 分鐘"
+      }
+    ]
+  },
+  {
+    "id": "call_hospital_missed",
+    "app": "phone",
+    "kind": "record",
+    "when": "週日 00:25",
+    "title": "景和綜合醫院",
+    "body": "未接來電 2 通。",
+    "fields": [
+      {
+        "label": "週日",
+        "value": "00:25、00:41"
+      }
+    ]
+  },
+  {
+    "id": "call_mom_missed",
+    "app": "phone",
+    "kind": "record",
+    "when": "週日 01:10",
+    "title": "媽媽",
+    "body": "未接來電 6 通。",
+    "fields": [
+      {
+        "label": "週日",
+        "value": "01:10、01:12、06:30、13:05"
+      },
+      {
+        "label": "週一",
+        "value": "08:15、12:20"
+      }
+    ]
+  },
+  {
+    "id": "say_zh_keys",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "when": "較早",
+    "body": "各位，鑰匙都先交給我保管，月底我統一還給房東。之後要回去拿東西，再跟我約時間開門就好🙏"
+  },
+  {
+    "id": "say_zh_deposit",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "when": "上週四 20:14",
+    "body": "各位，跟大家報告一下，押金的部分房東說要扣修繕費，牆面和浴室都算進去，算下來是拿不回來了。我有再爭取，但對方態度蠻硬的，不好意思😅"
+  },
+  {
+    "id": "say_aze_rain",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "aze",
+    "when": "週六 21:55",
+    "body": "內湖下超大",
+    "image": {
+      "description": "從室內隔著落地窗往外拍。窗上全是雨水，外面的路燈糊成一片。窗邊看得到婚宴的圓桌和桌花的一角。"
+    }
+  },
+  {
+    "id": "say_aze_wen",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "aze",
+    "when": "週日 11:08",
+    "body": "雯昨天快三點才睡"
+  },
+  {
+    "id": "say_aze_studio",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "when": "較早",
+    "body": "泰順街 巷子裡白色鐵門那間"
+  },
+  {
+    "id": "say_aze_wedding",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "when": "週五 22:40",
+    "body": "明天內湖拍婚禮 八點開始"
+  },
+  {
+    "id": "say_yq_meet",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "yiqing",
+    "when": "週六 15:50",
+    "body": "六點半老地方 我沒手機喔 不見不散"
+  },
+  {
+    "id": "say_aze_ok",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "when": "週六 15:53",
+    "body": "好"
+  },
+  {
+    "id": "say_yq_password",
+    "app": "chat",
+    "thread": "dm_jingwen",
+    "kind": "statement",
+    "speaker": "yiqing",
+    "when": "較早",
+    "body": "你直接登我的雲端看 密碼一樣是那個"
+  },
+  {
+    "id": "say_yq_book",
+    "app": "chat",
+    "thread": "dm_jingwen",
+    "kind": "statement",
+    "speaker": "yiqing",
+    "when": "上週三 22:15",
+    "body": "欸靖 想跟你聊書的事"
+  },
+  {
+    "id": "say_zh_open",
+    "app": "chat",
+    "thread": "dm_zonghan",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "when": "週五 22:05",
+    "body": "OK的，明天我帶看到九點，結束直接過去，大概九點多到。"
+  },
+  {
+    "id": "say_zh_sunday",
+    "app": "chat",
+    "thread": "dm_zonghan",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "when": "週日 11:40",
+    "body": "以晴，昨天的事我想當面再跟妳說明一次，有些細節妳可能誤會了。手機修好回我一下，時間我都可以配合🙏"
+  },
+  {
+    "id": "say_py_snack",
+    "app": "chat",
+    "thread": "dm_pinyu",
+    "kind": "statement",
+    "speaker": "pinyu",
+    "when": "週六 23:05",
+    "body": "小夜的宵夜 羨慕嗎",
+    "image": {
+      "description": "休息室的桌上放著一盒打開的滷味和兩杯手搖飲。畫面右下角有一隻伸進來的手，正要拿竹籤，手腕上戴著銀色金屬錶帶、藍色錶面的錶。"
+    }
+  },
+  {
+    "id": "mo_fri_arrive",
+    "app": "moments",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "when": "週五 16:30",
+    "title": "靖雯",
+    "body": "台中 我來了～～",
+    "image": {
+      "description": "高鐵台中站的月台，一只行李箱和一雙白色球鞋入鏡。天色還亮。"
+    }
+  },
+  {
+    "id": "mo_sat_signing",
+    "app": "moments",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "when": "週六 13:10",
+    "title": "靖雯",
+    "body": "開始了！！好緊張🥹",
+    "image": {
+      "description": "書店裡的簽書會現場。長桌上疊著同一本小說，立牌寫著「新書簽書會 13:00–16:00」，前面排了一列讀者。"
+    }
+  },
+  {
+    "id": "mo_sat_done",
+    "app": "moments",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "when": "週六 16:12",
+    "title": "靖雯",
+    "body": "簽完了 謝謝台中🫶",
+    "image": {
+      "description": "簽名桌的特寫。一束花、兩支用到沒水的簽字筆、一杯喝完的飲料。"
+    }
+  },
+  {
+    "id": "mo_sat_market",
+    "app": "moments",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "when": "週六 22:30",
+    "title": "靖雯",
+    "body": "台中夜市 吃爆😂",
+    "image": {
+      "description": "夜市的走道，兩邊是亮著燈的攤位，人擠著人。地面是乾的，沒有人撐傘或穿雨衣。前景有一隻手拿著一串烤玉米。"
+    }
+  },
+  {
+    "id": "wx_daan_fri",
+    "app": "weather",
+    "kind": "record",
+    "when": "週五",
+    "title": "台北市大安區　週五晚上",
+    "body": "無降雨。"
+  },
+  {
+    "id": "wx_yonghe_fri",
+    "app": "weather",
+    "kind": "record",
+    "when": "週五",
+    "title": "新北市永和區　週五晚上",
+    "body": "無降雨。"
+  },
+  {
+    "id": "wx_taichung_fri",
+    "app": "weather",
+    "kind": "record",
+    "when": "週五",
+    "title": "台中市　週五晚上",
+    "body": "無降雨。"
+  },
+  {
+    "id": "wx_daan_sat",
+    "app": "weather",
+    "kind": "record",
+    "when": "週六 21:50",
+    "title": "台北市大安區　週六晚上",
+    "body": "21:50 起大雨，持續到凌晨。"
+  },
+  {
+    "id": "wx_yonghe_sat",
+    "app": "weather",
+    "kind": "record",
+    "when": "週六 21:50",
+    "title": "新北市永和區　週六晚上",
+    "body": "21:50 起大雨，持續到凌晨。"
+  },
+  {
+    "id": "wx_taichung_sat",
+    "app": "weather",
+    "kind": "record",
+    "when": "週六 21:00",
+    "title": "台中市　週六晚上",
+    "body": "21:00 起大雨，持續到午夜。"
+  },
+  {
+    "id": "fd_phone",
+    "app": "finder",
+    "kind": "record",
+    "title": "這支手機",
+    "body": "台北市大安區，快修通訊 大安店。連線中。"
+  },
+  {
+    "id": "fd_ipad",
+    "app": "finder",
+    "kind": "record",
+    "title": "以晴的 iPad",
+    "body": "台北市大安區，泰順街一帶。幾分鐘前更新。",
+    "needsLocate": true
+  },
+  {
+    "id": "say_aze_stoodup",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "難怪週六放我鴿子",
+    "hidden": true
+  },
+  {
+    "id": "say_zh_beer",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "哈哈，是我。啤酒加冰塊才順口，妳不懂。",
+    "when": "較早"
+  },
+  {
+    "id": "say_aze_latte",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "老樣子 拿鐵",
+    "when": "週五 22:49"
+  },
+  {
+    "id": "say_aze_admit",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "好啦我們有見面",
+    "hidden": true
+  },
+  {
+    "id": "say_aze_asked",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "是雯叫我去問的 她想先知道你手上有什麼",
+    "hidden": true
+  },
+  {
+    "id": "say_aze_typo",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "打錯啦",
+    "hidden": true
+  },
+  {
+    "id": "say_aze_noipad",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "我這邊沒有你的 iPad 啊",
+    "hidden": true
+  },
+  {
+    "id": "say_jw_dry",
+    "app": "chat",
+    "thread": "dm_jingwen",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "body": "我那邊還好耶",
+    "hidden": true
+  },
+  {
+    "id": "say_jw_glitch",
+    "app": "chat",
+    "thread": "dm_jingwen",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "body": "會不會是定位亂跳呀",
+    "hidden": true
+  },
+  {
+    "id": "say_jw_doorbell",
+    "app": "chat",
+    "thread": "dm_jingwen",
+    "kind": "statement",
+    "speaker": "jingwen",
+    "body": "我在妳家樓下 按門鈴沒人應耶",
+    "hidden": true
+  },
+  {
+    "id": "say_zh_admit",
+    "app": "chat",
+    "thread": "dm_zonghan",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "房東確實有退，錢現在在我這邊。",
+    "hidden": true
+  },
+  {
+    "id": "say_zh_left",
+    "app": "chat",
+    "thread": "dm_zonghan",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子，手也好好的。",
+    "hidden": true
+  },
+  {
+    "id": "say_zh_bag",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "有，我走的時候紙袋還在鞋櫃上，我有印象。",
+    "hidden": true
+  },
+  {
+    "id": "say_zh_linkou",
+    "app": "chat",
+    "thread": "dm_zonghan",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "那天離開之後我去林口找品妤，待到她下班。",
+    "hidden": true
+  },
+  {
+    "id": "say_zh_refund",
+    "app": "chat",
+    "thread": "dm_zonghan",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "妳的那一份我剛剛轉過去了。",
+    "hidden": true
+  },
+  {
+    "id": "say_py_dating",
+    "app": "chat",
+    "thread": "dm_pinyu",
+    "kind": "statement",
+    "speaker": "pinyu",
+    "body": "好啦是宗翰 我們在一起一陣子了",
+    "hidden": true
+  },
+  {
+    "id": "say_py_asked",
+    "app": "chat",
+    "thread": "dm_pinyu",
+    "kind": "statement",
+    "speaker": "pinyu",
+    "body": "靖雯剛剛問我能不能幫忙查妳在哪間醫院",
+    "hidden": true
+  },
+  {
+    "id": "rec_login",
+    "app": "finder",
+    "kind": "record",
+    "title": "登入確認視窗",
+    "body": "有人在另一台裝置上輸入了這個帳號的密碼。位置：台北市大安區附近。",
+    "hidden": true
+  }
+]
