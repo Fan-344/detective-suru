@@ -1,0 +1,716 @@
+{
+  "_note": "外觀框架用的假資料，全部是佔位文字，與第一案內容無關。步驟三會改由 content/case01 經 engine 提供。",
+  "startBattery": 64,
+  "mockReplyText": "對方回覆的佔位訊息",
+  "mockReplyTime": "現在",
+  "afterIntro": {
+    "app": "chat",
+    "detail": "t_group"
+  },
+  "intro": [
+    {
+      "kind": "text",
+      "lines": [
+        "［螢幕亮起］"
+      ]
+    },
+    {
+      "kind": "text",
+      "lines": [
+        "這裡是開場的佔位文字。",
+        "正式文本之後由資料檔提供。"
+      ]
+    },
+    {
+      "kind": "quote",
+      "lines": [
+        "這一段示範引用區塊的樣子。",
+        "每行各自換行。",
+        "最後一行可以有署名。"
+      ],
+      "signature": "署名"
+    },
+    {
+      "kind": "text",
+      "lines": [
+        "一段一段出現，",
+        "點一下前進。"
+      ]
+    },
+    {
+      "kind": "notice",
+      "label": "通知範例",
+      "lines": [
+        "這一段示範通知樣式。",
+        "內容是佔位文字。"
+      ]
+    },
+    {
+      "kind": "text",
+      "lines": [
+        "最後一段。",
+        "再點一下就進入手機畫面。"
+      ]
+    }
+  ],
+  "phone": {
+    "selfId": "self",
+    "wifiName": "測試網路_5G",
+    "folders": [
+      {
+        "id": "f_tools",
+        "name": "工具",
+        "icon": "tools"
+      }
+    ],
+    "apps": [
+      {
+        "id": "sms",
+        "name": "簡訊",
+        "icon": "sms",
+        "layout": "list",
+        "unread": 2
+      },
+      {
+        "id": "notes",
+        "name": "備忘錄",
+        "icon": "notes",
+        "layout": "list"
+      },
+      {
+        "id": "receipts",
+        "name": "雲端發票",
+        "icon": "receipts",
+        "layout": "list",
+        "unread": 6
+      },
+      {
+        "id": "moments",
+        "name": "片刻",
+        "icon": "moments",
+        "layout": "gallery"
+      },
+      {
+        "id": "weather",
+        "name": "天氣",
+        "icon": "weather",
+        "layout": "list"
+      },
+      {
+        "id": "music",
+        "name": "音樂",
+        "icon": "music",
+        "layout": "placeholder"
+      },
+      {
+        "id": "finder",
+        "name": "找裝置",
+        "icon": "finder",
+        "layout": "placeholder",
+        "folder": "f_tools"
+      },
+      {
+        "id": "camera",
+        "name": "相機",
+        "icon": "camera",
+        "layout": "placeholder",
+        "folder": "f_tools"
+      },
+      {
+        "id": "phone",
+        "name": "電話",
+        "icon": "phone",
+        "layout": "list",
+        "unread": 3,
+        "dock": true
+      },
+      {
+        "id": "chat",
+        "name": "聊聊",
+        "icon": "chat",
+        "layout": "chat",
+        "dock": true
+      },
+      {
+        "id": "photos",
+        "name": "相簿",
+        "icon": "photos",
+        "layout": "gallery",
+        "dock": true
+      }
+    ],
+    "threads": [
+      {
+        "id": "t_group",
+        "title": "測試群組",
+        "group": true,
+        "unread": 31,
+        "prefill": "這是預先填好的一句話 只能按送出",
+        "members": [
+          {
+            "id": "a",
+            "name": "聯絡人甲"
+          },
+          {
+            "id": "b",
+            "name": "聯絡人乙"
+          },
+          {
+            "id": "c",
+            "name": "聯絡人丙"
+          }
+        ],
+        "messages": [
+          {
+            "id": "g1",
+            "from": "a",
+            "day": "週五",
+            "time": "21:10",
+            "text": "群組訊息範例一"
+          },
+          {
+            "id": "g2",
+            "from": "b",
+            "day": "週五",
+            "time": "21:12",
+            "text": "群組訊息範例二，這一則比較長，用來確認長句在泡泡裡會正常換行不會超出畫面"
+          },
+          {
+            "id": "g3",
+            "from": "self",
+            "day": "週五",
+            "time": "21:15",
+            "text": "機主這一側的訊息"
+          },
+          {
+            "id": "g4",
+            "from": "c",
+            "day": "週六",
+            "time": "09:02",
+            "text": "隔天的訊息"
+          },
+          {
+            "id": "g5",
+            "from": "c",
+            "day": "週六",
+            "time": "09:02",
+            "image": {
+              "tone": 2,
+              "description": "圖片佔位：群組裡的一張照片"
+            }
+          },
+          {
+            "id": "g6",
+            "from": "a",
+            "day": "週六",
+            "time": "09:30",
+            "text": "連續"
+          },
+          {
+            "id": "g7",
+            "from": "a",
+            "day": "週六",
+            "time": "09:30",
+            "text": "好幾則"
+          },
+          {
+            "id": "g8",
+            "from": "a",
+            "day": "週六",
+            "time": "09:31",
+            "text": "短訊息"
+          }
+        ]
+      },
+      {
+        "id": "t_a",
+        "title": "聯絡人甲",
+        "group": false,
+        "unread": 5,
+        "members": [
+          {
+            "id": "a",
+            "name": "聯絡人甲"
+          }
+        ],
+        "options": [
+          {
+            "id": "o1",
+            "text": "回覆選項一"
+          },
+          {
+            "id": "o2",
+            "text": "回覆選項二 稍微長一點的句子"
+          },
+          {
+            "id": "o3",
+            "text": "回覆選項三"
+          }
+        ],
+        "messages": [
+          {
+            "id": "a1",
+            "from": "self",
+            "day": "週六",
+            "time": "15:50",
+            "text": "私訊範例"
+          },
+          {
+            "id": "a2",
+            "from": "a",
+            "day": "週六",
+            "time": "15:53",
+            "text": "好"
+          },
+          {
+            "id": "a3",
+            "from": "a",
+            "day": "週日",
+            "time": "10:20",
+            "text": "未讀訊息範例"
+          }
+        ]
+      },
+      {
+        "id": "t_b",
+        "title": "聯絡人乙",
+        "group": false,
+        "unread": 1,
+        "typing": "b",
+        "members": [
+          {
+            "id": "b",
+            "name": "聯絡人乙"
+          }
+        ],
+        "messages": [
+          {
+            "id": "b1",
+            "from": "b",
+            "day": "週日",
+            "time": "11:05",
+            "text": "這個聊天室示範「正在輸入」的樣子"
+          }
+        ]
+      },
+      {
+        "id": "t_c",
+        "title": "聯絡人丙",
+        "group": false,
+        "unread": 0,
+        "readAt": "23:08",
+        "members": [
+          {
+            "id": "c",
+            "name": "聯絡人丙"
+          }
+        ],
+        "messages": [
+          {
+            "id": "c1",
+            "from": "c",
+            "day": "週六",
+            "time": "23:05",
+            "image": {
+              "tone": 4,
+              "description": "圖片佔位：對方傳來的一張照片"
+            }
+          },
+          {
+            "id": "c2",
+            "from": "self",
+            "day": "週六",
+            "time": "23:06",
+            "text": "這個聊天室示範已讀時間"
+          }
+        ]
+      },
+      {
+        "id": "t_d",
+        "title": "聯絡人丁",
+        "group": false,
+        "unread": 0,
+        "members": [
+          {
+            "id": "d",
+            "name": "聯絡人丁"
+          }
+        ],
+        "messages": []
+      }
+    ],
+    "lists": {
+      "sms": [
+        {
+          "label": "週日",
+          "rows": [
+            {
+              "id": "sms1",
+              "title": "寄件單位甲",
+              "subtitle": "簡訊內容的第一行預覽文字",
+              "meta": "08:40",
+              "unread": true,
+              "detail": {
+                "title": "寄件單位甲",
+                "when": "週日 08:40",
+                "lines": [
+                  "簡訊全文的佔位文字。",
+                  "第二行。"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "週六",
+          "rows": [
+            {
+              "id": "sms2",
+              "title": "寄件單位乙",
+              "subtitle": "另一則簡訊的預覽",
+              "meta": "17:30",
+              "unread": true,
+              "detail": {
+                "title": "寄件單位乙",
+                "when": "週六 17:30",
+                "lines": [
+                  "另一則簡訊全文的佔位文字。"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "notes": [
+        {
+          "label": "週六",
+          "rows": [
+            {
+              "id": "n1",
+              "title": "筆記標題一",
+              "subtitle": "筆記的第一行",
+              "meta": "16:20",
+              "detail": {
+                "title": "筆記標題一",
+                "when": "週六 16:20",
+                "lines": [
+                  "筆記第一行。",
+                  "筆記第二行。",
+                  "筆記第三行。"
+                ]
+              }
+            },
+            {
+              "id": "n2",
+              "title": "筆記標題二",
+              "subtitle": "條列式的筆記",
+              "detail": {
+                "title": "筆記標題二",
+                "lines": [
+                  "16:30 事項一",
+                  "18:30 事項二",
+                  "事項三"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "receipts": [
+        {
+          "label": "週六",
+          "rows": [
+            {
+              "id": "r1",
+              "title": "店家甲",
+              "subtitle": "品項 ×1、品項 ×1",
+              "meta": "18:42",
+              "unread": true,
+              "detail": {
+                "title": "店家甲",
+                "when": "週六 18:42",
+                "fields": [
+                  {
+                    "label": "品項一",
+                    "value": "×1"
+                  },
+                  {
+                    "label": "品項二",
+                    "value": "×1"
+                  },
+                  {
+                    "label": "付款",
+                    "value": "信用卡載具"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "r2",
+              "title": "店家乙",
+              "subtitle": "品項 ×6",
+              "meta": "20:16",
+              "unread": true,
+              "detail": {
+                "title": "店家乙",
+                "when": "週六 20:16",
+                "fields": [
+                  {
+                    "label": "品項",
+                    "value": "×6"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "週五",
+          "rows": [
+            {
+              "id": "r3",
+              "title": "店家丙",
+              "subtitle": "品項 ×2",
+              "meta": "12:05",
+              "detail": {
+                "title": "店家丙",
+                "when": "週五 12:05",
+                "fields": [
+                  {
+                    "label": "品項",
+                    "value": "×2"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "weather": [
+        {
+          "label": "地點",
+          "rows": [
+            {
+              "id": "w1",
+              "title": "地點甲",
+              "subtitle": "降雨紀錄",
+              "detail": {
+                "title": "地點甲",
+                "fields": [
+                  {
+                    "label": "週五晚上",
+                    "value": "無雨"
+                  },
+                  {
+                    "label": "週六晚上",
+                    "value": "佔位資料"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "w2",
+              "title": "地點乙",
+              "subtitle": "降雨紀錄",
+              "detail": {
+                "title": "地點乙",
+                "fields": [
+                  {
+                    "label": "週五晚上",
+                    "value": "無雨"
+                  },
+                  {
+                    "label": "週六晚上",
+                    "value": "佔位資料"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "phone": [
+        {
+          "label": "週日",
+          "rows": [
+            {
+              "id": "p1",
+              "title": "聯絡人戊",
+              "subtitle": "未接來電 ×3",
+              "meta": "09:12",
+              "unread": true,
+              "detail": {
+                "title": "聯絡人戊",
+                "fields": [
+                  {
+                    "label": "09:12",
+                    "value": "未接"
+                  },
+                  {
+                    "label": "08:55",
+                    "value": "未接"
+                  },
+                  {
+                    "label": "08:41",
+                    "value": "未接"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "週六",
+          "rows": [
+            {
+              "id": "p2",
+              "title": "聯絡人甲",
+              "subtitle": "撥出・2 分鐘",
+              "meta": "16:02",
+              "detail": {
+                "title": "聯絡人甲",
+                "fields": [
+                  {
+                    "label": "16:02",
+                    "value": "撥出・2 分鐘"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "galleries": {
+      "photos": [
+        {
+          "id": "ph1",
+          "when": "週五 22:10",
+          "caption": "照片說明一",
+          "image": {
+            "tone": 0,
+            "description": "圖片佔位：照片一的文字描述"
+          }
+        },
+        {
+          "id": "ph2",
+          "when": "週五 22:12",
+          "caption": "照片說明二",
+          "image": {
+            "tone": 1,
+            "description": "圖片佔位：照片二的文字描述"
+          }
+        },
+        {
+          "id": "ph3",
+          "when": "週五 22:30",
+          "image": {
+            "tone": 2,
+            "description": "圖片佔位：螢幕截圖一"
+          }
+        },
+        {
+          "id": "ph4",
+          "when": "週五 22:31",
+          "image": {
+            "tone": 3,
+            "description": "圖片佔位：螢幕截圖二"
+          }
+        },
+        {
+          "id": "ph5",
+          "when": "週五 22:40",
+          "caption": "照片說明五",
+          "image": {
+            "tone": 4,
+            "description": "圖片佔位：並排比對的截圖"
+          }
+        },
+        {
+          "id": "ph6",
+          "when": "週五 23:02",
+          "image": {
+            "tone": 5,
+            "description": "圖片佔位：文件的照片"
+          }
+        },
+        {
+          "id": "ph7",
+          "when": "上個月",
+          "image": {
+            "tone": 1,
+            "description": "圖片佔位：較早的照片"
+          }
+        }
+      ],
+      "moments": [
+        {
+          "id": "m1",
+          "when": "週六 13:20",
+          "caption": "動態說明一",
+          "image": {
+            "tone": 3,
+            "description": "圖片佔位：動態一"
+          }
+        },
+        {
+          "id": "m2",
+          "when": "週六 15:45",
+          "caption": "動態說明二",
+          "image": {
+            "tone": 5,
+            "description": "圖片佔位：動態二"
+          }
+        },
+        {
+          "id": "m3",
+          "when": "週六 22:30",
+          "caption": "動態說明三",
+          "image": {
+            "tone": 0,
+            "description": "圖片佔位：動態三"
+          }
+        }
+      ]
+    }
+  },
+  "introTitle": "SURU",
+  "suruDemo": {
+    "title": "樣式示意",
+    "sections": {
+      "cards": "測試牌",
+      "players": "對象",
+      "form": "挑戰書"
+    },
+    "cards": [
+      {
+        "no": 3,
+        "title": "牌面標題甲",
+        "note": "紀錄 × 說法"
+      },
+      {
+        "no": 7,
+        "title": "牌面標題乙比較長一點",
+        "note": "紀錄 × 說法"
+      },
+      {
+        "no": 12,
+        "title": "牌面標題丙"
+      }
+    ],
+    "players": [
+      "聯絡人甲",
+      "聯絡人乙",
+      "聯絡人丙",
+      "聯絡人丁"
+    ],
+    "form": [
+      "欄位一",
+      "欄位二",
+      "欄位三",
+      "欄位四"
+    ],
+    "submit": "封緘送出",
+    "close": "關閉示意頁"
+  }
+}
