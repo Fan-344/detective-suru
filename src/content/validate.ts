@@ -464,6 +464,15 @@ export function validateCase(raw: RawCase): Issue[] {
       if (!isStrArr(challenge.suspects)) sayC('suspects 應該是人物 id 的陣列');
       else if (isStr(challenge.culprit) && !challenge.suspects.includes(challenge.culprit)) sayC('culprit 不在 suspects 裡，玩家永遠選不到正確答案');
       if (!isStrArr(challenge.recipients)) sayC('recipients 應該是人物 id 的陣列');
+      if (challenge.sequence !== undefined) {
+        const fieldIds = new Set(Array.isArray(challenge.fields) ? challenge.fields.map((f) => (isObj(f) ? f.id : undefined)) : []);
+        if (!isStrArr(challenge.sequence)) sayC('sequence 應該是文字陣列');
+        else {
+          for (const step of challenge.sequence) if (step !== 'who' && !fieldIds.has(step)) sayC(`sequence 裡的「${step}」不是 "who"，也不是任何一欄的 id`);
+          if (!challenge.sequence.includes('who')) sayC('sequence 裡要有 "who"（指認是誰的那一題）');
+          for (const id of fieldIds) if (isStr(id) && !challenge.sequence.includes(id)) sayC(`sequence 漏了「${id}」這一欄`);
+        }
+      }
       if (!Array.isArray(challenge.fields) || challenge.fields.length === 0) sayC('fields 至少要有一欄');
       else
         challenge.fields.forEach((field, i) => {

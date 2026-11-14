@@ -94,10 +94,10 @@
       "item": "say_py_snack",
       "prompt": "這張照片，哪裡讓你在意？",
       "options": [
-        { "id": "food", "text": "桌上那盒滷味" },
+        { "id": "food", "text": "那袋鹹酥雞" },
         { "id": "drinks", "text": "兩杯手搖飲" },
         { "id": "hand", "text": "伸進畫面的手" },
-        { "id": "room", "text": "休息室的桌子" }
+        { "id": "pen", "text": "藍色原子筆" }
       ],
       "answer": ["hand", "drinks"],
       "miss": "這個東西，會讓你想問品妤什麼？"

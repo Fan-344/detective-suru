@@ -17,7 +17,7 @@
       "send": 2,
       "locate": 4,
       "test": 2,
-      "challengeRetry": 4,
+      "challengeRetry": 2,
       "spotMiss": 1,
       "openIdleApp": 0.2
     },

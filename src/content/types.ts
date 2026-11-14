@@ -457,7 +457,15 @@ export interface EndingsFile {
   challenge: {
     /** 進入挑戰書時先顯示的說明，講清楚兩種錯法的後果 */
     intro?: string[];
-    /** 第一欄「是誰」的題目 */
+    /**
+     * 提問的順序，照推理的進度一題一題問，答對才問下一題。
+     * 內容是 fields 的 id，加上 "who"（指認是誰的那一題）。
+     * 每一題用一筆紀錄回答；答錯扣 meta.battery.cost.challengeRetry 並顯示那一題的 hint，可以再答。
+     * "who" 指錯就直接進指錯人的結局。玩家可以中途離開，之後從同一題繼續。
+     * 沒寫 sequence 時，照舊是先選人、再一次填完全部欄位。
+     */
+    sequence?: string[];
+    /** 「是誰」那一題的題目 */
     whoPrompt: string;
     /** 可以指認的人 */
     suspects: CharacterId[];
