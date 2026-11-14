@@ -30,26 +30,16 @@ export interface Engine {
   holds(state: GameState, condition: Condition | undefined): boolean;
 }
 
-/**
- * 疑點成立前多的一層：助理只說「這一筆讓我在意」，玩家要指出是這一筆的哪個地方有問題。
- * 【待文本確認】資料型別還沒有這個欄位（建議放在 Card.spot）；加上後改成直接讀。
- */
-export interface Spot {
-  /** 讓助理在意的那一筆 */
-  item: ItemId;
-  /** 助理問的那句話 */
-  prompt?: string;
-  /** 可以指的地方 */
-  options: { id: string; text: string }[];
-  /** 哪一個才是有問題的地方 */
-  answer: string;
-  /** 指錯時助理說的話 */
-  miss?: string;
-}
+/** 疑點成立前多的一層（見 Card.spot）。沒寫或沒有選項就當作沒有這一層。 */
+export type Spot = NonNullable<Card['spot']>;
 
 export function spotOf(card: Card): Spot | null {
-  const spot = (card as { spot?: Spot }).spot;
-  return spot && Array.isArray(spot.options) && spot.options.length > 0 ? spot : null;
+  return card.spot && card.spot.options.length > 0 ? card.spot : null;
+}
+
+/** 這個選項是不是正確答案。答案可以不只一個，指到任何一個都算對。 */
+export function isRightSpot(spot: Spot, option: string): boolean {
+  return Array.isArray(spot.answer) ? spot.answer.includes(option) : spot.answer === option;
 }
 
 export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES): Engine {
@@ -68,8 +58,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   /** 進推理備忘錄的 item（跟案情無關的生活內容不算） */
   const isClue = (id: ItemId) => items.has(id) && !items.get(id)!.flavor;
 
-  /** 指錯「哪裡有問題」時扣的電。【待文本確認】等 meta.battery.cost 加上 spotMiss 後改成直接讀。 */
-  const spotMissCost = (cost as { spotMiss?: number }).spotMiss ?? 0;
+  /** 指錯「哪裡有問題」時扣的電 */
+  const spotMissCost = cost.spotMiss ?? 0;
 
   const dmThread = (target: CharacterId): ThreadId | null =>
     content.threads.find((t) => t.members.length === 1 && t.members[0] === target)?.id ?? null;
@@ -449,7 +439,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const spot = card ? spotOf(card) : null;
         if (!concern || !card || !spot) return invalid('這不是現在在意的地方');
         if (!spot.options.some((o) => o.id === action.option) || concern.tried.includes(action.option)) return invalid('不能指這一項');
-        const right = action.option === spot.answer;
+        const right = isRightSpot(spot, action.option);
         out.push({ kind: 'spot', card: card.id, option: action.option, right });
         if (right) {
           s.concerns = s.concerns.filter((x) => x !== concern);

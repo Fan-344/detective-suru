@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadCase } from '../content';
-import { createEngine, memo, reachedConclusions, voice, type Action, type GameState, type Outcome } from './index';
+import { createEngine, isRightSpot, memo, reachedConclusions, spotOf, voice, type Action, type Engine, type GameState, type Outcome } from './index';
 
 const content = loadCase('case01');
 const engine = createEngine(content);
@@ -20,6 +20,16 @@ function run(state: GameState, actions: Action[]): { state: GameState; outcomes:
 }
 
 const afterCover = () => run(engine.start(), [{ type: 'sendCover' }]).state;
+
+/** 把目前「在意的地方」都指對（有的話），讓疑點成立。測的不是這一層的測試用它跳過這一步。 */
+function spotAll(e: Engine, state: GameState): GameState {
+  for (const concern of e.menu(state).concerns) {
+    const spot = spotOf(e.content.cards.find((c) => c.id === concern.card)!)!;
+    const right = spot.options.find((o) => isRightSpot(spot, o.id))!;
+    state = e.step(state, { type: 'spot', card: concern.card, option: right.id }).state;
+  }
+  return state;
+}
 
 describe('engine', () => {
   it('src/engine 不引用任何畫面相關的東西', () => {
@@ -189,7 +199,7 @@ describe('engine', () => {
   });
 
   it('紙袋牌引出登入視窗；可以按按鈕、關掉，或放著去做別的事（等於不理它）', () => {
-    let s = run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state;
+    let s = spotAll(engine, run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state);
     expect(s.cards).toContain('card_bag');
     s = run(s, [{ type: 'test', card: 'card_bag', target: 'zonghan' }]).state;
     expect(s.prompt).toBe('sys_login_prompt');
@@ -211,10 +221,8 @@ describe('engine', () => {
     const login = content.events.find((e) => e.id === 'sys_login_prompt');
     const wall = login?.kind === 'system' ? login.options?.find((o) => o.hints?.length) : undefined;
     if (!wall?.hints) throw new Error('登入視窗沒有軟牆按鈕');
-    let s = run(afterCover(), [
-      { type: 'openApp', app: 'receipts' },
-      { type: 'test', card: 'card_bag', target: 'zonghan' },
-    ]).state;
+    let s = spotAll(engine, run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state);
+    s = run(s, [{ type: 'test', card: 'card_bag', target: 'zonghan' }]).state;
     for (let i = 0; i <= wall.hints.length; i++) {
       const r = engine.step(s, { type: 'answerPrompt', option: wall.id });
       expect(r.outcomes).toEqual([{ kind: 'promptHint', event: 'sys_login_prompt', text: wall.hints[i % wall.hints.length] }]);
@@ -295,21 +303,24 @@ describe('engine', () => {
     expect(s.unopened).toContain(photo.item);
     expect(s.cards).not.toContain(card.id);
     expect(strict.menu(s).images).toContain(photo.item);
+    expect(strict.menu(s).concerns.some((c) => c.card === card.id)).toBe(false);
     s = strict.step(s, { type: 'viewImage', item: photo.item }).state;
     expect(s.seen).toContain(photo.item);
     expect(s.unopened).not.toContain(photo.item);
-    expect(s.cards).toContain(card.id);
+    // 點開之後才輪到它：有「哪裡有問題」這一層就先成為在意的地方，沒有就直接是疑點
+    expect(spotAll(strict, s).cards).toContain(card.id);
   });
 
   it('助理自己記下的疑點只給一個未讀記號，不重複，打開助理 App 就清掉；比對出來的不算', () => {
     const first = engine.step(engine.start(), { type: 'sendCover' });
-    // 開局讀群組就會記下一個疑點
+    // 開局讀群組，助理就會記下一筆（疑點或在意的地方）
+    const noted = (s: GameState) => s.cards.length + s.concerns.length;
     expect(first.outcomes.filter((o) => o.kind === 'assistantUnread')).toHaveLength(1);
-    expect(first.outcomes).toContainEqual(expect.objectContaining({ kind: 'cards', via: 'noted' }));
+    expect(noted(first.state)).toBeGreaterThan(0);
     expect(first.state.assistantUnread).toBe(true);
     // 還沒打開之前，再記下新的也不重複通知
     const more = engine.step(first.state, { type: 'openApp', app: 'receipts' });
-    expect(more.outcomes.some((o) => o.kind === 'cards')).toBe(true);
+    expect(noted(more.state)).toBeGreaterThan(noted(first.state));
     expect(more.outcomes.some((o) => o.kind === 'assistantUnread')).toBe(false);
     // 比對出來的直接告訴玩家，不動未讀記號
     const found = engine.step(more.state, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' });
@@ -323,8 +334,9 @@ describe('engine', () => {
   it('在意的地方：條件成立時不直接給疑點，要指出哪裡有問題；指錯扣電、不能重複指，指對才成立', () => {
     // 用副本自己寫一筆，不依賴資料檔裡怎麼寫
     const copy = structuredClone(content);
+    for (const c of copy.cards) delete c.spot;
     const card = copy.cards.find((c) => c.id === 'card_bag')!;
-    (card as { spot?: unknown }).spot = {
+    card.spot = {
       item: 'rcp_2016',
       prompt: '問句',
       options: [
@@ -334,7 +346,7 @@ describe('engine', () => {
       ],
       answer: 'b',
     };
-    (copy.meta.battery.cost as { spotMiss?: number }).spotMiss = 1;
+    copy.meta.battery.cost.spotMiss = 1;
     const e2 = createEngine(copy);
     let s = e2.step(e2.start(), { type: 'sendCover' }).state;
     s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
@@ -353,6 +365,25 @@ describe('engine', () => {
     expect(hit.state.concerns).toEqual([]);
     expect(hit.state.battery).toBe(miss.state.battery);
     expect(hit.outcomes).toContainEqual({ kind: 'cards', cards: ['card_bag'], via: 'found' });
+  });
+
+  it('答案不只一個時，指到任何一個都算對', () => {
+    const copy = structuredClone(content);
+    for (const c of copy.cards) delete c.spot;
+    copy.cards.find((c) => c.id === 'card_bag')!.spot = {
+      item: 'rcp_2016',
+      options: [
+        { id: 'a', text: '甲' },
+        { id: 'b', text: '乙' },
+        { id: 'c', text: '丙' },
+      ],
+      answer: ['a', 'c'],
+    };
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
+    expect(e2.step(s, { type: 'spot', card: 'card_bag', option: 'c' }).state.cards).toContain('card_bag');
+    expect(e2.step(s, { type: 'spot', card: 'card_bag', option: 'b' }).state.cards).not.toContain('card_bag');
   });
 
   it('備忘錄分兩欄、時間軸照故事時間排；心聲只在結論還沒到達時出現', () => {
