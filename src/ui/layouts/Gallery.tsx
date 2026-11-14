@@ -31,7 +31,7 @@ export function GalleryViewer({ items, currentId, onGo }: ViewerProps) {
   const next = items[index + 1];
   return (
     <div className="viewer">
-      <ImageBlock image={item.image} className="viewer__img" />
+      <ImageBlock image={item.image} className="viewer__img" full />
       <div className="viewer__info">
         <div className="viewer__when">{item.when}</div>
         {item.caption && <div className="viewer__caption">{item.caption}</div>}

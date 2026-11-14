@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { S } from '../strings';
-import type { SuruData } from '../types';
+import type { AccuseAnswer, SuruData } from '../types';
+import { Accuse } from './Accuse';
 import { SuruCard, SuruHeader, SuruMark } from './Suru';
 
 type Tab = 'voice' | 'timeline' | 'records' | 'statements' | 'cards';
@@ -17,6 +18,7 @@ interface Props {
   title: string;
   data: SuruData;
   onClose(): void;
+  onAccuse(answer: AccuseAnswer): void;
 }
 
 /**
@@ -24,11 +26,27 @@ interface Props {
  * 跟以晴手機裡的備忘錄 App 是兩回事。
  * 這裡只有長相和分頁，比對、出牌等規則在步驟三才接。
  */
-export function SuruApp({ title, data, onClose }: Props) {
+export function SuruApp({ title, data, onClose, onAccuse }: Props) {
+  const [accusing, setAccusing] = useState(false);
   const [tab, setTab] = useState<Tab>('voice');
   const [card, setCard] = useState<number | null>(null);
   const latest = data.voice[0];
   const earlier = data.voice.slice(1);
+
+  if (accusing) {
+    return (
+      <Accuse
+        title={title}
+        data={data.accuse}
+        records={data.records}
+        onBack={() => setAccusing(false)}
+        onSubmit={(answer) => {
+          setAccusing(false);
+          onAccuse(answer);
+        }}
+      />
+    );
+  }
 
   return (
     <section className="suru suru-app" aria-label={title}>
@@ -102,6 +120,7 @@ export function SuruApp({ title, data, onClose }: Props) {
           </div>
         )}
       </div>
+      <button className="suru-button suru-app__accuse" onClick={() => setAccusing(true)}>{S.accuseEntry}</button>
     </section>
   );
 }

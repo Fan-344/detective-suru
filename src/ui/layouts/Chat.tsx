@@ -3,15 +3,15 @@ import { groupByDay, lastLine, unreadLabel } from '../format';
 import { S } from '../strings';
 import type { ChatThread, ImagePlaceholder } from '../types';
 
-export function ImageBlock({ image, className = '' }: { image: ImagePlaceholder; className?: string }) {
+export function ImageBlock({ image, className = '', full = false }: { image: ImagePlaceholder; className?: string; full?: boolean }) {
   return (
     <div className={`img img--tone${image.tone % 6} ${className}`} role="img" aria-label={image.description}>
-      <span className="img__text">{image.description}</span>
+      <span className="img__text">{full ? image.description : (image.label ?? image.description)}</span>
     </div>
   );
 }
 
-function Avatar({ name }: { name: string }) {
+export function Avatar({ name }: { name: string }) {
   // 還沒有頭像圖，先用名字最後一個字
   return <span className="avatar" aria-hidden="true">{name.slice(-1)}</span>;
 }

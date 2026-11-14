@@ -7,6 +7,7 @@ export type LayoutKind =
   | 'list'
   | 'gallery'
   | 'placeholder'
+  | 'contacts'
   | 'suru'
   // 以下是跟案情無關、但真的能用的背景 App
   | 'calculator'
@@ -34,7 +35,8 @@ export type IconId =
   | 'calendar'
   | 'clock'
   | 'calculator'
-  | 'settings';
+  | 'settings'
+  | 'contacts';
 
 export interface AppDef {
   id: string;
@@ -60,7 +62,10 @@ export interface FolderDef {
 /** 還沒有正式圖片時的佔位：一個色塊加一段文字描述 */
 export interface ImagePlaceholder {
   tone: number;
+  /** 點開大圖後看到的完整描述 */
   description: string;
+  /** 很短的標示，用在縮圖和聊天裡的佔位色塊 */
+  label?: string;
 }
 
 export interface ChatMember {
@@ -156,12 +161,34 @@ export interface SuruMemoItem {
 }
 
 /** Suru 助理裡的內容：心聲（最新的排最前面）和推理備忘錄 */
+/** 人物背景：幾行前言，加上每個人的一段簡介 */
+export interface CastData {
+  intro: string[];
+  people: { name: string; brief: string }[];
+}
+
+/** 指認兇手的表單：說明、可以指認的人、要填的欄位、可以交給誰 */
+export interface AccuseData {
+  intro: string[];
+  suspects: string[];
+  fields: string[];
+  recipients: string[];
+}
+
+export interface AccuseAnswer {
+  who: string;
+  /** 每一欄選的紀錄 id，順序同 fields */
+  records: string[];
+  giveTo: string;
+}
+
 export interface SuruData {
   voice: SuruVoiceLine[];
   timeline: SuruTimelineRow[];
   records: SuruMemoItem[];
   statements: SuruMemoItem[];
   cards: { no: number; title: string; note?: string }[];
+  accuse: AccuseData;
 }
 
 export interface MusicTrack {
@@ -207,6 +234,8 @@ export interface PhoneData {
   lists: Record<string, ListGroup[]>;
   galleries: Record<string, GalleryItem[]>;
   suru: SuruData;
+  /** 聯絡人 App：背景前言和每個人的簡介 */
+  contacts: CastData;
   music: MusicTrack[];
   calendar: CalendarData;
   clock: ClockData;
@@ -221,6 +250,7 @@ export interface PhoneActions {
   onOpenSuru(): void;
   onOpenApp(appId: string): void;
   onDismissNotice(): void;
+  onAccuse(answer: AccuseAnswer): void;
 }
 
 export interface Nav {

@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { Calculator, Calendar, Camera, Clock, Music, Settings } from '../apps/Extras';
 import { SuruBanner } from '../suru/Suru';
 import { ChatList, ChatRoom } from '../layouts/Chat';
+import { ContactCard, ContactList } from '../layouts/Contacts';
 import { GalleryGrid, GalleryViewer } from '../layouts/Gallery';
 import { DetailView, ListView } from '../layouts/ListDetail';
 import { SuruApp } from '../suru/SuruApp';
@@ -123,6 +124,9 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     ) : (
       <GalleryGrid items={items} onOpen={openDetail} />
     );
+  } else if (app?.layout === 'contacts') {
+    const person = data.contacts.people.find((p) => p.name === nav.detail);
+    body = person ? <ContactCard person={person} /> : <ContactList cast={data.contacts} onOpen={openDetail} />;
   } else if (app?.layout === 'calculator') {
     body = <Calculator />;
   } else if (app?.layout === 'clock') {
@@ -152,7 +156,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
       <div className="phone__stage">
         {app?.layout === 'suru' ? (
           <div key="suru" className="suruwrap">
-            <SuruApp title={app.name} data={data.suru} onClose={back} />
+            <SuruApp title={app.name} data={data.suru} onClose={back} onAccuse={actions.onAccuse} />
           </div>
         ) : app ? (
           <section key={viewKey} className={`appwin appwin--${motion}`} aria-label={title}>

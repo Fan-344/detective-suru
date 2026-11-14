@@ -117,6 +117,13 @@ const ART: Partial<Record<IconId, ReactNode>> = {
       <circle cx="30" cy="30" r="3" fill="#f0b54a" />
     </>
   ),
+  // 聯絡人：一個人的剪影
+  contacts: (
+    <>
+      <circle cx="30" cy="23.500" r="8.500" fill="#fff" />
+      <path d="M13 49c1.500-9.500 8.500-14.500 17-14.500S45.500 39.500 47 49z" fill="#fff" />
+    </>
+  ),
   // 工具：四格
   tools: (
     <g fill="#fff" fillOpacity="0.9">

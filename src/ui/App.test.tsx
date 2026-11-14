@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import fixture from './mock/fixture.json';
@@ -90,7 +90,7 @@ describe('外觀框架', () => {
     expect(screen.getByText(fixture.intro[0].lines[0])).toBeTruthy();
   });
 
-  it('Suru 樣式示意頁看得到測試牌、對象和挑戰書', () => {
+  it('Suru 樣式示意頁看得到疑點、對象和開始推理的表單', () => {
     render(<App />);
     passIntro();
     fireEvent.click(screen.getByRole('button', { name: 'DEV' }));
@@ -189,5 +189,43 @@ describe('外觀框架', () => {
     expect(screen.getByText(fixture.phone.clock.alarms[0].label)).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: S.clockWatch }));
     expect(screen.getByTestId('watch-time').textContent).toBe('00:00.00');
+  });
+
+  it('聯絡人 App：上方是背景前言，每個人一筆，點開看簡介', () => {
+    render(<App />);
+    passIntro();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /聯絡人$/ }));
+    const cast = fixture.phone.contacts;
+    expect(screen.getByText(cast.intro[0])).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(cast.people[1].name) }));
+    expect(screen.getByText(cast.people[1].brief)).toBeTruthy();
+    back();
+    expect(screen.getByText(cast.intro[2])).toBeTruthy();
+  });
+
+  it('指認兇手：從 Suru 助理進入，填完才能送出', () => {
+    render(<App />);
+    passIntro();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /Suru/ }));
+    fireEvent.click(screen.getByRole('button', { name: S.accuseEntry }));
+    const accuse = fixture.phone.suru.accuse;
+    const records = fixture.phone.suru.records;
+    expect(screen.getByText(accuse.intro[0])).toBeTruthy();
+    const submit = screen.getByRole('button', { name: S.accuseSubmit }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: S.accuseWho })).getByRole('radio', { name: accuse.suspects[0] }));
+    for (const field of accuse.fields) {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(field) }));
+      const options = screen.getAllByRole('button', { name: new RegExp(records[0].title) });
+      fireEvent.click(options[options.length - 1]);
+    }
+    expect(submit.disabled).toBe(true);
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: S.accuseGive })).getByRole('radio', { name: accuse.recipients[1] }));
+    expect(submit.disabled).toBe(false);
+    fireEvent.click(submit);
+    expect(screen.getByRole('status').textContent).toBe(fixture.accuseResult);
   });
 });

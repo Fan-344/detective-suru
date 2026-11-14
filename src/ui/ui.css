@@ -332,6 +332,7 @@ ul, ol { list-style: none; }
 .app-icon--photos { background: linear-gradient(180deg, #ffffff, #f1eef0); }
 .app-icon--suru { background: linear-gradient(180deg, #17161a, #060608); }
 .app-icon--tools { background: linear-gradient(180deg, #a7adbb, #6d7384); }
+.app-icon--contacts { background: linear-gradient(180deg, #b9bcc6, #8a8e9b); }
 
 .folder-icon {
   width: 60px;
@@ -440,6 +441,14 @@ ul, ol { list-style: none; }
   align-items: center;
   justify-content: center;
 }
+
+/* 聯絡人 */
+.contacts__intro { margin: 14px 12px 16px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); font-size: 15px; line-height: 1.7; color: #4a4c55; }
+.row__chev { flex: none; color: #b9bbc4; font-size: 22px; }
+.contact { padding: 34px 24px; display: flex; flex-direction: column; align-items: center; -webkit-user-select: text; user-select: text; }
+.contact__avatar .avatar { width: 92px; height: 92px; font-size: 36px; }
+.contact__name { margin-top: 14px; font-size: 26px; font-weight: 700; }
+.contact__brief { margin-top: 22px; width: 100%; padding: 16px 18px; border-radius: var(--radius); background: var(--surface); font-size: 16px; line-height: 1.8; }
 
 /* ───────── 聊天室 ───────── */
 
@@ -786,7 +795,25 @@ ul, ol { list-style: none; }
 .suru-items__meta { display: flex; justify-content: space-between; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--s-amber); }
 .suru-items__title { font-size: 17px; }
 .suru-items__body { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 14px; color: #b8b2a4; }
-.suru-hand--wrap { flex-wrap: wrap; overflow: visible; }
+.suru-hand--wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; overflow: visible; }
+.suru-hand--wrap .suru-card { width: 100%; aspect-ratio: 5 / 6; }
+.suru-hand--wrap .suru-card__title { font-size: 16px; }
+
+/* 指認兇手 */
+.suru-app__accuse { margin: 10px 24px 14px; height: 46px; }
+.accuse__intro { padding: 2px 0 24px; font-size: 17px; line-height: 1.9; color: #cfc9bb; }
+.accuse__fields { margin-bottom: 28px; }
+.accuse__fields > li { display: block; padding: 0; }
+.accuse__field { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 2px; }
+.accuse__chosen { flex: 1; text-align: right; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 14px; color: var(--s-amber); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accuse__picker { margin: 0 0 12px 30px; border-left: 1px solid #5b5446; }
+.accuse__picker button { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 15px; }
+.accuse__picker button small { font-size: 11px; color: var(--s-dim); }
+.accuse__picker button.on span { color: var(--s-amber); }
+.accuse__give { display: flex; gap: 10px; padding-bottom: 26px; }
+.accuse__give button { flex: 1; height: 46px; border: 1px solid var(--s-line); text-align: center; font-size: 16px; color: #cfc9bb; }
+.accuse__give button.on { border-color: var(--s-amber); color: var(--s-amber); }
+.accuse .accuse__submit { margin: 0 0 8px; width: 100%; }
 
 /* ───────── 開場 ───────── */
 

@@ -13,6 +13,7 @@ interface Fixture {
   mockReplyTime: string;
   afterIntro: Nav;
   wander: { after: number; hints: string[] };
+  accuseResult: string;
   intro: IntroSegment[];
   introTitle: string;
   suruDemo: SuruDemo;
@@ -100,6 +101,7 @@ export function usePhoneMock() {
         wander.current.shown += 1;
         setData((d) => ({ ...d, notice: { id: wander.current.shown, text } }));
       },
+      onAccuse: () => setData((d) => ({ ...d, notice: { id: Date.now(), text: fixture.accuseResult } })),
       onDismissNotice: () => setData((d) => ({ ...d, notice: undefined })),
       onOpenSuru: () =>
         setData((d) => ({
