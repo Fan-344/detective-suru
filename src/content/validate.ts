@@ -482,6 +482,7 @@ export function validateCase(raw: RawCase): Issue[] {
   function checkImage(say: (m: string) => void, field: string, value: unknown) {
     if (value === undefined) return;
     if (!isObj(value) || !isStr(value.description)) say(`${field} 一定要有 description（用文字描述圖裡看得到什麼）`);
+    else if (!isStr(value.label)) say(`${field} 缺少 label（很短的標示，例如「宵夜」，讓玩家知道這裡有圖可以點開）`);
   }
 }
 

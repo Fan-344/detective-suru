@@ -28,7 +28,7 @@ const kindName = { record: '紀錄', statement: '說法' };
 
 const out = [];
 const p = (line = '') => out.push(line);
-const image = (img) => (img ? `〔圖：${img.description}〕` : '');
+const image = (img) => (img ? `［照片：${img.label ?? ''}］〔點開看到：${img.description}〕` : '');
 
 p(`# ${caseId} 文本預覽`);
 p();

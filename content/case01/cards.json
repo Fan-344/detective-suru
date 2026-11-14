@@ -1,12 +1,12 @@
 [
   {
     "id": "card_latte",
-    "title": "那杯拿鐵",
+    "title": "咖啡店的另一杯拿鐵是誰的",
     "say": "欸 週六咖啡店那杯拿鐵是誰的"
   },
   {
     "id": "card_deposit",
-    "title": "押金確認單",
+    "title": "押金到底有沒有退",
     "say": "鞋櫃上那張確認單 上面寫全額返還",
     "targets": [
       "zonghan"
@@ -14,17 +14,17 @@
   },
   {
     "id": "card_market",
-    "title": "夜市沒下雨",
+    "title": "夜市那則動態和台中的天氣",
     "say": "欸 你限動的夜市怎麼沒下雨 那天台中不是下很大"
   },
   {
     "id": "card_ipad",
-    "title": "iPad 的位置",
+    "title": "她的 iPad 為什麼在泰順街",
     "say": "我的舊 iPad 怎麼會在泰順街那邊"
   },
   {
     "id": "card_bag",
-    "title": "牛皮紙袋",
+    "title": "她在影印店買的牛皮紙袋",
     "say": "翰哥 你那天走的時候有看到我的牛皮紙袋嗎",
     "thread": "group",
     "targets": [
@@ -38,7 +38,7 @@
   },
   {
     "id": "card_wen",
-    "title": "「雯」",
+    "title": "阿澤在群組提到靖雯的那句話",
     "say": "欸 阿澤怎麼知道靖幾點睡",
     "sayTo": {
       "aze": "欸 你怎麼知道靖幾點睡"
@@ -55,7 +55,7 @@
   },
   {
     "id": "card_watch",
-    "title": "照片裡的手",
+    "title": "品妤傳來的宵夜照片",
     "say": "欸 宵夜照片角落那隻手是誰",
     "targets": [
       "pinyu",
@@ -69,7 +69,7 @@
   },
   {
     "id": "card_leave",
-    "title": "幾點走的",
+    "title": "宗翰週六晚上幾點離開舊家",
     "say": "翰哥 你週六幾點走的",
     "targets": [
       "zonghan"

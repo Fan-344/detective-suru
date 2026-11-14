@@ -31,7 +31,12 @@ export type When = string;
 export interface ImageRef {
   /** content/<case>/assets/ 底下的檔名 */
   file?: string;
-  /** 這張圖裡看得到什麼。只描述畫面，不替玩家解讀。 */
+  /**
+   * 很短的標示，例如「宵夜」「班表」。還沒點開時顯示成「［照片：宵夜］」，讓玩家知道這裡有圖可以看。
+   * 只說這是什麼的照片，不提圖裡的細節。
+   */
+  label?: string;
+  /** 這張圖裡看得到什麼，點開才顯示。只描述畫面，不替玩家解讀。 */
   description: string;
 }
 
