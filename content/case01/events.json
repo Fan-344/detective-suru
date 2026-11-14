@@ -449,6 +449,15 @@
             "jingwen_knows_phone_active": true
           }
         }
+      },
+      {
+        "id": "allow",
+        "label": "允許",
+        "hints": [
+          "登入的人不是她。放進來之後，雲端裡的東西還會在嗎？",
+          "她把密碼給過誰？那個人現在想拿走什麼？",
+          "這一下按下去，是在替誰開門？"
+        ]
       }
     ],
     "onTimeout": {
@@ -600,7 +609,7 @@
     },
     "effects": {
       "ladder": {
-        "jingwen": 2
+        "jingwen": 1
       }
     }
   },

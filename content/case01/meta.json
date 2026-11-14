@@ -20,7 +20,8 @@
       "challengeRetry": 4,
       "openIdleApp": 0.2
     },
-    "ladderTickEvery": 8
+    "ladderTickEvery": 10,
+    "ladderTickEveryIgnored": 7
   },
   "coverStory": "欸 我週六在舊家樓梯滑了一跤 沒大礙 在家躺著 那天的事有點記不清",
   "coverThread": "group",

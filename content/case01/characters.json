@@ -31,7 +31,8 @@
         "id": "login",
         "onEnter": [
           "sys_login_prompt"
-        ]
+        ],
+        "needsContact": "self"
       },
       {
         "level": 5,

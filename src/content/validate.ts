@@ -113,6 +113,7 @@ export function validateCase(raw: RawCase): Issue[] {
     else {
       if (!isNum(battery.start) || battery.start <= 0 || battery.start > 100) sayMeta('battery.start 應該是 1 到 100 的數字');
       if (!isNum(battery.ladderTickEvery) || battery.ladderTickEvery <= 0) sayMeta('battery.ladderTickEvery 應該是正數');
+      if (battery.ladderTickEveryIgnored !== undefined && (!isNum(battery.ladderTickEveryIgnored) || battery.ladderTickEveryIgnored <= 0)) sayMeta('battery.ladderTickEveryIgnored 應該是正數');
       const cost = isObj(battery.cost) ? battery.cost : {};
       for (const k of ['openApp', 'readThread', 'send', 'locate']) {
         if (!isNum(cost[k]) || (cost[k] as number) < 0) sayMeta(`battery.cost.${k} 應該是不小於 0 的數字`);
@@ -216,6 +217,9 @@ export function validateCase(raw: RawCase): Issue[] {
       if (!isObj(step)) return void say(`ladder 第 ${i + 1} 級應該是一個物件`);
       if (step.level !== i + 1) say(`ladder 第 ${i + 1} 級的 level 應該是 ${i + 1}，等級要從 1 連續編號`);
       if (!isStr(step.id)) say(`ladder 第 ${i + 1} 級缺少 id`);
+      if (step.needsContact !== undefined && typeof step.needsContact !== 'boolean' && step.needsContact !== 'self' && step.needsContact !== 'anyone') {
+        say(`ladder 第 ${i + 1} 級的 needsContact 應該是 "self"、"anyone"、true 或 false`);
+      }
       if (!Array.isArray(step.onEnter)) say(`ladder 第 ${i + 1} 級缺少 onEnter（沒有事件就寫空陣列）`);
       else refs(say, `ladder 第 ${i + 1} 級的 onEnter`, step.onEnter, eventIds, '事件');
     });
@@ -348,6 +352,7 @@ export function validateCase(raw: RawCase): Issue[] {
           const sayO = (m: string) => say(`options 第 ${i + 1} 個：${m}`);
           if (!isObj(opt)) return void sayO('應該是一個物件');
           need(opt, sayO, 'id', 'label');
+          if (opt.hints !== undefined && (!isStrArr(opt.hints) || opt.hints.length === 0)) sayO('hints 至少要有一句');
           checkEffects(sayO, 'effects', opt.effects);
         });
       }

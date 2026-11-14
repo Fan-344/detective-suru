@@ -80,7 +80,14 @@ export interface CaseMeta {
       /** 指對了人但證據沒選對、挑戰書被退回時扣的電量 */
       challengeRetry?: number;
     };
+    /** 電量每掉多少，沒有被安撫的人自動升一級 */
     ladderTickEvery: number;
+    /**
+     * 從來沒被玩家理過的人（玩家沒對他送過任何訊息，回覆選項和測試牌都算）改用這個間隔，
+     * 數字比 ladderTickEvery 小，所以升得比較快。玩家一旦對他說過話，就改回 ladderTickEvery。
+     * 沒寫就一律用 ladderTickEvery。
+     */
+    ladderTickEveryIgnored?: number;
   };
   /**
    * 【待確認】這個案子「本週」各天的先後順序，用來排時間軸。
@@ -124,6 +131,13 @@ export interface LadderStep {
   id: string;
   /** 進入這一級時依序觸發的事件 id（見 events.json） */
   onEnter: EventId[];
+  /**
+   * 進這一級之前，玩家必須先傳過訊息，否則停在前一級。
+   * - "self"：要對這個角色本人傳過（回覆他的訊息，或拿牌測試他）
+   * - "anyone"（或 true）：對任何人傳過就算
+   * 開局固定送出的掩護說法不算。自動推進和事件效果造成的上升都受這個限制；條件成立後照常。
+   */
+  needsContact?: boolean | 'self' | 'anyone';
 }
 
 export interface Character {
@@ -338,8 +352,12 @@ export type GameEvent =
       title: string;
       lines: string[];
       reveals?: ItemId[];
-      /** 視窗上的按鈕。不理它（逾時）由 engine 處理，效果寫在 onTimeout。 */
-      options?: { id: string; label: string; effects?: Effects }[];
+      /**
+       * 視窗上的按鈕。有 hints 的是「軟牆」按鈕：按了只跳出一句提醒（輪流用，只提問），
+       * 視窗不關、不耗電、不套用 effects。
+       * 把視窗關掉或放著不管，套用 onTimeout。
+       */
+      options?: { id: string; label: string; effects?: Effects; hints?: string[] }[];
       onTimeout?: Effects;
     }
   | {
