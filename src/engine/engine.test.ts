@@ -323,7 +323,8 @@ describe('engine', () => {
     const s = run(afterCover(), [{ type: 'openApp', app: flavor.app }]).state;
     expect(s.seen).toContain(flavor.id);
     const m = memo(content, s);
-    expect([...m.records, ...m.statements, ...m.timeline].map((i) => i.id)).not.toContain(flavor.id);
+    expect([...m.records, ...m.statements].map((i) => i.id)).not.toContain(flavor.id);
+    expect(m.timeline.map((r) => r.item)).not.toContain(flavor.id);
     expect(engine.menu(s).challenge?.records ?? []).not.toContain(flavor.id);
   });
 
@@ -527,7 +528,12 @@ describe('engine', () => {
     const m = memo(content, s);
     expect(m.records.every((i) => i.kind === 'record')).toBe(true);
     expect(m.statements.map((i) => i.id)).toContain('say_aze_stoodup');
-    expect(m.timeline.map((i) => i.id).indexOf('rcp_1628')).toBeLessThan(m.timeline.map((i) => i.id).indexOf('rcp_2207'));
+    expect(m.timeline.map((r) => r.item).indexOf('rcp_1628')).toBeLessThan(m.timeline.map((r) => r.item).indexOf('rcp_2207'));
+    // 時間軸只放資料裡寫了 timeline 的列，每一列帶自己的時間和文字
+    const rowsWanted = s.seen.flatMap((id) => content.items.find((i) => i.id === id && !i.flavor)?.timeline ?? []);
+    expect(m.timeline).toHaveLength(rowsWanted.length);
+    expect(m.timeline.every((r) => r.when && r.text)).toBe(true);
+    expect(new Set(m.timeline.map((r) => r.id)).size).toBe(m.timeline.length);
     expect(reachedConclusions(content, s)).toContain('time_window');
     const lines = voice(engine, s).map((l) => l.id);
     expect(lines).toContain('v_coma_1');

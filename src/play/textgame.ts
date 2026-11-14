@@ -394,7 +394,7 @@ export class TextGame {
     const m = this.engine.menu(this.state);
     const list: Choice[] = [
       { label: '心聲', run: () => this.showVoice() },
-      { label: '時間軸', run: () => this.showList('時間軸', memo(this.content, this.state).timeline) },
+      { label: '時間軸', run: () => this.showTimeline() },
       { label: '紀錄', run: () => this.showList('紀錄', memo(this.content, this.state).records) },
       { label: '說法', run: () => this.showList('說法', memo(this.content, this.state).statements) },
       { label: '疑點', run: () => this.showCards() },
@@ -449,6 +449,13 @@ export class TextGame {
     this.say('', `── ${title} ──`);
     if (items.length === 0) this.say('（還沒有東西）');
     for (const item of items) this.say(`・${this.label(item)}`);
+  }
+
+  private showTimeline() {
+    const rows = memo(this.content, this.state).timeline;
+    this.say('', '── 時間軸 ──');
+    if (rows.length === 0) this.say('（還沒有東西）');
+    for (const row of rows) this.say('・' + row.when + '　' + row.text);
   }
 
   private showCards() {

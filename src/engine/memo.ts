@@ -1,7 +1,7 @@
 // 從遊戲狀態算出助理 App 要顯示的東西：備忘錄兩欄、時間軸、到達的結論、心聲。
 // 只讀狀態，不改狀態。
 
-import type { CaseContent, Conclusion, Item, VoiceLine } from '../content/types';
+import type { CaseContent, Conclusion, Item, ItemId, VoiceLine, When } from '../content/types';
 import { parseWhen } from '../content/when';
 import type { Engine } from './engine';
 import type { GameState } from './types';
@@ -9,20 +9,30 @@ import type { GameState } from './types';
 export interface Memo {
   records: Item[];
   statements: Item[];
-  /** 有時間的 item，依故事內的時間排序 */
-  timeline: Item[];
+  /** 發生過的事：看過的 item 寫在 timeline 欄位裡的每一列，依故事內的時間排序 */
+  timeline: TimelineRow[];
+}
+
+/** 時間軸上的一列。一筆 item 可以有好幾列 */
+export interface TimelineRow {
+  /** 這一列自己的 id（item id 加第幾列），畫面拿來當 key */
+  id: string;
+  /** 這一列出自哪一筆 item */
+  item: ItemId;
+  when: When;
+  text: string;
 }
 
 export function memo(content: CaseContent, state: GameState): Memo {
   const byId = new Map(content.items.map((i) => [i.id, i]));
   // 跟案情無關的生活內容看得到，但不進備忘錄
   const seen = state.seen.flatMap((id) => byId.get(id) ?? []).filter((i) => !i.flavor);
-  const sortKey = (i: Item) => (i.when ? (parseWhen(i.when, content.meta.dayOrder)?.sort ?? null) : null);
+  // 每一列用自己的時間排，不看 item 本身的 when；時間讀不懂的排最後
   const timeline = seen
-    .map((item) => ({ item, key: sortKey(item) }))
-    .filter((x): x is { item: Item; key: number } => x.key !== null)
+    .flatMap((item) => (item.timeline ?? []).map((row, i): TimelineRow => ({ id: item.id + '#' + (i + 1), item: item.id, when: row.when, text: row.text })))
+    .map((row) => ({ row, key: parseWhen(row.when, content.meta.dayOrder)?.sort ?? Infinity }))
     .sort((a, b) => a.key - b.key)
-    .map((x) => x.item);
+    .map((x) => x.row);
   return {
     records: seen.filter((i) => i.kind === 'record'),
     statements: seen.filter((i) => i.kind === 'statement'),
