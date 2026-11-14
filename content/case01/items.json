@@ -55,7 +55,7 @@
     "kind": "record",
     "when": "週六",
     "title": "週六",
-    "body": "16:30 送修手機\n18:30 阿澤\n印東西\n舊家整理箱子\n宗翰 押金"
+    "body": "16:30 送修手機\n18:30 阿澤\n印東西\n舊家 拿 iPad\n宗翰 押金"
   },
   {
     "id": "note_questions",
@@ -125,11 +125,11 @@
     "kind": "record",
     "when": "週六 20:16",
     "title": "公館快印（公館）",
-    "body": "A3 彩色輸出 ×6、牛皮紙袋 ×1",
+    "body": "A3 彩色輸出 ×6",
     "fields": [
       {
         "label": "金額",
-        "value": "195 元"
+        "value": "180 元"
       },
       {
         "label": "載具",
@@ -544,8 +544,18 @@
     "app": "finder",
     "kind": "record",
     "title": "以晴的 iPad",
-    "body": "台北市大安區，泰順街一帶。幾分鐘前更新。",
-    "needsLocate": true
+    "body": "目前位置：台北市大安區，泰順街一帶。",
+    "needsLocate": true,
+    "fields": [
+      {
+        "label": "週五 至 週六 22:41",
+        "value": "新北市永和區"
+      },
+      {
+        "label": "週六 23:38 起",
+        "value": "台北市大安區，泰順街一帶"
+      }
+    ]
   },
   {
     "id": "say_aze_stoodup",
@@ -653,15 +663,6 @@
     "kind": "statement",
     "speaker": "zonghan",
     "body": "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子，手也好好的。",
-    "hidden": true
-  },
-  {
-    "id": "say_zh_bag",
-    "app": "chat",
-    "thread": "group",
-    "kind": "statement",
-    "speaker": "zonghan",
-    "body": "有，我走的時候紙袋還在鞋櫃上，我有印象。",
     "hidden": true
   },
   {
@@ -837,5 +838,14 @@
     "title": "夢",
     "body": "夢到五個人還住在一起\n醒來有點難過",
     "flavor": true
+  },
+  {
+    "id": "say_zh_ipad",
+    "app": "chat",
+    "thread": "group",
+    "kind": "statement",
+    "speaker": "zonghan",
+    "body": "在啊，我走的時候它還在紙箱上，我有印象。",
+    "hidden": true
   }
 ]

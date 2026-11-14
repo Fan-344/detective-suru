@@ -165,11 +165,11 @@
     }
   },
   {
-    "card": "card_bag",
+    "card": "card_oldipad",
     "target": "zonghan",
     "tone": "engaged",
     "reply": [
-      "以晴，有，我走的時候紙袋還在鞋櫃上，我有印象。妳找不到嗎？"
+      "以晴，在啊，我走的時候它還在紙箱上，我有印象。怎麼了，找不到嗎？"
     ],
     "others": [
       {
@@ -182,7 +182,7 @@
       }
     ],
     "reveals": [
-      "say_zh_bag"
+      "say_zh_ipad"
     ],
     "effects": {
       "ladder": {

@@ -23,29 +23,17 @@
     "say": "我的舊 iPad 怎麼會在泰順街那邊"
   },
   {
-    "id": "card_bag",
-    "title": "她在影印店買的牛皮紙袋",
-    "say": "翰哥 你那天走的時候有看到我的牛皮紙袋嗎",
+    "id": "card_oldipad",
+    "title": "那台舊 iPad 週六晚上還在不在舊家",
+    "say": "翰哥 你那天走的時候 我那台舊 iPad 還在箱子上嗎",
     "thread": "group",
     "targets": [
       "zonghan"
     ],
     "availableWhen": {
       "seen": [
-        "rcp_2016"
+        "fd_ipad"
       ]
-    },
-    "spot": {
-      "item": "rcp_2016",
-      "prompt": "這張發票，哪裡讓你在意？",
-      "options": [
-        { "id": "print", "text": "A3 彩色輸出 ×6" },
-        { "id": "bag", "text": "牛皮紙袋 ×1" },
-        { "id": "time", "text": "時間 20:16" },
-        { "id": "amount", "text": "金額 195 元" }
-      ],
-      "answer": "bag",
-      "miss": "這一項，跟她後來發生的事有關嗎？"
     }
   },
   {
@@ -68,12 +56,27 @@
       "item": "say_aze_wen",
       "prompt": "這句話，哪裡不對勁？",
       "options": [
-        { "id": "name", "text": "「雯」" },
-        { "id": "day", "text": "「昨天」" },
-        { "id": "hour", "text": "「快三點」" },
-        { "id": "sleep", "text": "「才睡」" }
+        {
+          "id": "name",
+          "text": "「雯」"
+        },
+        {
+          "id": "day",
+          "text": "「昨天」"
+        },
+        {
+          "id": "hour",
+          "text": "「快三點」"
+        },
+        {
+          "id": "sleep",
+          "text": "「才睡」"
+        }
       ],
-      "answer": ["name", "hour"],
+      "answer": [
+        "name",
+        "hour"
+      ],
       "miss": "這幾個字，換成別人來說也一樣嗎？"
     }
   },
@@ -94,12 +97,27 @@
       "item": "say_py_snack",
       "prompt": "這張照片，哪裡讓你在意？",
       "options": [
-        { "id": "food", "text": "那袋鹹酥雞" },
-        { "id": "drinks", "text": "兩杯手搖飲" },
-        { "id": "hand", "text": "伸進畫面的手" },
-        { "id": "pen", "text": "藍色原子筆" }
+        {
+          "id": "food",
+          "text": "那袋鹹酥雞"
+        },
+        {
+          "id": "drinks",
+          "text": "兩杯手搖飲"
+        },
+        {
+          "id": "hand",
+          "text": "伸進畫面的手"
+        },
+        {
+          "id": "pen",
+          "text": "藍色原子筆"
+        }
       ],
-      "answer": ["hand", "drinks"],
+      "answer": [
+        "hand",
+        "drinks"
+      ],
       "miss": "這個東西，會讓你想問品妤什麼？"
     }
   },
@@ -119,10 +137,22 @@
       "item": "say_zh_open",
       "prompt": "這句話，哪裡值得再問他？",
       "options": [
-        { "id": "ok", "text": "「OK的」" },
-        { "id": "work", "text": "「帶看到九點」" },
-        { "id": "direct", "text": "「結束直接過去」" },
-        { "id": "arrive", "text": "「大概九點多到」" }
+        {
+          "id": "ok",
+          "text": "「OK的」"
+        },
+        {
+          "id": "work",
+          "text": "「帶看到九點」"
+        },
+        {
+          "id": "direct",
+          "text": "「結束直接過去」"
+        },
+        {
+          "id": "arrive",
+          "text": "「大概九點多到」"
+        }
       ],
       "answer": "arrive",
       "miss": "這幾個字，有什麼是需要他再說清楚的嗎？"
