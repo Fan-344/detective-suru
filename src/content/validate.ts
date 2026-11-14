@@ -247,6 +247,19 @@ export function validateCase(raw: RawCase): Issue[] {
     refs(say, 'speaker', entry.speaker, speakerIds, '人物');
     refs(say, 'thread', entry.thread, threadIds, '聊天室');
     checkWhen(say, entry.when, false);
+    if (entry.timeline !== undefined) {
+      if (!Array.isArray(entry.timeline) || entry.timeline.length === 0) say('timeline 應該是陣列，至少一列');
+      else if (entry.flavor === true) say('標了 flavor（跟案情無關）的不能進時間軸');
+      else
+        entry.timeline.forEach((row, i) => {
+          if (!isObj(row) || !isStr(row.text) || row.text.trim() === '') say(`timeline 第 ${i + 1} 列缺少 text`);
+          else {
+            checkWhen((m) => say(`timeline 第 ${i + 1} 列：${m}`), row.when, true);
+            if (!isStr(row.label) || row.label.trim() === '') say(`timeline 第 ${i + 1} 列缺少 label（畫面上顯示的大概時段）`);
+            if (row.who !== undefined && !isStr(row.who)) say(`timeline 第 ${i + 1} 列的 who 應該是角色的 id`);
+          }
+        });
+    }
     checkImage(say, 'image', entry.image);
     if (entry.date !== undefined && !(isStr(entry.date) && /^\d{4}-\d{2}-\d{2}$/.test(entry.date))) say('date 的寫法應該是 2026-11-14');
     if (entry.time !== undefined && !(isStr(entry.time) && /^\d{2}:\d{2}$/.test(entry.time))) say('time 的寫法應該是 16:30');
@@ -415,6 +428,18 @@ export function validateCase(raw: RawCase): Issue[] {
       need2('worldClocks', ['city']);
       need2('playlist', ['title', 'artist']);
       need2('posts', ['author', 'text', 'when']);
+      need2('chats', ['id', 'title', 'when']);
+      const chats = (raw.flavor as Obj).chats;
+      if (Array.isArray(chats)) {
+        chats.forEach((chat, i) => {
+          if (!isObj(chat)) return;
+          const sayChat = reporter('flavor', `chats 第 ${i + 1} 筆`);
+          if (!Array.isArray(chat.messages) || chat.messages.length === 0) return void sayChat('缺少 messages（至少一則）');
+          chat.messages.forEach((m, j) => {
+            for (const f of ['from', 'when', 'text']) if (!isObj(m) || !isStr(m[f])) sayChat(`messages 第 ${j + 1} 則缺少 ${f}`);
+          });
+        });
+      }
     }
   }
 

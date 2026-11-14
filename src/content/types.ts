@@ -175,6 +175,8 @@ export interface Character {
    * 每個人的篇幅和語氣要一樣，不能讓誰特別突出。
    */
   brief?: string;
+  /** 自介：這個人自己寫在個人頁面上的話（他本人的口氣），可以用 \n 換行。跟 brief（旁白寫的介紹）不同。 */
+  bio?: string;
   /** 一行語氣摘要（給寫作的人看，玩家看不到）。完整的語氣指南在 docs/voice/ */
   style: string;
   /**
@@ -258,6 +260,15 @@ export interface Item {
   date?: string;
   /** 行事曆用的時刻，寫成 16:30。整天的行程不寫。 */
   time?: string;
+  /**
+   * 時間軸上的列。有寫才會進 Suru 的時間軸，而且要玩家看過這筆才出現。
+   * 目的是讓玩家對每個人那幾天的行蹤：誰在什麼時候、在哪裡（或自稱在哪裡）。
+   * 一筆可以有好幾列。text 只描述，不下結論；出自某人說法的，寫成「某某說：…」。
+   * - when：排先後用，可以寫得很細，玩家看不到
+   * - label：畫面上顯示的大概時段（例如「週六晚上」），同一個 label 的列排在一起
+   * - who：這一列講的是誰的行蹤（角色 id，或機主的 id）。講東西的（例如 iPad）不寫
+   */
+  timeline?: { when: When; label: string; text: string; who?: CharacterId }[];
   /** 【待確認】true 表示要先執行「定位」這個動作才看得到（找裝置用，耗電較多） */
   needsLocate?: boolean;
   /** 清單裡的分組標題（例如哪一天）。沒寫就用 when 的日期。 */
@@ -517,7 +528,20 @@ export interface FlavorFile {
   /** 音樂：歌單。歌名和演出者都是虛構的。 */
   playlist?: { title: string; artist: string }[];
   /** 碎念：動態牆上的貼文。帳號都是虛構的。 */
-  posts?: { author: string; text: string; when: string }[];
+  posts?: { author: string; text: string; when: string; handle?: string; likes?: number; replies?: number }[];
+  /**
+   * Link：跟案情無關的聊天室，只能看、不能回，不進推理。
+   * from 寫 "self" 代表機主自己，其他直接寫顯示的名字。
+   * official：官方帳號。muted：關了通知。
+   */
+  chats?: {
+    id: string;
+    title: string;
+    when: string;
+    official?: boolean;
+    muted?: boolean;
+    messages: { from: string; when: string; text: string }[];
+  }[];
 }
 
 // ───────────────────────── 全部合起來 ─────────────────────────

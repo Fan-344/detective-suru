@@ -31,6 +31,14 @@
         "label": "發生地",
         "value": "新北市永和區，公寓四樓往三樓樓梯間"
       }
+    ],
+    "timeline": [
+      {
+        "when": "週六 23:12",
+        "label": "週六深夜",
+        "text": "以晴被救護車送到景和綜合醫院急診",
+        "who": "yiqing"
+      }
     ]
   },
   {
@@ -39,7 +47,29 @@
     "kind": "record",
     "when": "週日 08:40",
     "title": "景和綜合醫院",
-    "body": "【景和綜合醫院】沈以晴女士家屬您好，病人已於今日轉入加護病房。探視時間為每日 11:00 及 19:00。"
+    "body": "【景和綜合醫院】沈以晴女士家屬您好，病人已於今日轉入加護病房。目前昏迷指數（GCS）6 分，尚未清醒。探視時間為每日 11:00 及 19:00。",
+    "fields": [
+      {
+        "label": "轉入",
+        "value": "加護病房（週日）"
+      },
+      {
+        "label": "昏迷指數",
+        "value": "6 分（滿分 15），尚未清醒"
+      },
+      {
+        "label": "探視時間",
+        "value": "每日 11:00、19:00"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週日 08:40",
+        "label": "週日",
+        "text": "以晴轉入加護病房",
+        "who": "yiqing"
+      }
+    ]
   },
   {
     "id": "note_instruction",
@@ -74,12 +104,40 @@
     "body": "電池更換訂金 ×1",
     "fields": [
       {
+        "label": "發票號碼",
+        "value": "XK-52071846"
+      },
+      {
+        "label": "發票期別",
+        "value": "115 年 11–12 月"
+      },
+      {
+        "label": "賣方統編",
+        "value": "54207311"
+      },
+      {
+        "label": "隨機碼",
+        "value": "3915"
+      },
+      {
         "label": "金額",
         "value": "500 元"
       },
       {
-        "label": "載具",
+        "label": "付款方式",
         "value": "信用卡"
+      },
+      {
+        "label": "載具",
+        "value": "手機條碼 /Q7M4.XT"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週六 16:28",
+        "label": "週六下午",
+        "text": "以晴在大安的維修店送修手機",
+        "who": "yiqing"
       }
     ]
   },
@@ -92,12 +150,32 @@
     "body": "悠遊卡加值 ×1",
     "fields": [
       {
+        "label": "發票號碼",
+        "value": "XM-30418822"
+      },
+      {
+        "label": "發票期別",
+        "value": "115 年 11–12 月"
+      },
+      {
+        "label": "賣方統編",
+        "value": "28630174"
+      },
+      {
+        "label": "隨機碼",
+        "value": "0462"
+      },
+      {
         "label": "金額",
         "value": "500 元"
       },
       {
-        "label": "載具",
+        "label": "付款方式",
         "value": "信用卡"
+      },
+      {
+        "label": "載具",
+        "value": "手機條碼 /Q7M4.XT"
       }
     ]
   },
@@ -110,12 +188,40 @@
     "body": "美式 ×1、拿鐵 ×1、肉桂捲 ×1",
     "fields": [
       {
+        "label": "發票號碼",
+        "value": "XK-77290315"
+      },
+      {
+        "label": "發票期別",
+        "value": "115 年 11–12 月"
+      },
+      {
+        "label": "賣方統編",
+        "value": "90415527"
+      },
+      {
+        "label": "隨機碼",
+        "value": "7738"
+      },
+      {
         "label": "金額",
         "value": "380 元"
       },
       {
-        "label": "載具",
+        "label": "付款方式",
         "value": "信用卡"
+      },
+      {
+        "label": "載具",
+        "value": "手機條碼 /Q7M4.XT"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週六 18:42",
+        "label": "週六傍晚",
+        "text": "以晴在大安的慢火咖啡",
+        "who": "yiqing"
       }
     ]
   },
@@ -128,12 +234,40 @@
     "body": "A3 彩色輸出 ×6",
     "fields": [
       {
+        "label": "發票號碼",
+        "value": "XN-10056273"
+      },
+      {
+        "label": "發票期別",
+        "value": "115 年 11–12 月"
+      },
+      {
+        "label": "賣方統編",
+        "value": "42781904"
+      },
+      {
+        "label": "隨機碼",
+        "value": "1290"
+      },
+      {
         "label": "金額",
         "value": "180 元"
       },
       {
-        "label": "載具",
+        "label": "付款方式",
         "value": "信用卡"
+      },
+      {
+        "label": "載具",
+        "value": "手機條碼 /Q7M4.XT"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週六 20:16",
+        "label": "週六晚上",
+        "text": "以晴在公館的影印店",
+        "who": "yiqing"
       }
     ]
   },
@@ -146,12 +280,40 @@
     "body": "啤酒 ×4、冰塊 ×1、紙杯 ×1",
     "fields": [
       {
+        "label": "發票號碼",
+        "value": "XM-64833907"
+      },
+      {
+        "label": "發票期別",
+        "value": "115 年 11–12 月"
+      },
+      {
+        "label": "賣方統編",
+        "value": "28630174"
+      },
+      {
+        "label": "隨機碼",
+        "value": "5506"
+      },
+      {
         "label": "金額",
         "value": "227 元"
       },
       {
-        "label": "載具",
+        "label": "付款方式",
         "value": "信用卡"
+      },
+      {
+        "label": "載具",
+        "value": "手機條碼 /Q7M4.XT"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週六 21:31",
+        "label": "週六晚上",
+        "text": "以晴在永和的超商",
+        "who": "yiqing"
       }
     ]
   },
@@ -164,12 +326,40 @@
     "body": "輕便雨衣 ×1、OK 繃 ×1",
     "fields": [
       {
+        "label": "發票號碼",
+        "value": "XM-64833951"
+      },
+      {
+        "label": "發票期別",
+        "value": "115 年 11–12 月"
+      },
+      {
+        "label": "賣方統編",
+        "value": "28630174"
+      },
+      {
+        "label": "隨機碼",
+        "value": "8124"
+      },
+      {
         "label": "金額",
         "value": "94 元"
       },
       {
-        "label": "載具",
+        "label": "付款方式",
         "value": "信用卡"
+      },
+      {
+        "label": "載具",
+        "value": "手機條碼 /Q7M4.XT"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週六 22:07",
+        "label": "週六深夜",
+        "text": "以晴又去了一次永和的超商",
+        "who": "yiqing"
       }
     ]
   },
@@ -183,7 +373,15 @@
     "image": {
       "label": "班表",
       "description": "護理站牆上一塊白板的照片，標題「護理人員週班表」，旁邊手寫「林口安康醫院 7B 病房　11 月第 2 週」，日期從 9 日（一）到 15 日（日）。八個名字是磁鐵標籤，「林品妤」那一列：休、白班、白班、白班、休、小夜、小夜，也就是 13 日（五）休、14 日（六）小夜、15 日（日）小夜。備註欄寫著「白班 08–16」「小夜 16–24」「大夜 00–08」。林品妤那一列被人用手機的標記工具畫了一道黃色螢光筆。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週六 16:00",
+        "label": "週六下午",
+        "text": "班表：品妤週六上小夜班，下午四點到半夜十二點",
+        "who": "pinyu"
+      }
+    ]
   },
   {
     "id": "ph_boxes",
@@ -195,7 +393,15 @@
     "image": {
       "label": "紙箱",
       "description": "空了大半的客廳，磨石子地，牆上有掛過畫留下的痕跡。地上疊著七八個封到一半的紙箱，箱子側面用麥克筆寫著「畫具」「書」「雜」，箱子上放著膠帶、麥克筆和一把美工刀。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週五 20:12",
+        "label": "週五晚上",
+        "text": "以晴在舊家整理紙箱",
+        "who": "yiqing"
+      }
+    ]
   },
   {
     "id": "ph_ipad",
@@ -207,7 +413,14 @@
     "image": {
       "label": "舊 iPad",
       "description": "一台邊角磨損的舊 iPad 放在打開的紙箱上，螢幕亮著，是繪圖 App，畫面上有一張沒上色的線稿：短髮女孩穿著連帽外套、背著背包，抬頭看路燈。旁邊是一條纏成一團的泛黃充電線和一支舊觸控筆，箱子裡看得到素描本。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週五 20:15",
+        "label": "週五晚上",
+        "text": "以晴的舊 iPad 放在舊家的紙箱上"
+      }
+    ]
   },
   {
     "id": "ph_fileinfo_cover",
@@ -273,6 +486,14 @@
         "label": "通話時間",
         "value": "2 分鐘"
       }
+    ],
+    "timeline": [
+      {
+        "when": "週六 16:02",
+        "label": "週六下午",
+        "text": "以晴打了一通電話給靖雯",
+        "who": "yiqing"
+      }
     ]
   },
   {
@@ -336,7 +557,15 @@
     "image": {
       "label": "窗外的雨",
       "description": "從室內隔著落地窗往外拍。玻璃上全是往下流的雨水，窗外是暴雨中的馬路，路燈和車燈糊成一團一團的光。玻璃上有室內的倒影：阿澤面向窗戶，雙手舉著手機在拍這張照片，脖子上掛著一台相機；他身後是水晶吊燈、鋪白桌巾的圓桌、桌花，和一些看不清臉的賓客。畫面左下角是一張圓桌的桌邊和粉白色的桌花。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週六 21:55",
+        "label": "週六晚上",
+        "text": "阿澤從內湖傳了一張下大雨的照片",
+        "who": "aze"
+      }
+    ]
   },
   {
     "id": "say_aze_wen",
@@ -345,7 +574,15 @@
     "kind": "statement",
     "speaker": "aze",
     "when": "週日 11:08",
-    "body": "雯昨天快三點才睡"
+    "body": "雯昨天快三點才睡",
+    "timeline": [
+      {
+        "when": "週日 約03:00",
+        "label": "週日凌晨",
+        "text": "阿澤說：靖雯快三點才睡",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "say_aze_studio",
@@ -363,7 +600,15 @@
     "kind": "statement",
     "speaker": "aze",
     "when": "週五 22:40",
-    "body": "明天內湖拍婚禮 八點開始"
+    "body": "明天內湖拍婚禮 八點開始",
+    "timeline": [
+      {
+        "when": "週六 20:00",
+        "label": "週六晚上",
+        "text": "阿澤說：八點開始在內湖拍婚禮",
+        "who": "aze"
+      }
+    ]
   },
   {
     "id": "say_yq_meet",
@@ -372,7 +617,15 @@
     "kind": "statement",
     "speaker": "yiqing",
     "when": "週六 15:50",
-    "body": "六點半老地方 我沒手機喔 不見不散"
+    "body": "六點半老地方 我沒手機喔 不見不散",
+    "timeline": [
+      {
+        "when": "週六 18:30",
+        "label": "週六傍晚",
+        "text": "以晴約了阿澤六點半見面",
+        "who": "aze"
+      }
+    ]
   },
   {
     "id": "say_aze_ok",
@@ -408,7 +661,15 @@
     "kind": "statement",
     "speaker": "zonghan",
     "when": "週五 22:05",
-    "body": "OK的，明天我帶看到九點，結束直接過去，大概九點多到。"
+    "body": "OK的，明天我帶看到九點，結束直接過去，大概九點多到。",
+    "timeline": [
+      {
+        "when": "週六 21:00",
+        "label": "週六晚上",
+        "text": "宗翰說：帶看到九點，九點多到舊家開門",
+        "who": "zonghan"
+      }
+    ]
   },
   {
     "id": "say_zh_sunday",
@@ -430,7 +691,15 @@
     "image": {
       "label": "宵夜",
       "description": "休息室的白色桌面上，一袋插著竹籤的鹹酥雞、一袋地瓜條、兩杯手搖飲、一團衛生紙、一支藍色原子筆。畫面右下角伸進一隻手，放在鹹酥雞的紙袋旁邊，袖口是深色外套，手腕上戴著銀色金屬錶帶、藍色錶面的錶。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週六 23:05",
+        "label": "週六深夜",
+        "text": "品妤從醫院休息室傳了一張宵夜的照片",
+        "who": "pinyu"
+      }
+    ]
   },
   {
     "id": "mo_fri_arrive",
@@ -443,7 +712,15 @@
     "image": {
       "label": "高鐵月台",
       "description": "高鐵台中站的月台，一只行李箱和一雙白色球鞋入鏡。天色還亮。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週五 16:30",
+        "label": "週五下午",
+        "text": "靖雯的動態：到台中了",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "mo_sat_signing",
@@ -456,7 +733,15 @@
     "image": {
       "label": "簽書會現場",
       "description": "書店裡的簽書會現場。長桌上疊著同一本小說，立牌寫著「新書簽書會 13:00–16:00」，前面排了一列讀者。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週六 13:10",
+        "label": "週六下午",
+        "text": "靖雯的動態：台中的簽書會開始",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "mo_sat_done",
@@ -469,7 +754,15 @@
     "image": {
       "label": "簽名桌",
       "description": "簽名桌的特寫。一束花、兩支用到沒水的簽字筆、一杯喝完的飲料。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週六 16:12",
+        "label": "週六下午",
+        "text": "靖雯的動態：簽書會結束",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "mo_sat_market",
@@ -482,7 +775,15 @@
     "image": {
       "label": "夜市",
       "description": "靖雯把手機舉高、由上往下的自拍。她拿著一串烤玉米貼在臉旁，穿白 T 恤和淺色牛仔外套。右半邊是夜市的走道，兩邊是亮著燈的攤位，人擠著人。地面是乾的柏油路，上面有一張掉在地上的衛生紙，沒有人撐傘或穿雨衣。"
-    }
+    },
+    "timeline": [
+      {
+        "when": "週六 22:30",
+        "label": "週六深夜",
+        "text": "靖雯的動態：在台中逛夜市",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "wx_daan_fri",
@@ -548,12 +849,36 @@
     "needsLocate": true,
     "fields": [
       {
-        "label": "週五 至 週六 22:41",
+        "label": "週四",
         "value": "新北市永和區"
       },
       {
-        "label": "週六 23:38 起",
+        "label": "週五",
+        "value": "新北市永和區"
+      },
+      {
+        "label": "週六",
+        "value": "新北市永和區，22:41 離開。23:38 起：台北市大安區，泰順街一帶"
+      },
+      {
+        "label": "週日",
         "value": "台北市大安區，泰順街一帶"
+      },
+      {
+        "label": "週一",
+        "value": "台北市大安區，泰順街一帶"
+      }
+    ],
+    "timeline": [
+      {
+        "when": "週六 22:41",
+        "label": "週六深夜",
+        "text": "以晴的 iPad 離開永和"
+      },
+      {
+        "when": "週六 23:38",
+        "label": "週六深夜",
+        "text": "以晴的 iPad 出現在大安區泰順街一帶"
       }
     ]
   },
@@ -564,7 +889,15 @@
     "kind": "statement",
     "speaker": "aze",
     "body": "難怪週六放我鴿子",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週六 18:31",
+        "label": "週六傍晚",
+        "text": "阿澤說：以晴那天沒有出現",
+        "who": "aze"
+      }
+    ]
   },
   {
     "id": "say_zh_beer",
@@ -591,7 +924,15 @@
     "kind": "statement",
     "speaker": "aze",
     "body": "好啦我們有見面",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週六 18:32",
+        "label": "週六傍晚",
+        "text": "阿澤說：那天其實有見到以晴",
+        "who": "aze"
+      }
+    ]
   },
   {
     "id": "say_aze_asked",
@@ -645,7 +986,15 @@
     "kind": "statement",
     "speaker": "jingwen",
     "body": "我在妳家樓下 按門鈴沒人應耶",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週一",
+        "label": "週一",
+        "text": "靖雯說：她在以晴家樓下按門鈴",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "say_zh_admit",
@@ -663,7 +1012,15 @@
     "kind": "statement",
     "speaker": "zonghan",
     "body": "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子，手也好好的。",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週六 21:50",
+        "label": "週六晚上",
+        "text": "宗翰說：九點五十左右離開舊家",
+        "who": "zonghan"
+      }
+    ]
   },
   {
     "id": "say_zh_linkou",
@@ -672,7 +1029,15 @@
     "kind": "statement",
     "speaker": "zonghan",
     "body": "那天離開之後我去林口找品妤，待到她下班。",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週六 22:50",
+        "label": "週六深夜",
+        "text": "宗翰說：離開舊家後去林口找品妤，待到她下班",
+        "who": "zonghan"
+      }
+    ]
   },
   {
     "id": "say_zh_refund",
@@ -707,7 +1072,14 @@
     "kind": "record",
     "title": "登入確認視窗",
     "body": "有人在另一台裝置上輸入了這個帳號的密碼。位置：台北市大安區附近。",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週一",
+        "label": "週一",
+        "text": "有人在大安區附近的另一台裝置上，輸入了以晴帳號的密碼"
+      }
+    ]
   },
   {
     "id": "cal_deadline1",
@@ -846,6 +1218,143 @@
     "kind": "statement",
     "speaker": "zonghan",
     "body": "在啊，我走的時候它還在紙箱上，我有印象。",
-    "hidden": true
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週六 21:51",
+        "label": "週六晚上",
+        "text": "宗翰說：他離開的時候，iPad 還在紙箱上"
+      }
+    ]
+  },
+  {
+    "id": "ph_fl_cat",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "巷口的貓",
+    "body": "一隻橘貓。",
+    "image": {
+      "label": "巷口的貓",
+      "description": "白天的巷子口，一隻胖橘貓趴在機車坐墊上瞇著眼睛，背景是鐵捲門和幾盆盆栽，陽光斜斜打在貓背上。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_desk",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "新家的桌子",
+    "body": "剛搬好的工作桌。",
+    "image": {
+      "label": "新家的桌子",
+      "description": "靠窗的一張木頭工作桌，上面有桌上型螢幕、鍵盤、一塊黑色繪圖板和一杯插滿色鉛筆的馬克杯，桌腳邊還有兩個沒拆的紙箱。牆是剛漆過的白色，什麼都還沒掛。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_sketch",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "速寫",
+    "body": "素描本的一頁。",
+    "image": {
+      "label": "速寫",
+      "description": "攤開的素描本，鉛筆速寫：咖啡店吧台後面一個正在手沖的店員，旁邊畫了幾個杯子和一盆龜背芋。頁角用鉛筆寫著日期「10/3」。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_ramen",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "拉麵",
+    "body": "一碗拉麵。",
+    "image": {
+      "label": "拉麵",
+      "description": "從正上方拍的一碗豚骨拉麵，叉燒兩片、半顆溏心蛋、海苔和蔥花，旁邊是一雙免洗筷和一杯冰水，木頭吧台桌面。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_river",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "河堤",
+    "body": "傍晚的河堤。",
+    "image": {
+      "label": "河堤",
+      "description": "傍晚的河濱自行車道，天空是橘色到紫色的漸層，遠處有一座橋的剪影，近處的草地上有人牽著狗，沒有拍到臉。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_swatch",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "試色",
+    "body": "顏料試色。",
+    "image": {
+      "label": "試色",
+      "description": "一張水彩紙上畫了四排色塊，從土黃、赭紅到深藍，每一格下面用鉛筆寫了小小的編號。旁邊是一個打開的鐵盒水彩和兩支沾濕的水彩筆。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_proof",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "雜誌校稿",
+    "body": "另一個案子的校稿。",
+    "image": {
+      "label": "雜誌校稿",
+      "description": "電腦螢幕的翻拍照。螢幕上是一張雜誌內頁的排版稿，右半邊是一幅彩色插圖：一個人撐著傘站在公車站牌下。插圖旁邊有紅色的校稿註記「這裡再亮一點」「字不要壓到傘」。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_plant",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "陽台",
+    "body": "新家陽台的盆栽。",
+    "image": {
+      "label": "陽台",
+      "description": "窄窄的陽台，欄杆邊排著三盆植物：一盆薄荷、一盆快枯掉的迷迭香、一盆剛冒芽的不知道什麼。地上有一個綠色澆水壺，遠處是對面公寓的鐵窗。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_book",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "書店",
+    "body": "書店的繪本區。",
+    "image": {
+      "label": "書店",
+      "description": "書店的繪本平台，十幾本封面朝上的繪本排成三排，都是色彩鮮豔的動物和小孩圖案，書名看不清楚。平台上立著一張手寫的小卡：「店員推薦」。"
+    },
+    "flavor": true
+  },
+  {
+    "id": "ph_fl_move",
+    "app": "photos",
+    "kind": "record",
+    "when": "較早",
+    "title": "搬家那天",
+    "body": "搬家貨車。",
+    "image": {
+      "label": "搬家那天",
+      "description": "一樓的巷子裡停著一台小貨車，後斗打開，裡面疊著紙箱、一張捲起來的床墊和一個畫架。貨車旁邊的地上有一台摺疊推車，沒有拍到人。"
+    },
+    "flavor": true
   }
 ]
