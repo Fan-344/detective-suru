@@ -69,6 +69,8 @@ export interface ImagePlaceholder {
   label?: string;
   /** 正式圖片的代號（src/ui/assets/photos/<代號>.jpg）。有圖就顯示圖，沒有就顯示色塊 */
   src?: string;
+  /** 這張圖屬於資料裡的哪一筆。點開時要告訴遊戲規則「看過了」 */
+  itemId?: string;
 }
 
 export interface ChatMember {
@@ -86,6 +88,8 @@ export interface ChatMessage {
   time: string;
   text?: string;
   image?: ImagePlaceholder;
+  /** 不是訊息，而是夾在訊息之間的一行小字（例如「已讀後過了很久才回」） */
+  note?: string;
 }
 
 export interface ReplyOption {
@@ -124,6 +128,7 @@ export interface ListDetail {
   when?: string;
   lines?: string[];
   fields?: { label: string; value: string }[];
+  image?: ImagePlaceholder;
 }
 
 export interface ListGroup {
@@ -186,6 +191,10 @@ export interface AccuseData {
   intro: string[];
   steps: AccuseStep[];
   answers: string[];
+  /** 目前這一題可以選的紀錄（用紀錄回答的題目才有） */
+  choices: SuruMemoItem[];
+  /** 現在能不能指認 */
+  available: boolean;
 }
 
 export interface FinderDevice {
@@ -194,6 +203,8 @@ export interface FinderDevice {
   located: boolean;
   /** 定位之後顯示的位置紀錄，一行一筆 */
   history: string[];
+  /** 定位要耗多少電（還沒定位時才有） */
+  cost?: number;
 }
 
 export interface SuruData {
@@ -267,6 +278,10 @@ export interface PhoneActions {
   onDismissNotice(): void;
   onAccuseAnswer(stepId: string, value: string): void;
   onLocate(deviceId: string): void;
+  /** 玩家點開了某一筆的照片 */
+  onViewImage(itemId: string): void;
+  /** 玩家換了畫面（開了哪個 App、哪一層） */
+  onNavigate(nav: Nav): void;
 }
 
 export interface Nav {

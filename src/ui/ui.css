@@ -458,6 +458,13 @@ ul, ol { list-style: none; }
 .viewer__img.img--photo .img__photo { object-fit: contain; }
 .viewer__img.img--photo { background: #000; }
 
+.room__note { text-align: center; margin: 8px 0 2px; font-size: 12px; color: var(--muted); }
+.detail__img { width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius); margin-top: 18px; }
+.detail__img.img--photo { aspect-ratio: auto; }
+.zoom__placeholder { width: 86%; aspect-ratio: 3 / 4; border-radius: 12px; }
+.zoom__placeholder .img__text { font-size: 16px; line-height: 1.7; max-width: 84%; }
+.finder__locate small { margin-left: 6px; font-weight: 400; opacity: 0.85; }
+
 /* 點開看大圖：蓋住整個畫面，再點一下關閉 */
 .zoom { position: absolute; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.94); animation: fade 0.2s; }
 .zoom img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -878,6 +885,14 @@ ul, ol { list-style: none; }
 .intro__seg--notice .suru-label { margin-bottom: 6px; }
 .intro__end { height: 30vh; }
 .intro__hint { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 0 22px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 12px; letter-spacing: 0.3em; color: var(--s-dim); }
+
+/* ───────── 結局 ───────── */
+
+.ending { position: absolute; inset: 0; z-index: 55; display: flex; flex-direction: column; animation: fade 1.2s ease-out; }
+.ending__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8vh 30px 20px; }
+.ending__title { font-size: 24px; font-weight: 500; letter-spacing: 0.2em; color: var(--s-amber); margin-bottom: 28px; }
+.ending__scroll p { font-size: 17px; line-height: 2; margin-bottom: 22px; }
+.load-error { max-width: 90vw; white-space: pre-wrap; color: #e8614c; font-size: 14px; line-height: 1.6; padding: 24px; }
 
 /* ───────── 沒電 ───────── */
 

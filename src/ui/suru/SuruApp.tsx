@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { S } from '../strings';
 import type { SuruData, SuruMemoItem } from '../types';
 import { Accuse } from './Accuse';
@@ -55,18 +55,20 @@ export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
   const [accusing, setAccusing] = useState(false);
   const latest = data.voice[0];
 
+  // 題目全部答完、進度歸零時，回到助理的主畫面
+  const answered = useRef(data.accuse.answers.length);
+  useEffect(() => {
+    if (data.accuse.answers.length < answered.current) setAccusing(false);
+    answered.current = data.accuse.answers.length;
+  }, [data.accuse.answers.length]);
+
   if (accusing) {
     return (
       <Accuse
         title={title}
         data={data.accuse}
-        records={data.records}
         onBack={() => setAccusing(false)}
-        onAnswer={(stepId, value) => {
-          // 答完最後一題就回到 Suru 助理
-          if (data.accuse.answers.length + 1 >= data.accuse.steps.length) setAccusing(false);
-          onAccuseAnswer(stepId, value);
-        }}
+        onAnswer={onAccuseAnswer}
       />
     );
   }
@@ -140,7 +142,9 @@ export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
         )}
       </div>
 
-      <button className="suru-button suru-app__accuse" onClick={() => setAccusing(true)}>{S.accuseEntry}</button>
+      {data.accuse.available && (
+        <button className="suru-button suru-app__accuse" onClick={() => setAccusing(true)}>{S.accuseEntry}</button>
+      )}
     </section>
   );
 }

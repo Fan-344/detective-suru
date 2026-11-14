@@ -1,5 +1,7 @@
 import { S } from '../strings';
 import type { ListDetail, ListGroup } from '../types';
+import { ImageBlock } from './Chat';
+import type { ZoomFn } from './Chat';
 
 /** 清單：依日期分組，點一列看詳情 */
 export function ListView({ groups, onOpen }: { groups: ListGroup[]; onOpen(rowId: string): void }) {
@@ -29,7 +31,7 @@ export function ListView({ groups, onOpen }: { groups: ListGroup[]; onOpen(rowId
   );
 }
 
-export function DetailView({ detail }: { detail: ListDetail }) {
+export function DetailView({ detail, onZoom }: { detail: ListDetail; onZoom?: ZoomFn }) {
   return (
     <article className="detail">
       <h2 className="detail__title">{detail.title}</h2>
@@ -41,6 +43,7 @@ export function DetailView({ detail }: { detail: ListDetail }) {
           ))}
         </div>
       )}
+      {detail.image && <ImageBlock image={detail.image} className="detail__img" onZoom={onZoom} />}
       {detail.fields && (
         <dl className="detail__fields">
           {detail.fields.map((f, i) => (

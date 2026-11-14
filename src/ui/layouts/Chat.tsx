@@ -4,7 +4,13 @@ import { groupByDay, lastLine, unreadLabel } from '../format';
 import { S } from '../strings';
 import type { ChatThread, ImagePlaceholder } from '../types';
 
-export type ZoomFn = (src: string, alt: string) => void;
+/** 要放大看的東西：有圖檔就給網址；沒有圖檔的佔位圖給 image，放大後顯示完整描述 */
+export interface ZoomTarget {
+  src?: string;
+  alt: string;
+  image?: ImagePlaceholder;
+}
+export type ZoomFn = (target: ZoomTarget) => void;
 
 interface ImageProps {
   image: ImagePlaceholder;
@@ -19,16 +25,24 @@ export function ImageBlock({ image, className = '', full = false, onZoom }: Imag
   if (src) {
     const img = <img className="img__photo" src={src} alt={image.description} draggable={false} />;
     return onZoom ? (
-      <button className={`img img--photo ${className}`} onClick={() => onZoom(src, image.description)} aria-label={`${S.zoomOpen}：${image.description}`}>
+      <button className={`img img--photo ${className}`} onClick={() => onZoom({ src, alt: image.description, image })} aria-label={`${S.zoomOpen}：${image.description}`}>
         {img}
       </button>
     ) : (
       <div className={`img img--photo ${className}`}>{img}</div>
     );
   }
+  const text = <span className="img__text">{full ? image.description : (image.label ?? image.description)}</span>;
+  if (onZoom && !full) {
+    return (
+      <button className={`img img--tone${image.tone % 6} ${className}`} onClick={() => onZoom({ alt: image.description, image })} aria-label={`${S.zoomOpen}：${image.label ?? image.description}`}>
+        {text}
+      </button>
+    );
+  }
   return (
     <div className={`img img--tone${image.tone % 6} ${className}`} role="img" aria-label={image.description}>
-      <span className="img__text">{full ? image.description : (image.label ?? image.description)}</span>
+      {text}
     </div>
   );
 }
@@ -45,7 +59,7 @@ export function Avatar({ name, avatar, onZoom }: AvatarProps) {
   if (!src) return <span className="avatar" aria-hidden="true">{name.slice(-1)}</span>;
   const img = <img src={src} alt="" draggable={false} />;
   return onZoom ? (
-    <button className="avatar avatar--img" onClick={() => onZoom(src, name)} aria-label={`${S.zoomOpen}：${name}`}>
+    <button className="avatar avatar--img" onClick={() => onZoom({ src, alt: name })} aria-label={`${S.zoomOpen}：${name}`}>
       {img}
     </button>
   ) : (
@@ -111,9 +125,10 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom }: Ro
           <div key={`${group.day}-${gi}`}>
             <div className="room__day"><span>{group.day}</span></div>
             {group.items.map((m, i) => {
+              if (m.note) return <div key={m.id} className="room__note">{m.note}</div>;
               const mine = m.from === selfId;
-              const prev = group.items[i - 1];
-              const next = group.items[i + 1];
+              const prev = group.items[i - 1]?.note ? undefined : group.items[i - 1];
+              const next = group.items[i + 1]?.note ? undefined : group.items[i + 1];
               const first = !prev || prev.from !== m.from;
               const tail = !next || next.from !== m.from || next.time !== m.time;
               return (

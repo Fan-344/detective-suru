@@ -17,9 +17,9 @@ function passIntro() {
 const home = () => fireEvent.click(screen.getByRole('button', { name: S.home }));
 const back = () => fireEvent.click(screen.getByRole('button', { name: S.back }));
 
-describe('外觀框架', () => {
+describe('外觀框架（假資料示範）', () => {
   it('開場一段一段出現，結束後進入群組，輸入框只能按送出', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     expect(screen.getByText(fixture.intro[0].lines[0])).toBeTruthy();
     expect(screen.queryByText(fixture.intro[1].lines[0])).toBeNull();
     passIntro();
@@ -31,7 +31,7 @@ describe('外觀框架', () => {
 
   it('送出後出現在聊天室，對方輸入中，之後回覆', () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     fireEvent.click(screen.getByRole('button', { name: S.send }));
     expect(screen.queryByRole('button', { name: S.send })).toBeNull();
@@ -43,7 +43,7 @@ describe('外觀框架', () => {
   });
 
   it('能進出三種版型', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
 
@@ -72,7 +72,7 @@ describe('外觀框架', () => {
   });
 
   it('找裝置在資料夾裡，按定位之後才看得到位置紀錄', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /工具/ }));
@@ -85,7 +85,7 @@ describe('外觀框架', () => {
   });
 
   it('電量歸零顯示沒電畫面，點一下回到開場', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     expect(screen.getByTestId('battery').textContent).toBe(`${fixture.startBattery}%`);
     fireEvent.click(screen.getByRole('button', { name: 'DEV' }));
@@ -95,7 +95,7 @@ describe('外觀框架', () => {
   });
 
   it('Suru 樣式示意頁看得到疑點、對象和開始推理的表單', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     fireEvent.click(screen.getByRole('button', { name: 'DEV' }));
     fireEvent.click(screen.getByRole('button', { name: 'Suru 樣式' }));
@@ -107,7 +107,7 @@ describe('外觀框架', () => {
   });
 
   it('Suru 助理：從圖示打開，有疑點、線索、時間軸三個分頁，收起後回主畫面', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /Suru/ }));
@@ -127,7 +127,7 @@ describe('外觀框架', () => {
 
   it('長按 home 鍵叫出 Suru 助理，短按回主畫面', () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     const button = screen.getByRole('button', { name: S.home });
     fireEvent.pointerDown(button);
@@ -142,7 +142,7 @@ describe('外觀框架', () => {
   });
 
   it('背景 App 真的能用：計算機、行事曆、設定', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /計算機/ }));
@@ -166,7 +166,7 @@ describe('外觀框架', () => {
   });
 
   it('連續逛三個背景 App 會跳出 Suru 的提醒，點一下收起，不擋操作', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     for (const name of [/計算機/, /音樂/]) {
       home();
@@ -183,7 +183,7 @@ describe('外觀框架', () => {
 
   it('時鐘有三個分頁，世界時鐘從資料給的時刻開始走', () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /時鐘/ }));
@@ -199,7 +199,7 @@ describe('外觀框架', () => {
   });
 
   it('聯絡人 App：上方是背景前言，每個人一筆，點開看簡介', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /聯絡人$/ }));
@@ -212,7 +212,7 @@ describe('外觀框架', () => {
   });
 
   it('指認兇手：一題一題問，答過的留在上方，中途離開回來從同一題繼續', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /Suru/ }));
@@ -253,7 +253,7 @@ describe('外觀框架', () => {
   });
 
   it('頭像和聊天裡的照片點一下看大圖，再點一下關閉', () => {
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /聯絡人$/ }));
@@ -272,7 +272,7 @@ describe('外觀框架', () => {
 
   it('心聲像系統通知一樣跳出來，點一下收起', () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<App mode="mock" />);
     passIntro();
     expect(screen.queryByRole('status')).toBeNull();
     act(() => {

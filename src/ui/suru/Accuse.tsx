@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { S } from '../strings';
-import type { AccuseData, SuruMemoItem } from '../types';
+import type { AccuseData } from '../types';
 import { SuruHeader, SuruToken } from './Suru';
 
 interface Props {
   title: string;
   data: AccuseData;
-  records: SuruMemoItem[];
   onBack(): void;
   onAnswer(stepId: string, value: string): void;
 }
@@ -19,7 +18,8 @@ const two = (n: number) => String(n).padStart(2, '0');
  * 答過的題目留在上方，看得到推理是怎麼一步一步接起來的。可以中途離開，回來從同一題繼續。
  * 這裡只負責問和收答案；答得對不對、指錯人會怎樣，是遊戲規則，步驟三才接。
  */
-export function Accuse({ title, data, records, onBack, onAnswer }: Props) {
+export function Accuse({ title, data, onBack, onAnswer }: Props) {
+  const records = data.choices;
   const [picked, setPicked] = useState<string | null>(null);
   const index = Math.min(data.answers.length, data.steps.length - 1);
   const step = data.steps[index];
@@ -27,9 +27,8 @@ export function Accuse({ title, data, records, onBack, onAnswer }: Props) {
 
   const answer = () => {
     if (!picked) return;
-    const label = step.kind === 'record' ? (records.find((r) => r.id === picked)?.title ?? picked) : picked;
     setPicked(null);
-    onAnswer(step.id, label);
+    onAnswer(step.id, picked);
   };
 
   return (
@@ -64,6 +63,7 @@ export function Accuse({ title, data, records, onBack, onAnswer }: Props) {
 
         {step.kind === 'record' && (
           <ul className="accuse__picker accuse__picker--open" role="radiogroup" aria-label={S.accuseProof}>
+            {records.length === 0 && <li className="suru-empty">{S.suruEmpty}</li>}
             {records.map((r) => (
               <li key={r.id}>
                 <button role="radio" aria-checked={picked === r.id} className={picked === r.id ? 'on' : ''} onClick={() => setPicked(r.id)}>

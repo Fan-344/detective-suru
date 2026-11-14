@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react';
 import { Calculator, Calendar, Camera, Clock, Music, Settings } from '../apps/Extras';
 import { Finder } from '../apps/Finder';
 import { SuruBanner } from '../suru/Suru';
-import { ChatList, ChatRoom } from '../layouts/Chat';
+import { ChatList, ChatRoom, ImageBlock } from '../layouts/Chat';
+import type { ZoomTarget } from '../layouts/Chat';
 import { ContactCard, ContactList } from '../layouts/Contacts';
 import { GalleryGrid, GalleryViewer } from '../layouts/Gallery';
 import { DetailView, ListView } from '../layouts/ListDetail';
@@ -39,8 +40,18 @@ const HOME: Nav = { app: null, detail: null };
 export function Phone({ data, battery, actions, initialNav, homePress = 0, assistPress = 0, tension = 0 }: Props) {
   const [nav, setNav] = useState<Nav>(initialNav ?? HOME);
   const [motion, setMotion] = useState<Motion>('open');
-  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null);
-  const onZoom = (src: string, alt: string) => setZoom({ src, alt });
+  const [zoom, setZoom] = useState<ZoomTarget | null>(null);
+  const onZoom = (target: ZoomTarget) => {
+    // 點開照片要讓遊戲規則知道「看過了」
+    if (target.image?.itemId) actions.onViewImage(target.image.itemId);
+    setZoom(target);
+  };
+
+  useEffect(() => {
+    actions.onNavigate(nav);
+    // 只在換畫面時通知
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav.app, nav.detail]);
   const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false, hintLevel: 1 });
 
   const app = data.apps.find((a) => a.id === nav.app) ?? null;
@@ -72,6 +83,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     seenAssist.current = assistPress;
     const suru = data.apps.find((a) => a.layout === 'suru');
     if (!suru) return;
+    actions.onOpenApp(suru.id);
     actions.onOpenSuru();
     setMotion('open');
     setNav({ app: suru.id, detail: null });
@@ -110,7 +122,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     const groups = data.lists[app.id] ?? [];
     const row = groups.flatMap((g) => g.rows).find((r) => r.id === nav.detail);
     if (row) {
-      body = <DetailView detail={row.detail} />;
+      body = <DetailView detail={row.detail} onZoom={onZoom} />;
     } else {
       body = (
         <ListView
@@ -125,9 +137,22 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   } else if (app?.layout === 'gallery') {
     const items = data.galleries[app.id] ?? [];
     body = nav.detail ? (
-      <GalleryViewer items={items} currentId={nav.detail} onGo={(id) => setNav({ app: app.id, detail: id })} />
+      <GalleryViewer
+        items={items}
+        currentId={nav.detail}
+        onGo={(id) => {
+          actions.onViewImage(id);
+          setNav({ app: app.id, detail: id });
+        }}
+      />
     ) : (
-      <GalleryGrid items={items} onOpen={openDetail} />
+      <GalleryGrid
+        items={items}
+        onOpen={(id) => {
+          actions.onViewImage(id);
+          openDetail(id);
+        }}
+      />
     );
   } else if (app?.layout === 'contacts') {
     const person = data.contacts.people.find((p) => p.name === nav.detail);
@@ -184,7 +209,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
         )}
         {zoom && (
           <button className="zoom" onClick={() => setZoom(null)} aria-label={S.zoomClose}>
-            <img src={zoom.src} alt={zoom.alt} draggable={false} />
+            {zoom.src ? <img src={zoom.src} alt={zoom.alt} draggable={false} /> : zoom.image ? <ImageBlock image={zoom.image} className="zoom__placeholder" full /> : null}
           </button>
         )}
         <div className="phone__veil" aria-hidden="true" />

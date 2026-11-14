@@ -5,10 +5,10 @@ interface Props {
   onBattery(value: number): void;
   onSkipIntro(): void;
   onRestart(): void;
-  onClearUnread(): void;
-  onResetData(): void;
-  onShowcase(): void;
-  onVoice(): void;
+  onClearUnread?(): void;
+  onResetData?(): void;
+  onShowcase?(): void;
+  onVoice?(): void;
 }
 
 /** 驗收用的小面板，只在開發模式或網址帶 ?dev 時出現。不是遊戲的一部分。 */
@@ -37,10 +37,10 @@ export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUn
             <button onClick={() => onBattery(0)}>沒電</button>
             <button onClick={onSkipIntro}>跳過開場</button>
             <button onClick={onRestart}>重播開場</button>
-            <button onClick={onClearUnread}>清掉紅點</button>
-            <button onClick={onResetData}>還原假資料</button>
-            <button onClick={onShowcase}>Suru 樣式</button>
-            <button onClick={onVoice}>心聲通知</button>
+            {onClearUnread && <button onClick={onClearUnread}>清掉紅點</button>}
+            {onResetData && <button onClick={onResetData}>還原假資料</button>}
+            {onShowcase && <button onClick={onShowcase}>Suru 樣式</button>}
+            {onVoice && <button onClick={onVoice}>心聲通知</button>}
           </div>
         </div>
       )}

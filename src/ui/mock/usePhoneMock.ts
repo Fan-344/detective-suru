@@ -114,9 +114,13 @@ export function usePhoneMock() {
         setData((d) => ({ ...d, notice: { id: wander.current.shown, text } }));
       },
       // 示範用：任何答案都接受並往下一題；全部答完跳一句佔位的結果，再從頭開始
+      onViewImage: () => {},
+      onNavigate: () => {},
       onAccuseAnswer: (_stepId, value) =>
         setData((d) => {
-          const answers = [...d.suru.accuse.answers, value];
+          // 用紀錄回答的題目，上方顯示那筆紀錄的名稱
+          const label = d.suru.records.find((r) => r.id === value)?.title ?? value;
+          const answers = [...d.suru.accuse.answers, label];
           const done = answers.length >= d.suru.accuse.steps.length;
           return {
             ...d,

@@ -26,6 +26,7 @@ export function Finder({ devices, onLocate }: Props) {
               {!d.located && (
                 <button className="finder__locate" onClick={() => onLocate(d.id)} aria-label={`${S.finderLocate} ${d.name}`}>
                   {S.finderLocate}
+                  {d.cost ? <small>－{d.cost}%</small> : null}
                 </button>
               )}
             </div>
