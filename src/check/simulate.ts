@@ -46,6 +46,7 @@ export function concreteActions(engine: Engine, s: GameState): Action[] {
   for (const t of m.threads) if (!t.read) list.push({ type: 'readThread', thread: t.thread });
   for (const l of m.locate) list.push({ type: 'locate', app: l.app });
   for (const item of m.images) if (!s.viewedImages.includes(item)) list.push({ type: 'viewImage', item });
+  for (const c of m.concerns) for (const option of c.options) list.push({ type: 'spot', card: c.card, option });
   for (const r of m.replies) for (const option of r.options) list.push({ type: 'reply', event: r.event, option });
   for (const t of m.tests) for (const target of t.targets) list.push({ type: 'test', card: t.card, target });
   for (const l of engine.content.links) {
@@ -209,6 +210,8 @@ const describe = (a: Action): string => {
       return `定位 ${a.app}`;
     case 'viewImage':
       return `看照片 ${a.item}`;
+    case 'spot':
+      return `指出 ${a.card}:${a.option}`;
     case 'reply':
       return `回 ${a.event}:${a.option}`;
     case 'test':

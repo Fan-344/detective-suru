@@ -30,6 +30,28 @@ export interface Engine {
   holds(state: GameState, condition: Condition | undefined): boolean;
 }
 
+/**
+ * 疑點成立前多的一層：助理只說「這一筆讓我在意」，玩家要指出是這一筆的哪個地方有問題。
+ * 【待文本確認】資料型別還沒有這個欄位（建議放在 Card.spot）；加上後改成直接讀。
+ */
+export interface Spot {
+  /** 讓助理在意的那一筆 */
+  item: ItemId;
+  /** 助理問的那句話 */
+  prompt?: string;
+  /** 可以指的地方 */
+  options: { id: string; text: string }[];
+  /** 哪一個才是有問題的地方 */
+  answer: string;
+  /** 指錯時助理說的話 */
+  miss?: string;
+}
+
+export function spotOf(card: Card): Spot | null {
+  const spot = (card as { spot?: Spot }).spot;
+  return spot && Array.isArray(spot.options) && spot.options.length > 0 ? spot : null;
+}
+
 export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES): Engine {
   const { meta } = content;
   const cost = meta.battery.cost;
@@ -45,6 +67,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   const openCost = (app: { background?: boolean }) => (app.background ? (cost.openIdleApp ?? cost.openApp) : cost.openApp);
   /** 進推理備忘錄的 item（跟案情無關的生活內容不算） */
   const isClue = (id: ItemId) => items.has(id) && !items.get(id)!.flavor;
+
+  /** 指錯「哪裡有問題」時扣的電。【待文本確認】等 meta.battery.cost 加上 spotMiss 後改成直接讀。 */
+  const spotMissCost = (cost as { spotMiss?: number }).spotMiss ?? 0;
 
   const dmThread = (target: CharacterId): ThreadId | null =>
     content.threads.find((t) => t.members.length === 1 && t.members[0] === target)?.id ?? null;
@@ -92,6 +117,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       threads: Object.fromEntries(content.threads.map((t) => [t.id, { appended: [] }])),
       links: [],
       cards: [],
+      concerns: [],
       cardsUsed: [],
       fired: [],
       scheduled: [],
@@ -105,6 +131,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       voiceClock: Object.fromEntries(content.conclusions.map((c) => [c.id, 0])),
       wanderStreak: 0,
       wanderIndex: 0,
+      assistantUnread: false,
       challengeTries: 0,
       ended: null,
     };
@@ -264,10 +291,21 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
     };
 
     const gainCards = () => {
-      const fresh = content.cards.filter((c) => c.availableWhen && !s.cards.includes(c.id) && holds(s, c.availableWhen)).map((c) => c.id);
-      if (fresh.length === 0) return;
-      s.cards.push(...fresh);
-      out.push({ kind: 'cards', cards: fresh });
+      const ready = content.cards.filter(
+        (c) => c.availableWhen && !s.cards.includes(c.id) && !s.concerns.some((x) => x.card === c.id) && holds(s, c.availableWhen),
+      );
+      if (ready.length === 0) return;
+      // 有寫 spot 的先變成「在意的地方」，要玩家指出哪裡有問題才成為疑點；沒寫的直接成為疑點
+      for (const c of ready.filter((c) => spotOf(c))) s.concerns.push({ card: c.id, tried: [] });
+      const fresh = ready.filter((c) => !spotOf(c)).map((c) => c.id);
+      if (fresh.length) {
+        s.cards.push(...fresh);
+        out.push({ kind: 'cards', cards: fresh, via: 'noted' });
+      }
+      if (!s.assistantUnread) {
+        s.assistantUnread = true;
+        out.push({ kind: 'assistantUnread' });
+      }
     };
 
     const done = (): StepResult => {
@@ -341,6 +379,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const first = !s.openedApps.includes(app.id);
         if (first) s.openedApps.push(app.id);
         out.push({ kind: 'app', app: app.id, first });
+        if (app.view === 'assistant') s.assistantUnread = false;
         see(content.items.filter((i) => i.app === app.id && !i.thread && !i.hidden && (!i.needsLocate || s.located.includes(app.id))).map((i) => i.id));
         if (app.background) {
           s.wanderStreak += 1;
@@ -404,6 +443,25 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
 
+      case 'spot': {
+        const concern = s.concerns.find((x) => x.card === action.card);
+        const card = cards.get(action.card);
+        const spot = card ? spotOf(card) : null;
+        if (!concern || !card || !spot) return invalid('這不是現在在意的地方');
+        if (!spot.options.some((o) => o.id === action.option) || concern.tried.includes(action.option)) return invalid('不能指這一項');
+        const right = action.option === spot.answer;
+        out.push({ kind: 'spot', card: card.id, option: action.option, right });
+        if (right) {
+          s.concerns = s.concerns.filter((x) => x !== concern);
+          s.cards.push(card.id);
+          out.push({ kind: 'cards', cards: [card.id], via: 'found' });
+        } else {
+          concern.tried.push(action.option);
+          spend(spotMissCost);
+        }
+        return done();
+      }
+
       case 'compare': {
         const statement = items.get(action.statement);
         const record = items.get(action.record);
@@ -419,7 +477,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const fresh = (link?.unlocks ?? []).filter((c) => cards.has(c) && !s.cards.includes(c));
         if (fresh.length) {
           s.cards.push(...fresh);
-          out.push({ kind: 'cards', cards: fresh });
+          out.push({ kind: 'cards', cards: fresh, via: 'found' });
         }
         return done();
       }
@@ -493,7 +551,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   }
 
   function menu(s: GameState): Menu {
-    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], images: [], replies: [], tests: [], compare: null, challenge: null };
+    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], images: [], assistantUnread: false, concerns: [], replies: [], tests: [], compare: null, challenge: null };
     if (s.phase === 'ended') return empty;
     if (s.phase === 'cover') return { ...empty, cover: true };
     const chatOpen = chatApps.some((a) => s.openedApps.includes(a));
@@ -515,10 +573,17 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
             return { thread: t.id, read, cost: read ? 0 : cost.readThread };
           })
         : [],
+      assistantUnread: s.assistantUnread,
       locate: s.openedApps
         .filter((a) => !s.located.includes(a) && content.items.some((i) => i.app === a && i.needsLocate && !i.hidden))
         .map((app) => ({ app, cost: cost.locate })),
       images: [...s.seen, ...s.unopened].filter((id) => items.get(id)?.image),
+      concerns: s.concerns.flatMap((x) => {
+        const card = cards.get(x.card);
+        const spot = card ? spotOf(card) : null;
+        if (!spot) return [];
+        return [{ card: x.card, item: spot.item, options: spot.options.map((o) => o.id).filter((id) => !x.tried.includes(id)), missCost: spotMissCost }];
+      }),
       replies: s.awaiting.flatMap((id) => {
         const e = events.get(id);
         if (!e || e.kind !== 'message' || !s.readThreads.includes(e.thread)) return [];

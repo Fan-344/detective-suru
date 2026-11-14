@@ -301,6 +301,60 @@ describe('engine', () => {
     expect(s.cards).toContain(card.id);
   });
 
+  it('助理自己記下的疑點只給一個未讀記號，不重複，打開助理 App 就清掉；比對出來的不算', () => {
+    const first = engine.step(engine.start(), { type: 'sendCover' });
+    // 開局讀群組就會記下一個疑點
+    expect(first.outcomes.filter((o) => o.kind === 'assistantUnread')).toHaveLength(1);
+    expect(first.outcomes).toContainEqual(expect.objectContaining({ kind: 'cards', via: 'noted' }));
+    expect(first.state.assistantUnread).toBe(true);
+    // 還沒打開之前，再記下新的也不重複通知
+    const more = engine.step(first.state, { type: 'openApp', app: 'receipts' });
+    expect(more.outcomes.some((o) => o.kind === 'cards')).toBe(true);
+    expect(more.outcomes.some((o) => o.kind === 'assistantUnread')).toBe(false);
+    // 比對出來的直接告訴玩家，不動未讀記號
+    const found = engine.step(more.state, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' });
+    expect(found.outcomes).toContainEqual(expect.objectContaining({ kind: 'cards', via: 'found' }));
+    const assistant = content.apps.apps.find((a) => a.view === 'assistant')!;
+    const opened = engine.step(found.state, { type: 'openApp', app: assistant.id });
+    expect(opened.state.assistantUnread).toBe(false);
+    expect(engine.menu(opened.state).assistantUnread).toBe(false);
+  });
+
+  it('在意的地方：條件成立時不直接給疑點，要指出哪裡有問題；指錯扣電、不能重複指，指對才成立', () => {
+    // 用副本自己寫一筆，不依賴資料檔裡怎麼寫
+    const copy = structuredClone(content);
+    const card = copy.cards.find((c) => c.id === 'card_bag')!;
+    (card as { spot?: unknown }).spot = {
+      item: 'rcp_2016',
+      prompt: '問句',
+      options: [
+        { id: 'a', text: '甲' },
+        { id: 'b', text: '乙' },
+        { id: 'c', text: '丙' },
+      ],
+      answer: 'b',
+    };
+    (copy.meta.battery.cost as { spotMiss?: number }).spotMiss = 1;
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
+    expect(s.cards).not.toContain('card_bag');
+    expect(e2.menu(s).concerns).toEqual([{ card: 'card_bag', item: 'rcp_2016', options: ['a', 'b', 'c'], missCost: 1 }]);
+    expect(e2.menu(s).tests.some((t) => t.card === 'card_bag')).toBe(false);
+
+    const miss = e2.step(s, { type: 'spot', card: 'card_bag', option: 'a' });
+    expect(miss.outcomes).toContainEqual({ kind: 'spot', card: 'card_bag', option: 'a', right: false });
+    expect(s.battery - miss.state.battery).toBe(1);
+    expect(e2.menu(miss.state).concerns[0].options).toEqual(['b', 'c']);
+    expect(e2.step(miss.state, { type: 'spot', card: 'card_bag', option: 'a' }).outcomes[0].kind).toBe('invalid');
+
+    const hit = e2.step(miss.state, { type: 'spot', card: 'card_bag', option: 'b' });
+    expect(hit.state.cards).toContain('card_bag');
+    expect(hit.state.concerns).toEqual([]);
+    expect(hit.state.battery).toBe(miss.state.battery);
+    expect(hit.outcomes).toContainEqual({ kind: 'cards', cards: ['card_bag'], via: 'found' });
+  });
+
   it('備忘錄分兩欄、時間軸照故事時間排；心聲只在結論還沒到達時出現', () => {
     const s = run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state;
     const m = memo(content, s);

@@ -3,7 +3,7 @@
 // 這裡的字串只有介面用語；劇情文字全部來自資料檔。
 
 import type { CaseContent, ImageRef, Item, Message, Signal } from '../content/types';
-import { createEngine, memo, voice, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
+import { createEngine, memo, spotOf, voice, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
 
 export interface Choice {
   label: string;
@@ -171,7 +171,17 @@ export class TextGame {
         }
         break;
       case 'cards':
-        for (const id of o.cards) this.say(`　＋發現疑點：${this.content.cards.find((c) => c.id === id)?.title ?? id}（可以拿去問人）`);
+        // 自己比對出來的才直接說；助理自己記下的不說是什麼，要玩家進 Suru 看
+        if (o.via === 'found') for (const id of o.cards) this.say(`　＋發現疑點：${this.content.cards.find((c) => c.id === id)?.title ?? id}（可以拿去問人）`);
+        break;
+      case 'spot': {
+        const card = this.content.cards.find((c) => c.id === o.card);
+        const spot = card ? spotOf(card) : null;
+        if (!o.right) this.say(spot?.miss ?? '（不是這裡。）');
+        break;
+      }
+      case 'assistantUnread':
+        this.say(`　（${this.appName(this.content.apps.apps.find((a) => a.view === 'assistant')?.id ?? '')} 記下了一筆新的東西。）`);
         break;
       case 'link':
         this.say(o.result === 'match' ? '→ 吻合。' : o.result === 'conflict' ? '→ 矛盾。' : '→ 看不出關聯。');
@@ -377,6 +387,7 @@ export class TextGame {
       { label: '說法', run: () => this.showList('說法', memo(this.content, this.state).statements) },
       { label: '疑點', run: () => this.showCards() },
     ];
+    if (m.concerns.length) list.push({ label: `在意的地方（${m.concerns.length}）`, run: () => (this.screen = this.concernList) });
     if (m.compare) list.push({ label: '比對一則說法和一筆紀錄', run: () => (this.screen = this.pickStatement) });
     // 疑點、拿疑點去試探人、指認兇手都收在助理 App 裡，主畫面不放
     if (m.tests.length) list.push({ label: '試探某個人（拿疑點去問）', run: () => (this.screen = this.probeWho) });
@@ -384,6 +395,39 @@ export class TextGame {
     list.push(this.back());
     return list;
   };
+
+  // 在意的地方：助理只指出是哪一筆，玩家要說出哪裡有問題
+  private concernList = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    return [
+      ...m.concerns.flatMap((c) => {
+        const item = this.item(c.item);
+        return item ? [{ label: this.label(item), run: () => this.openConcern(c.card) }] : [];
+      }),
+      this.toSuru(),
+    ];
+  };
+
+  private openConcern(cardId: string) {
+    const card = this.content.cards.find((c) => c.id === cardId);
+    const spot = card ? spotOf(card) : null;
+    const item = spot ? this.item(spot.item) : undefined;
+    if (!spot || !item) return;
+    this.say('');
+    this.detail(item);
+    if (item.image && this.state.viewedImages.includes(item.id)) this.say(`　${item.image.description}`);
+    if (spot.prompt) this.say('', spot.prompt);
+    this.screen = () => {
+      const c = this.engine.menu(this.state).concerns.find((x) => x.card === cardId);
+      if (!c) return this.suru();
+      return [
+        ...spot.options
+          .filter((o) => c.options.includes(o.id))
+          .map((o) => ({ label: `${o.text}${c.missCost ? `（指錯 -${c.missCost}%）` : ''}`, run: () => this.act({ type: 'spot', card: cardId, option: o.id }) })),
+        { label: '先不回答', run: () => (this.screen = this.concernList) },
+      ];
+    };
+  }
 
   private showVoice() {
     this.say('', '── 心聲 ──', ...voice(this.engine, this.state).map((l) => `・${l.text}`));

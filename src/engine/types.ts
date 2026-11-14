@@ -53,8 +53,13 @@ export interface GameState {
   located: AppId[];
   threads: Record<ThreadId, { appended: AppendedMessage[] }>;
   links: LinkResult[];
-  /** 手上的牌 */
+  /** 手上的牌（玩家面前叫疑點） */
   cards: CardId[];
+  /**
+   * 助理在意、但還沒成為疑點的地方：條件成立了，要玩家指出「哪裡有問題」才會變成疑點。
+   * tried 是已經指錯過的選項。
+   */
+  concerns: { card: CardId; tried: string[] }[];
   /** 用過的「牌>對象」 */
   cardsUsed: string[];
   /** 已經發生過的事件。每個事件整場只發生一次。 */
@@ -84,6 +89,8 @@ export interface GameState {
   wanderStreak: number;
   /** 下一次亂逛提醒用第幾句 */
   wanderIndex: number;
+  /** 助理 App 裡有玩家還沒看過的新東西（畫面上是圖示的紅點） */
+  assistantUnread: boolean;
   challengeTries: number;
   /** 結局 id */
   ended: string | null;
@@ -98,6 +105,8 @@ export type Action =
   | { type: 'viewImage'; item: ItemId }
   | { type: 'reply'; event: EventId; option: string }
   | { type: 'compare'; statement: ItemId; record: ItemId }
+  /** 對某個在意的地方，指出哪裡有問題 */
+  | { type: 'spot'; card: CardId; option: string }
   | { type: 'test'; card: CardId; target: CharacterId }
   /** option 為 null 表示把視窗關掉（不理它） */
   | { type: 'answerPrompt'; option: string | null }
@@ -119,7 +128,12 @@ export type Outcome =
   | { kind: 'sent'; thread: ThreadId; text: string }
   | { kind: 'message'; thread: ThreadId; from: CharacterId; text: string[]; image?: ImageRef; signal?: Signal; event?: EventId }
   | { kind: 'link'; statement: ItemId; record: ItemId; result: 'match' | 'conflict' | 'none' }
-  | { kind: 'cards'; cards: CardId[] }
+  /** found：玩家自己比對出來的；noted：看到某些東西後助理自己記下的（不主動告訴玩家是什麼） */
+  | { kind: 'cards'; cards: CardId[]; via: 'found' | 'noted' }
+  /** 助理 App 有新東西了。只是一個記號，不說內容；到玩家打開助理 App 之前只出現一次。 */
+  | { kind: 'assistantUnread' }
+  /** 指出哪裡有問題的結果。指對了那個疑點就成立（另有一筆 cards）；指錯會扣電。 */
+  | { kind: 'spot'; card: CardId; option: string; right: boolean }
   | { kind: 'prompt'; event: EventId }
   /** 按了視窗上的軟牆按鈕：只丟出一句提醒，視窗還在 */
   | { kind: 'promptHint'; event: EventId; text: string }
@@ -146,6 +160,9 @@ export interface Menu {
   locate: { app: AppId; cost: number }[];
   /** 現在可以點開照片的 item（含已經點開過的） */
   images: ItemId[];
+  assistantUnread: boolean;
+  /** 在意的地方，以及還能指的選項 */
+  concerns: { card: CardId; item: ItemId; options: string[]; missCost: number }[];
   replies: { event: EventId; thread: ThreadId; options: string[]; cost: number }[];
   tests: { card: CardId; thread: ThreadId | null; targets: CharacterId[]; cost: number }[];
   compare: { statements: ItemId[]; records: ItemId[] } | null;
