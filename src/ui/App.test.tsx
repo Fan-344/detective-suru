@@ -101,4 +101,57 @@ describe('外觀框架', () => {
     fireEvent.click(screen.getByRole('button', { name: demo.close }));
     expect(screen.queryByText(demo.cards[0].title)).toBeNull();
   });
+
+  it('Suru 助理：從圖示打開，看得到心聲與備忘錄分頁，收起後回主畫面', () => {
+    render(<App />);
+    passIntro();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /Suru/ }));
+    const suru = fixture.phone.suru;
+    expect(screen.getByText(suru.voice[0].text)).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
+    expect(screen.getByText(suru.timeline[0].text!)).toBeTruthy();
+    expect(screen.getAllByText(S.suruGap).length).toBe(2);
+    fireEvent.click(screen.getByRole('tab', { name: S.suruRecords }));
+    expect(screen.getByText(suru.records[0].title)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
+    expect(screen.getByRole('button', { name: /雲端發票/ })).toBeTruthy();
+  });
+
+  it('長按 home 鍵叫出 Suru 助理，短按回主畫面', () => {
+    vi.useFakeTimers();
+    render(<App />);
+    passIntro();
+    const button = screen.getByRole('button', { name: S.home });
+    fireEvent.pointerDown(button);
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    fireEvent.pointerUp(button);
+    fireEvent.click(button);
+    expect(screen.getByRole('tab', { name: S.suruVoice })).toBeTruthy();
+    fireEvent.click(button);
+    expect(screen.queryByRole('tab', { name: S.suruVoice })).toBeNull();
+  });
+
+  it('背景 App 真的能用：計算機、行事曆、設定', () => {
+    render(<App />);
+    passIntro();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /計算機/ }));
+    for (const key of ['7', '×', '6', '=']) fireEvent.click(screen.getByRole('button', { name: key }));
+    expect(screen.getByTestId('calc-display').textContent).toBe('42');
+    home();
+
+    fireEvent.click(screen.getByRole('button', { name: /行事曆/ }));
+    expect(screen.getByText('2026 年 11 月')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: S.calNext }));
+    expect(screen.getByText('2026 年 12 月')).toBeTruthy();
+    home();
+
+    fireEvent.click(screen.getByRole('button', { name: /設定/ }));
+    expect(screen.getByTestId('battery')).toBeTruthy();
+    fireEvent.click(screen.getByRole('switch', { name: S.setShowPercent }));
+    expect(screen.queryByTestId('battery')).toBeNull();
+  });
 });

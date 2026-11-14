@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { Calculator, Calendar, Camera, Music, Settings, Stopwatch } from '../apps/Extras';
 import { ChatList, ChatRoom } from '../layouts/Chat';
 import { GalleryGrid, GalleryViewer } from '../layouts/Gallery';
 import { DetailView, ListView } from '../layouts/ListDetail';
+import { SuruApp } from '../suru/SuruApp';
 import { S } from '../strings';
 import { tensionStage, tensionVisual } from '../format';
-import type { Nav, PhoneActions, PhoneData } from '../types';
+import type { Nav, PhoneActions, PhoneData, PhonePrefs } from '../types';
 import { HomeScreen } from './HomeScreen';
 import { BackGlyph } from './icons';
 import { StatusBar } from './StatusBar';
@@ -17,6 +19,8 @@ interface Props {
   initialNav?: Nav;
   /** 每按一次實體 home 鍵就加一，外殼看到數字變了就回主畫面 */
   homePress?: number;
+  /** 每長按一次 home 鍵就加一，外殼看到數字變了就叫出 Suru 助理 */
+  assistPress?: number;
   /** 緊張程度 0 到 1，只影響畫面氣氛 */
   tension?: number;
 }
@@ -29,9 +33,10 @@ const HOME: Nav = { app: null, detail: null };
  * 手機外殼：狀態列、主畫面、進出 App 的轉場。
  * 「現在開著哪個 App、哪一層」是外殼自己的畫面狀態，不屬於遊戲狀態。
  */
-export function Phone({ data, battery, actions, initialNav, homePress = 0, tension = 0 }: Props) {
+export function Phone({ data, battery, actions, initialNav, homePress = 0, assistPress = 0, tension = 0 }: Props) {
   const [nav, setNav] = useState<Nav>(initialNav ?? HOME);
   const [motion, setMotion] = useState<Motion>('open');
+  const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false });
 
   const app = data.apps.find((a) => a.id === nav.app) ?? null;
 
@@ -39,7 +44,10 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, tensi
     setMotion(how);
     setNav(next);
   };
-  const openApp = (appId: string) => go({ app: appId, detail: null }, 'open');
+  const openApp = (appId: string) => {
+    if (data.apps.find((a) => a.id === appId)?.layout === 'suru') actions.onOpenSuru();
+    go({ app: appId, detail: null }, 'open');
+  };
   const openDetail = (id: string) => go({ app: nav.app, detail: id }, 'push');
   const back = () => (nav.detail ? go({ app: nav.app, detail: null }, 'pop') : go(HOME, 'close'));
 
@@ -50,6 +58,19 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, tensi
     setMotion('close');
     setNav(HOME);
   }, [homePress]);
+
+  const seenAssist = useRef(assistPress);
+  useEffect(() => {
+    if (assistPress === seenAssist.current) return;
+    seenAssist.current = assistPress;
+    const suru = data.apps.find((a) => a.layout === 'suru');
+    if (!suru) return;
+    actions.onOpenSuru();
+    setMotion('open');
+    setNav({ app: suru.id, detail: null });
+    // 只在長按次數改變時觸發
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistPress]);
 
   let title = app?.name ?? '';
   let body = null;
@@ -100,6 +121,18 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, tensi
     ) : (
       <GalleryGrid items={items} onOpen={openDetail} />
     );
+  } else if (app?.layout === 'calculator') {
+    body = <Calculator />;
+  } else if (app?.layout === 'clock') {
+    body = <Stopwatch />;
+  } else if (app?.layout === 'calendar') {
+    body = <Calendar start={data.calendar} />;
+  } else if (app?.layout === 'settings') {
+    body = <Settings wifiName={data.wifiName} battery={battery} prefs={prefs} onChange={setPrefs} />;
+  } else if (app?.layout === 'camera') {
+    body = <Camera />;
+  } else if (app?.layout === 'music') {
+    body = <Music tracks={data.music} />;
   } else if (app) {
     body = <div className="empty">{S.placeholderScreen}</div>;
   }
@@ -109,13 +142,17 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, tensi
 
   return (
     <div
-      className="phone"
+      className={`phone ${prefs.reduceMotion ? 'phone--calm' : ''}`}
       data-stage={tensionStage(tension)}
       style={{ '--tension': tensionVisual(tension).toFixed(3) } as CSSProperties}
     >
-      <StatusBar wifiName={data.wifiName} battery={battery} />
+      <StatusBar wifiName={data.wifiName} battery={battery} showPercent={prefs.showPercent} />
       <div className="phone__stage">
-        {app ? (
+        {app?.layout === 'suru' ? (
+          <div key="suru" className="suruwrap">
+            <SuruApp title={app.name} data={data.suru} onClose={back} />
+          </div>
+        ) : app ? (
           <section key={viewKey} className={`appwin appwin--${motion}`} aria-label={title}>
             <div className="appwin__bar">
               <button className="appwin__back" onClick={back} aria-label={S.back}>

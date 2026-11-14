@@ -2,7 +2,19 @@
 // 這些只描述「畫面要顯示什麼」，不含任何遊戲規則。
 // 步驟三會由 engine 的狀態轉成這些型別，畫面元件本身不用改。
 
-export type LayoutKind = 'chat' | 'list' | 'gallery' | 'placeholder';
+export type LayoutKind =
+  | 'chat'
+  | 'list'
+  | 'gallery'
+  | 'placeholder'
+  | 'suru'
+  // 以下是跟案情無關、但真的能用的背景 App
+  | 'calculator'
+  | 'clock'
+  | 'calendar'
+  | 'settings'
+  | 'camera'
+  | 'music';
 
 export type IconId =
   | 'chat'
@@ -16,7 +28,13 @@ export type IconId =
   | 'finder'
   | 'tools'
   | 'music'
-  | 'camera';
+  | 'camera'
+  | 'suru'
+  | 'social'
+  | 'calendar'
+  | 'clock'
+  | 'calculator'
+  | 'settings';
 
 export interface AppDef {
   id: string;
@@ -113,6 +131,50 @@ export type IntroSegment =
   | { kind: 'quote'; lines: string[]; signature?: string }
   | { kind: 'notice'; label: string; lines: string[] };
 
+export interface SuruVoiceLine {
+  id: string;
+  text: string;
+  isNew?: boolean;
+}
+
+export interface SuruTimelineRow {
+  id: string;
+  time: string;
+  text?: string;
+  /** 這段時間沒有任何紀錄，要明確顯示成空白 */
+  gap?: boolean;
+}
+
+export interface SuruMemoItem {
+  id: string;
+  title: string;
+  source: string;
+  when: string;
+  body?: string;
+}
+
+/** Suru 助理裡的內容：心聲（最新的排最前面）和推理備忘錄 */
+export interface SuruData {
+  voice: SuruVoiceLine[];
+  timeline: SuruTimelineRow[];
+  records: SuruMemoItem[];
+  statements: SuruMemoItem[];
+  cards: { no: number; title: string; note?: string }[];
+}
+
+export interface MusicTrack {
+  title: string;
+  artist: string;
+  seconds: number;
+  tone: number;
+}
+
+/** 設定 App 裡真的會生效的開關 */
+export interface PhonePrefs {
+  showPercent: boolean;
+  reduceMotion: boolean;
+}
+
 export interface PhoneData {
   selfId: string;
   wifiName: string;
@@ -121,6 +183,9 @@ export interface PhoneData {
   threads: ChatThread[];
   lists: Record<string, ListGroup[]>;
   galleries: Record<string, GalleryItem[]>;
+  suru: SuruData;
+  music: MusicTrack[];
+  calendar: { year: number; month: number };
 }
 
 export interface PhoneActions {
@@ -128,6 +193,7 @@ export interface PhoneActions {
   onChooseReply(threadId: string, optionId: string): void;
   onSendPrefill(threadId: string): void;
   onOpenRow(appId: string, rowId: string): void;
+  onOpenSuru(): void;
 }
 
 export interface Nav {

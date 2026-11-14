@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRef } from 'react';
 import { DevPanel } from './dev/DevPanel';
 import { tensionFromBattery } from './format';
 import { usePhoneMock } from './mock/usePhoneMock';
@@ -21,6 +22,28 @@ export function App() {
   const mock = usePhoneMock();
   const [homePress, setHomePress] = useState(0);
   const [showcase, setShowcase] = useState(false);
+  const [assistPress, setAssistPress] = useState(0);
+
+  // 實體 home 鍵：短按回主畫面，長按叫出 Suru 助理
+  const pressTimer = useRef<number | undefined>(undefined);
+  const longFired = useRef(false);
+  const pressStart = () => {
+    longFired.current = false;
+    window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(() => {
+      longFired.current = true;
+      setAssistPress((n) => n + 1);
+    }, 450);
+  };
+  const pressEnd = () => window.clearTimeout(pressTimer.current);
+  const pressClick = () => {
+    if (longFired.current) {
+      longFired.current = false;
+      return;
+    }
+    setHomePress((n) => n + 1);
+  };
+  const suruCalling = mock.stage === 'phone' && mock.data.suru.voice.some((v) => v.isNew);
   return (
     <div className="stage">
       <div className="device">
@@ -39,6 +62,7 @@ export function App() {
               actions={mock.actions}
               initialNav={mock.afterIntro}
               homePress={homePress}
+              assistPress={assistPress}
               tension={tensionFromBattery(mock.battery, mock.startBattery)}
             />
           )}
@@ -47,10 +71,15 @@ export function App() {
         </div>
         <div className="chin">
           <button
-            className="chin__home"
+            className={`chin__home ${suruCalling ? 'chin__home--calling' : ''}`}
             aria-label={S.home}
             disabled={mock.stage !== 'phone'}
-            onClick={() => setHomePress((n) => n + 1)}
+            onClick={pressClick}
+            onPointerDown={pressStart}
+            onPointerUp={pressEnd}
+            onPointerLeave={pressEnd}
+            onPointerCancel={pressEnd}
+            onContextMenu={(e) => e.preventDefault()}
           >
             <span />
           </button>

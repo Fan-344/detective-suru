@@ -84,6 +84,12 @@ export function usePhoneMock() {
         const text = data.threads.find((t) => t.id === threadId)?.prefill;
         if (text) sendAsSelf(threadId, text);
       },
+      onOpenSuru: () =>
+        setData((d) => ({
+          ...d,
+          apps: d.apps.map((a) => (a.layout === 'suru' ? { ...a, unread: 0 } : a)),
+          suru: { ...d.suru, voice: d.suru.voice.map((v) => ({ ...v, isNew: false })) },
+        })),
       onOpenRow: (appId, rowId) =>
         setData((d) => {
           const groups = d.lists[appId];

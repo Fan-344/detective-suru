@@ -100,7 +100,37 @@
         "id": "music",
         "name": "音樂",
         "icon": "music",
-        "layout": "placeholder"
+        "layout": "music"
+      },
+      {
+        "id": "calendar",
+        "name": "行事曆",
+        "icon": "calendar",
+        "layout": "calendar"
+      },
+      {
+        "id": "clock",
+        "name": "時鐘",
+        "icon": "clock",
+        "layout": "clock"
+      },
+      {
+        "id": "social",
+        "name": "碎念",
+        "icon": "social",
+        "layout": "list"
+      },
+      {
+        "id": "calculator",
+        "name": "計算機",
+        "icon": "calculator",
+        "layout": "calculator"
+      },
+      {
+        "id": "settings",
+        "name": "設定",
+        "icon": "settings",
+        "layout": "settings"
       },
       {
         "id": "finder",
@@ -113,7 +143,7 @@
         "id": "camera",
         "name": "相機",
         "icon": "camera",
-        "layout": "placeholder",
+        "layout": "camera",
         "folder": "f_tools"
       },
       {
@@ -121,8 +151,8 @@
         "name": "電話",
         "icon": "phone",
         "layout": "list",
-        "unread": 3,
-        "dock": true
+        "dock": true,
+        "unread": 3
       },
       {
         "id": "chat",
@@ -137,6 +167,14 @@
         "icon": "photos",
         "layout": "gallery",
         "dock": true
+      },
+      {
+        "id": "suru",
+        "name": "Suru",
+        "icon": "suru",
+        "layout": "suru",
+        "dock": true,
+        "unread": 1
       }
     ],
     "threads": [
@@ -579,6 +617,52 @@
             }
           ]
         }
+      ],
+      "social": [
+        {
+          "label": "動態",
+          "rows": [
+            {
+              "id": "so1",
+              "title": "帳號佔位甲",
+              "subtitle": "貼文佔位：一則跟案情無關的日常碎念",
+              "meta": "2 小時",
+              "detail": {
+                "title": "帳號佔位甲",
+                "when": "2 小時前",
+                "lines": [
+                  "貼文佔位：一則跟案情無關的日常碎念。"
+                ]
+              }
+            },
+            {
+              "id": "so2",
+              "title": "帳號佔位乙",
+              "subtitle": "貼文佔位：另一則無關的貼文",
+              "meta": "5 小時",
+              "detail": {
+                "title": "帳號佔位乙",
+                "when": "5 小時前",
+                "lines": [
+                  "貼文佔位：另一則無關的貼文。"
+                ]
+              }
+            },
+            {
+              "id": "so3",
+              "title": "帳號佔位丙",
+              "subtitle": "貼文佔位：第三則",
+              "meta": "昨天",
+              "detail": {
+                "title": "帳號佔位丙",
+                "when": "昨天",
+                "lines": [
+                  "貼文佔位：第三則。"
+                ]
+              }
+            }
+          ]
+        }
       ]
     },
     "galleries": {
@@ -672,6 +756,133 @@
           }
         }
       ]
+    },
+    "suru": {
+      "voice": [
+        {
+          "id": "v3",
+          "text": "佔位心聲：這裡會是一個問題，不是答案？",
+          "isNew": true
+        },
+        {
+          "id": "v2",
+          "text": "佔位心聲：較早的一句，也是問句？"
+        },
+        {
+          "id": "v1",
+          "text": "佔位心聲：最早的一句？"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "t1",
+          "time": "週六 16:28",
+          "text": "時間軸項目一"
+        },
+        {
+          "id": "t2",
+          "time": "週六 18:42",
+          "text": "時間軸項目二"
+        },
+        {
+          "id": "t3",
+          "time": "19:00–20:00",
+          "gap": true
+        },
+        {
+          "id": "t4",
+          "time": "週六 20:16",
+          "text": "時間軸項目三"
+        },
+        {
+          "id": "t5",
+          "time": "週六 22:07",
+          "text": "時間軸項目四"
+        },
+        {
+          "id": "t6",
+          "time": "22:07 之後",
+          "gap": true
+        }
+      ],
+      "records": [
+        {
+          "id": "r1",
+          "title": "紀錄項目一",
+          "source": "雲端發票",
+          "when": "週六 18:42",
+          "body": "品項 ×1、品項 ×1"
+        },
+        {
+          "id": "r2",
+          "title": "紀錄項目二",
+          "source": "天氣",
+          "when": "週六晚上",
+          "body": "佔位資料"
+        },
+        {
+          "id": "r3",
+          "title": "紀錄項目三",
+          "source": "簡訊",
+          "when": "週日 08:40"
+        }
+      ],
+      "statements": [
+        {
+          "id": "s1",
+          "title": "說法項目一",
+          "source": "聊聊・測試群組",
+          "when": "週六 21:55",
+          "body": "聯絡人甲：佔位的一句話"
+        },
+        {
+          "id": "s2",
+          "title": "說法項目二",
+          "source": "片刻",
+          "when": "週六 22:30",
+          "body": "聯絡人乙：佔位的一句話"
+        }
+      ],
+      "cards": [
+        {
+          "no": 3,
+          "title": "牌面標題甲",
+          "note": "紀錄 × 說法"
+        },
+        {
+          "no": 7,
+          "title": "牌面標題乙比較長一點",
+          "note": "紀錄 × 說法"
+        },
+        {
+          "no": 12,
+          "title": "牌面標題丙"
+        }
+      ]
+    },
+    "music": [
+      {
+        "title": "歌名佔位一",
+        "artist": "演出者甲",
+        "seconds": 204,
+        "tone": 0
+      },
+      {
+        "title": "歌名佔位二",
+        "artist": "演出者乙",
+        "seconds": 187,
+        "tone": 3
+      },
+      {
+        "title": "歌名佔位三",
+        "artist": "演出者甲",
+        "seconds": 231,
+        "tone": 4
+      }
+    ],
+    "calendar": {
+      "year": 2026,
+      "month": 11
     }
   },
   "introTitle": "SURU",

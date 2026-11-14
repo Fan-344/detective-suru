@@ -113,6 +113,11 @@ ul, ol { list-style: none; }
 .chin__home span { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #6a7080; }
 .chin__home:active { transform: scale(0.94); border-color: #8a8f9c; }
 .chin__home:disabled { opacity: 0.45; }
+.chin__home { touch-action: none; -webkit-touch-callout: none; }
+/* Suru 有新的心聲：home 鍵亮起琥珀色，長按叫出 */
+.chin__home--calling { border-color: var(--amber); animation: calling 2.2s ease-in-out infinite; }
+.chin__home--calling span { border-color: var(--amber); }
+@keyframes calling { 0%, 100% { box-shadow: 0 0 0 0 rgba(240, 181, 74, 0); } 50% { box-shadow: 0 0 14px 3px rgba(240, 181, 74, 0.55); } }
 
 /* 桌面或平板：置中的手機框 */
 @media (min-width: 500px) and (min-height: 500px) {
@@ -263,12 +268,8 @@ ul, ol { list-style: none; }
 .homewrap {
   position: absolute;
   inset: 0;
-  /* 她的桌布：明亮、粉嫩、無害 */
-  background:
-    radial-gradient(70% 40% at 82% 12%, #ffe1a8 0%, transparent 70%),
-    radial-gradient(80% 45% at 10% 38%, #ffb3c4 0%, transparent 70%),
-    radial-gradient(90% 50% at 90% 78%, #a8c8ff 0%, transparent 70%),
-    linear-gradient(170deg, #ffc2a6, #f6a5c0 45%, #b7a6ee);
+  /* 她的桌布：以晴自己畫的窗邊貓 */
+  background: #a98bd6 url('./assets/wallpaper.jpg') center bottom / cover no-repeat;
 }
 .homewrap--close { animation: home-in 0.26s ease-out; }
 @keyframes home-in { from { opacity: 0; transform: scale(1.06); } }
@@ -304,31 +305,33 @@ ul, ol { list-style: none; }
 .tile__name { font-size: 12px; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .app-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 60px;
   height: 60px;
-  border-radius: 14px;
-  color: #fff;
-  background: linear-gradient(180deg, #f6b042, #e8792b);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  border-radius: 23%;
+  overflow: hidden;
+  background: #888;
+  box-shadow: 0 2px 5px rgba(40, 20, 60, 0.22);
 }
-.app-icon svg { width: 32px; height: 32px; }
-.app-icon--sm { width: 20px; height: 20px; border-radius: 5px; box-shadow: none; }
-.app-icon--sm svg { width: 13px; height: 13px; }
-.app-icon--chat { background: linear-gradient(180deg, #f9b949, #ec7d2a); }
-.app-icon--moments { background: linear-gradient(180deg, #f08a8a, #c9417c); }
-.app-icon--receipts { background: linear-gradient(180deg, #5fc7b4, #2b8f8a); }
-.app-icon--notes { background: linear-gradient(180deg, #fbf3d0, #ecd98f); color: #7a5a1c; }
-.app-icon--photos { background: linear-gradient(180deg, #7fb6f2, #4672d6); }
-.app-icon--phone { background: linear-gradient(180deg, #6f7f9c, #3d4a66); }
-.app-icon--sms { background: linear-gradient(180deg, #b79cf2, #7658d1); }
-.app-icon--weather { background: linear-gradient(180deg, #7fd0ee, #3a8fc4); }
-.app-icon--finder { background: linear-gradient(180deg, #d5d96b, #8f9a2c); }
+.app-icon svg { display: block; width: 100%; height: 100%; }
+.app-icon--sm { width: 20px; height: 20px; box-shadow: none; }
+.app-icon--img { background: none; border-radius: 0; overflow: visible; box-shadow: none; }
+.app-icon--img img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 2px 3px rgba(40, 20, 60, 0.28)); -webkit-user-drag: none; pointer-events: none; }
+.app-icon--sm.app-icon--img img { filter: none; }
+/* 底色只有很輕的同色明暗，每個 App 一個顏色 */
+.app-icon--sms { background: linear-gradient(180deg, #9a5cf2, #6d3ad8); }
+.app-icon--notes { background: linear-gradient(180deg, #ffd02e, #ffab14); }
+.app-icon--receipts { background: linear-gradient(180deg, #43d663, #1fa847); }
+.app-icon--moments { background: linear-gradient(160deg, #ff9160, #ff4c8c); }
+.app-icon--weather { background: linear-gradient(180deg, #55b8ff, #1f86f2); }
+.app-icon--music { background: linear-gradient(180deg, #232228, #111014); }
+.app-icon--finder { background: linear-gradient(180deg, #2a3329, #161c16); }
+.app-icon--camera { background: linear-gradient(180deg, #f6f2ea, #e6e0d3); }
+.app-icon--phone { background: linear-gradient(180deg, #0f6464, #06434a); }
+.app-icon--chat { background: linear-gradient(180deg, #ff9d33, #f26a14); }
+.app-icon--photos { background: linear-gradient(180deg, #ffffff, #f1eef0); }
+.app-icon--suru { background: linear-gradient(180deg, #17161a, #060608); }
 .app-icon--tools { background: linear-gradient(180deg, #a7adbb, #6d7384); }
-.app-icon--music { background: linear-gradient(180deg, #f39ac0, #d24a7e); }
-.app-icon--camera { background: linear-gradient(180deg, #c3c7d1, #7f8594); }
 
 .folder-icon {
   width: 60px;
@@ -352,7 +355,7 @@ ul, ol { list-style: none; }
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  background: var(--danger);
+  background: #f0403a;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -637,6 +640,107 @@ ul, ol { list-style: none; }
 
 .suru-show { position: absolute; inset: 0; z-index: 60; display: flex; flex-direction: column; }
 .suru-show__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 24px 8px; }
+
+/* ───────── 背景 App：跟案情無關，但真的能用 ───────── */
+
+.phone--calm *, .phone--calm *::before, .phone--calm *::after { animation: none !important; transition: none !important; }
+
+.home__grid { gap: 18px 6px; }
+
+/* 計算機 */
+.calc { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; background: #000; padding: 0 14px 16px; }
+.calc__display { color: #fff; font-size: 64px; font-weight: 300; text-align: right; padding: 0 10px 8px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.calc__keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
+.calc__key { aspect-ratio: 1; border-radius: 50%; font-size: 28px; text-align: center; color: #fff; background: #333336; }
+.calc__key:active { filter: brightness(1.4); }
+.calc__key--fn { background: #a5a5a9; color: #000; font-size: 23px; }
+.calc__key--op { background: #f59a1b; font-size: 32px; }
+.calc__key--on { background: #fff; color: #f59a1b; }
+.calc__key--wide { grid-column: span 2; aspect-ratio: auto; border-radius: 999px; text-align: left; padding-left: 28px; }
+
+/* 時鐘（碼錶） */
+.watch { height: 100%; display: flex; flex-direction: column; background: #000; color: #fff; padding: 0 20px; }
+.watch__time { flex: none; padding: 16vh 0 8vh; text-align: center; font-size: 62px; font-weight: 200; font-variant-numeric: tabular-nums; }
+.watch__buttons { flex: none; display: flex; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid #2a2a2e; }
+.watch__btn { width: 78px; height: 78px; border-radius: 50%; text-align: center; font-size: 16px; background: #333336; color: #fff; }
+.watch__btn:disabled { opacity: 0.4; }
+.watch__btn--go { background: #0f3d1f; color: #46d86c; }
+.watch__btn--stop { background: #46130f; color: #ff5a4d; }
+.watch__laps { flex: 1; min-height: 0; overflow-y: auto; }
+.watch__laps li { display: flex; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid #2a2a2e; font-variant-numeric: tabular-nums; }
+
+/* 行事曆 */
+.cal { padding: 14px 14px 24px; background: var(--surface); min-height: 100%; }
+.cal__head { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 14px; }
+.cal__head h2 { font-size: 20px; font-weight: 700; }
+.cal__head button { width: 44px; height: 44px; font-size: 28px; text-align: center; color: #e0352b; }
+.cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.cal__grid--week { font-size: 12px; color: var(--muted); padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.cal__grid span { height: 46px; display: flex; align-items: center; justify-content: center; font-size: 17px; font-variant-numeric: tabular-nums; }
+.cal__grid--week span { height: 22px; font-size: 12px; }
+.cal__day { border-bottom: 1px solid var(--surface-2); }
+.cal__empty { padding-top: 26px; text-align: center; color: var(--muted); font-size: 14px; }
+
+/* 設定 */
+.setgroup { margin: 0 12px; }
+.setgroup .detail__field { align-items: center; min-height: 50px; }
+.switch { width: 52px; height: 32px; border-radius: 16px; background: #dcdce1; padding: 2px; display: block; transition: background-color 0.2s; }
+.switch span { display: block; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 0.2s; }
+.switch--on { background: #34c759; }
+.switch--on span { transform: translateX(20px); }
+
+/* 相機 */
+.cam { height: 100%; display: flex; flex-direction: column; background: #000; }
+.cam__view { flex: 1; position: relative; background: radial-gradient(80% 60% at 50% 50%, #0d0d0f, #000); }
+.cam__flash { position: absolute; inset: 0; background: #fff; animation: cam-flash 0.35s ease-out forwards; }
+@keyframes cam-flash { from { opacity: 0.9; } to { opacity: 0; } }
+.cam__bar { flex: none; height: 112px; display: flex; align-items: center; justify-content: center; }
+.cam__shutter { width: 70px; height: 70px; border-radius: 50%; border: 4px solid #fff; padding: 4px; }
+.cam__shutter span { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; }
+.cam__shutter:active span { transform: scale(0.88); }
+
+/* 音樂 */
+.music { padding: 22px 20px 26px; display: flex; flex-direction: column; align-items: center; }
+.music__cover { width: 62%; aspect-ratio: 1; border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25); }
+.music__title { margin-top: 20px; font-size: 20px; font-weight: 700; }
+.music__artist { color: var(--muted); font-size: 15px; }
+.music__bar { width: 100%; height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 20px; overflow: hidden; }
+.music__bar span { display: block; height: 100%; background: #f5325a; }
+.music__times { width: 100%; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding-top: 6px; font-variant-numeric: tabular-nums; }
+.music__controls { display: flex; align-items: center; gap: 30px; padding: 10px 0 20px; }
+.music__controls button { width: 54px; height: 54px; font-size: 26px; text-align: center; }
+.music__controls .music__play { width: 66px; height: 66px; border-radius: 50%; background: #f5325a; color: #fff; font-size: 26px; }
+.music__list { width: 100%; margin: 0; }
+
+/* Suru 助理 */
+.suruwrap { position: absolute; inset: 0; z-index: 6; animation: suru-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes suru-up { from { opacity: 0; transform: translateY(18%); } }
+.suru-app { height: 100%; display: flex; flex-direction: column; }
+.suru-app__top { flex: none; display: flex; align-items: center; }
+.suru-app__top .suru-head { flex: 1; padding-right: 8px; }
+.suru-app__close { flex: none; height: 44px; padding: 4px 22px 0 10px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 13px; letter-spacing: 0.2em; color: var(--s-dim); }
+.suru-app__now { flex: none; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 22px 30px 26px; }
+.suru-orb { width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--s-line); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 26px rgba(240, 181, 74, 0.18), inset 0 0 14px rgba(240, 181, 74, 0.1); }
+.suru-orb .suru-mark { width: 12px; height: 12px; }
+.suru-app__line { font-size: 20px; line-height: 1.8; text-align: center; min-height: 72px; }
+.suru-tabs { flex: none; display: flex; border-top: 1px solid var(--s-line); border-bottom: 1px solid var(--s-line); font-family: -apple-system, "PingFang TC", sans-serif; }
+.suru-tabs__tab { flex: 1; height: 44px; font-size: 13px; letter-spacing: 0.14em; color: var(--s-dim); text-align: center; border-bottom: 2px solid transparent; }
+.suru-tabs__tab--on { color: var(--s-amber); border-bottom-color: var(--s-amber); }
+.suru-app__body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 18px 24px 24px; }
+.suru-empty { color: var(--s-dim); text-align: center; padding-top: 20px; font-size: 15px; }
+.suru-voice li { padding: 14px 0; border-bottom: 1px solid var(--s-line); font-size: 17px; line-height: 1.8; color: #b8b2a4; }
+.suru-time li { display: flex; gap: 16px; padding: 12px 0 12px 16px; border-left: 1px solid #5b5446; position: relative; font-family: -apple-system, "PingFang TC", sans-serif; }
+.suru-time li::before { content: ""; position: absolute; left: -4px; top: 19px; width: 7px; height: 7px; background: var(--s-amber); transform: rotate(45deg); }
+.suru-time__when { flex: none; width: 96px; font-size: 13px; color: var(--s-amber); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.suru-time__text { font-size: 15px; }
+.suru-time__gap { border-left-style: dashed; }
+.suru-time__gap::before { background: var(--s-bg); border: 1px solid #5b5446; }
+.suru-time__gap .suru-time__when, .suru-time__gap .suru-time__text { color: var(--s-dim); }
+.suru-items li { display: flex; flex-direction: column; gap: 4px; padding: 14px 0; border-bottom: 1px solid var(--s-line); }
+.suru-items__meta { display: flex; justify-content: space-between; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--s-amber); }
+.suru-items__title { font-size: 17px; }
+.suru-items__body { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 14px; color: #b8b2a4; }
+.suru-hand--wrap { flex-wrap: wrap; overflow: visible; }
 
 /* ───────── 開場 ───────── */
 
