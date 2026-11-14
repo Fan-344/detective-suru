@@ -122,8 +122,8 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
   const run: Run = { profile, final: s, actions: [], login: null, solvableAt: null, sentMessage: false, stuck: false, softDead: false, usedReactions: new Set() };
 
   for (let guard = 0; guard < 400 && s.phase !== 'ended'; guard++) {
-    let options = concreteActions(engine, s);
-    if (profile === 'silent') options = options.filter((a) => !isMessage(a));
+    const everything = concreteActions(engine, s);
+    const options = profile === 'silent' ? everything.filter((a) => !isMessage(a)) : everything;
     const fields = correctFields(content, s);
     if (fields && run.solvableAt === null) run.solvableAt = s.spent;
     const costly = options.filter((a) => a.type !== 'compare');
@@ -133,7 +133,8 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
     if (canChallenge && s.phase === 'play' && !s.prompt) {
       const ready = (accused !== ch.culprit || fields !== null) && goalFlags.every(([flag, value]) => (s.flags[flag] ?? false) === value);
       const nothingLeft = costly.length === 0;
-      if (nothingLeft && !fields) run.softDead = true;
+      // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
+      if (!fields && everything.every((a) => a.type === 'compare')) run.softDead = true;
       if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) {
         const records = engine.menu(s).challenge!.records;
         const anyFields = Object.fromEntries(ch.fields.map((f) => [f.id, [pick(records)]]));

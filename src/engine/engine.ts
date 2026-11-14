@@ -97,7 +97,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       prompt: null,
       promptHintIndex: 0,
       soothe: {},
-      nextTickAt: meta.battery.ladderTickEvery,
+      lastTick: Object.fromEntries(content.characters.map((c) => [c.id, 0])),
+      attended: [],
       genericIndex,
       voiceClock: Object.fromEntries(content.conclusions.map((c) => [c.id, 0])),
       wanderStreak: 0,
@@ -139,19 +140,25 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       const from = s.ladder[who] ?? 0;
       const to = Math.max(0, Math.min(max, from + delta));
       if (to === from) return;
-      out.push({ kind: 'ladder', character: who, from, to, auto });
       if (to < from) {
+        out.push({ kind: 'ladder', character: who, from, to, auto });
         s.ladder[who] = to;
         return;
       }
       // 往上時一級一級走，每一級的 onEnter 都會發生
       for (let level = from + 1; level <= to && !s.ended; level++) {
+        const rung = character.ladder.find((l) => l.level === level);
+        // 標了 needsContact 的那一級要玩家先開口才進得去（否則停在前一級）：
+        // self 是要理過這個角色本人，其餘（true、anyone）是理過任何人就算
+        const contacted = rung?.needsContact === 'self' ? s.attended.includes(who) : s.attended.length > 0;
+        if (rung?.needsContact && !contacted) break;
         s.ladder[who] = level;
-        for (const id of character.ladder.find((l) => l.level === level)?.onEnter ?? []) fire(id);
+        for (const id of rung?.onEnter ?? []) fire(id);
         for (const e of content.endings.endings) {
           if (e.trigger.kind === 'ladder' && e.trigger.character === who && e.trigger.level === level) end(e.id);
         }
       }
+      if (s.ladder[who] !== from) out.push({ kind: 'ladder', character: who, from, to: s.ladder[who], auto });
     };
 
     /** byPlayer：這個效果是玩家送出的東西造成的，會記入「有沒有被安撫」 */
@@ -195,13 +202,29 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       apply(e.effects, false);
     }
 
+    /** 這個人隔多少電量自動推進一次。從來沒被理過的人用較短的間隔（資料有寫的話）。 */
+    const tickEvery = (who: CharacterId) =>
+      s.attended.includes(who) ? meta.battery.ladderTickEvery : (meta.battery.ladderTickEveryIgnored ?? meta.battery.ladderTickEvery);
+
+    /** 每個人各自計時。輪到的人如果這一段被安撫過就不升，然後重新開始算下一段。 */
     const tick = () => {
-      for (const c of content.characters) {
-        if (s.ended) return;
-        if (s.soothe[c.id] === 'calm') continue;
-        moveLadder(c.id, 1, true);
+      for (let again = true; again && !s.ended; ) {
+        again = false;
+        for (const c of content.characters) {
+          if (s.ended) return;
+          const every = tickEvery(c.id);
+          if (every <= 0 || s.spent - (s.lastTick[c.id] ?? 0) < every) continue;
+          s.lastTick[c.id] = tidy((s.lastTick[c.id] ?? 0) + every);
+          const calm = s.soothe[c.id] === 'calm';
+          delete s.soothe[c.id];
+          if (!calm) moveLadder(c.id, 1, true);
+          again = true;
+        }
       }
-      s.soothe = {};
+    };
+
+    const attend = (who: CharacterId) => {
+      if (characters.has(who) && !s.attended.includes(who)) s.attended.push(who);
     };
 
     const spend = (amount: number) => {
@@ -221,10 +244,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         s.scheduled = s.scheduled.filter((x) => x !== due);
         fire(due.event, true);
       }
-      while (!s.ended && s.spent >= s.nextTickAt) {
-        s.nextTickAt += meta.battery.ladderTickEvery;
-        tick();
-      }
+      tick();
     };
 
     const say = (thread: ThreadId, text: string) => {
@@ -289,7 +309,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       const option = e.options?.find((o) => o.id === action.option);
       if (!option) return invalid('沒有這個按鈕');
       // 軟牆按鈕：只提醒，不關視窗、不耗電
-      const hints = softWall(option);
+      const hints = option.hints ?? [];
       if (hints.length) {
         out.push({ kind: 'promptHint', event: e.id, text: hints[s.promptHintIndex % hints.length] });
         s.promptHintIndex += 1;
@@ -361,6 +381,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         if (!option) return invalid('沒有這個回覆選項');
         s.awaiting = s.awaiting.filter((id) => id !== e.id);
         say(e.thread, option.text);
+        attend(e.from);
         hear(e.thread, e.from, option.reply ?? [], option.signal);
         see(option.reveals ?? []);
         apply(option.effects, true);
@@ -397,6 +418,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const key = `${card.id}>${action.target}`;
         if (s.cardsUsed.includes(key)) return invalid('這張牌已經問過這個人了');
         s.cardsUsed.push(key);
+        attend(action.target);
         say(thread, card.sayTo?.[action.target] ?? card.say);
         const reaction = content.reactions.find((r) => r.card === card.id && r.target === action.target && holds(s, r.when));
         if (reaction) {
@@ -449,15 +471,6 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
     }
-  }
-
-  /**
-   * 系統視窗上的「軟牆」按鈕：按了只丟出一句提醒（hints 輪流用），視窗不關。
-   * 【待文本確認】資料型別還沒有這個欄位；等 src/content/types.ts 加上後改成直接讀。
-   */
-  function softWall(option: object): string[] {
-    const hints = (option as { hints?: unknown }).hints;
-    return Array.isArray(hints) ? hints.filter((h): h is string => typeof h === 'string') : [];
   }
 
   function historyItems(thread: ThreadId): ItemId[] {

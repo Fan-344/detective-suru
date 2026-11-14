@@ -63,8 +63,10 @@ export interface GameState {
    * calm 是降級或明確不變（算被安撫），stirred 是升級。沒有紀錄表示這一段沒碰過他。
    */
   soothe: Record<CharacterId, 'calm' | 'stirred'>;
-  /** 累計耗電到多少時做下一次階梯自動推進 */
-  nextTickAt: number;
+  /** 各角色上一次輪到自動推進時的累計耗電（不管那次有沒有升）。每個人各自計時。 */
+  lastTick: Record<CharacterId, number>;
+  /** 玩家理過的角色：回過他的訊息，或拿牌問過他。開局那句掩護說法不算。 */
+  attended: CharacterId[];
   /** 各角色下一次通用反應用第幾種 */
   genericIndex: Record<CharacterId, number>;
   /** 各結論最後一次有新進展時的累計耗電 */

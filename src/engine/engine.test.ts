@@ -108,14 +108,84 @@ describe('engine', () => {
       { type: 'reply', event: 'cov_py_dm', option: 'sleepy' },
     ]).state;
     expect(s.soothe.pinyu).toBe('calm');
-    for (const app of ['sms', 'notes', 'receipts', 'weather', 'phone']) {
-      if (s.spent < content.meta.battery.ladderTickEvery) s = run(s, [{ type: 'openApp', app }]).state;
+    // 品妤被理過，用一般的間隔；宗翰沒人理，用較短的間隔（資料有寫的話）
+    const every = content.meta.battery.ladderTickEvery;
+    const ignoredEvery = content.meta.battery.ladderTickEveryIgnored ?? every;
+    expect(s.attended).toEqual(['pinyu']);
+    const apps = content.apps.apps.filter((a) => !a.background && a.view !== 'chat').map((a) => a.id);
+    for (const app of apps) {
+      if (s.spent < ignoredEvery) s = run(s, [{ type: 'openApp', app }]).state;
     }
-    expect(s.spent).toBeGreaterThanOrEqual(content.meta.battery.ladderTickEvery);
-    expect(s.ladder.pinyu).toBe(1);
     expect(s.ladder.zonghan).toBe(2);
     expect(s.fired).toContain('msg_zh_refund');
-    expect(s.soothe).toEqual({});
+    for (const app of apps) {
+      if (s.spent < every) s = run(s, [{ type: 'openApp', app }]).state;
+    }
+    expect(s.spent).toBeGreaterThanOrEqual(every);
+    // 品妤這一段被安撫過，輪到她時不升，安撫的紀錄用掉
+    expect(s.ladder.pinyu).toBe(1);
+    expect(s.soothe.pinyu).toBeUndefined();
+  });
+
+  it('標了 needsContact 的那一級：玩家沒傳過訊息就進不去，傳過之後照常', () => {
+    // 用副本，自己標上去：不管資料檔之後怎麼調，這條規則本身都測得到
+    const copy = structuredClone(content);
+    const jw = copy.characters.find((c) => c.id === copy.endings.challenge.culprit)!;
+    for (const l of jw.ladder) delete l.needsContact;
+    const gate = jw.ladder.find((l) => l.onEnter.some((id) => copy.events.find((e) => e.id === id)?.kind === 'system'))!;
+    gate.needsContact = true;
+    const e2 = createEngine(copy);
+    const quiet = copy.apps.apps.filter((a) => a.view !== 'chat').map((a) => a.id);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    for (const app of quiet) s = e2.step(s, { type: 'openApp', app }).state;
+    s = e2.step(s, { type: 'locate', app: 'finder' }).state;
+    for (const t of copy.threads) s = e2.step(s, { type: 'readThread', thread: t.id }).state;
+    // 只翻手機：她停在前一級，視窗不會自己跳出來
+    expect(s.ladder[jw.id]).toBe(gate.level - 1);
+    expect(s.prompt).toBeNull();
+    expect(s.seen).not.toContain('rec_login');
+    // 開口之後，下一次輪到她就照常往上
+    // 一直回訊息把電耗下去（不依賴資料裡的間隔數字），直到輪到她
+    for (let i = 0; i < 20 && s.phase === 'play' && s.ladder[jw.id] < gate.level; i++) {
+      const id = s.awaiting[0];
+      const e = copy.events.find((x) => x.id === id);
+      if (e?.kind !== 'message') break;
+      s = e2.step(s, { type: 'reply', event: id, option: e.options![e.options!.length - 1].id }).state;
+    }
+    expect(s.attended.length).toBeGreaterThan(0);
+    expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(gate.level);
+    expect(s.seen).toContain('rec_login');
+  });
+
+  it('needsContact 是 self 時，要理過本人才進得去；理過別人不算', () => {
+    const copy = structuredClone(content);
+    const jw = copy.characters.find((c) => c.id === copy.endings.challenge.culprit)!;
+    for (const l of jw.ladder) delete l.needsContact;
+    const gate = jw.ladder.find((l) => l.onEnter.some((id) => copy.events.find((e) => e.id === id)?.kind === 'system'))!;
+    gate.needsContact = 'self';
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    for (const t of copy.threads) s = e2.step(s, { type: 'readThread', thread: t.id }).state;
+    // 理過別人
+    s = e2.step(s, { type: 'reply', event: 'cov_py_dm', option: 'sleepy' }).state;
+    for (const app of copy.apps.apps.filter((a) => a.view !== 'chat').map((a) => a.id)) s = e2.step(s, { type: 'openApp', app }).state;
+    s = e2.step(s, { type: 'locate', app: 'finder' }).state;
+    expect(s.attended).not.toContain(jw.id);
+    expect(s.ladder[jw.id]).toBe(gate.level - 1);
+    expect(s.seen).not.toContain('rec_login');
+    // 回她本人一句之後，再耗一段電就照常往上
+    const mine = s.awaiting.find((id) => copy.events.find((e) => e.id === id && e.kind === 'message' && e.from === jw.id));
+    const event = copy.events.find((e) => e.id === mine);
+    if (event?.kind !== 'message') throw new Error('沒有她等著回的訊息');
+    s = e2.step(s, { type: 'reply', event: event.id, option: event.options![event.options!.length - 1].id }).state;
+    expect(s.attended).toContain(jw.id);
+    for (let i = 0; i < 20 && s.phase === 'play' && s.ladder[jw.id] < gate.level; i++) {
+      const id = s.awaiting[0];
+      const e = copy.events.find((x) => x.id === id);
+      if (e?.kind !== 'message') break;
+      s = e2.step(s, { type: 'reply', event: id, option: e.options![e.options!.length - 1].id }).state;
+    }
+    expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(gate.level);
   });
 
   it('紙袋牌引出登入視窗；可以按按鈕、關掉，或放著去做別的事（等於不理它）', () => {
@@ -137,23 +207,22 @@ describe('engine', () => {
     expect(ignored.prompt).toBeNull();
   });
 
-  it('視窗上的軟牆按鈕只丟出提醒，視窗還在、不耗電、階梯不變', () => {
-    // 資料檔還沒有這顆按鈕，這裡在副本上加一顆來測
-    const copy = structuredClone(content);
-    const login = copy.events.find((e) => e.id === 'sys_login_prompt');
-    if (login?.kind !== 'system') throw new Error('找不到登入視窗');
-    login.options = [...(login.options ?? []), { id: 'allow', label: '允許', hints: ['第一句', '第二句'] } as never];
-    const e2 = createEngine(copy);
-    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
-    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
-    s = e2.step(s, { type: 'test', card: 'card_bag', target: 'zonghan' }).state;
-    const first = e2.step(s, { type: 'answerPrompt', option: 'allow' });
-    expect(first.outcomes).toEqual([{ kind: 'promptHint', event: 'sys_login_prompt', text: '第一句' }]);
-    expect(first.state.prompt).toBe('sys_login_prompt');
-    expect(first.state.battery).toBe(s.battery);
-    expect(first.state.ladder).toEqual(s.ladder);
-    const second = e2.step(first.state, { type: 'answerPrompt', option: 'allow' });
-    expect(second.outcomes).toEqual([{ kind: 'promptHint', event: 'sys_login_prompt', text: '第二句' }]);
+  it('視窗上的軟牆按鈕只丟出提醒（輪流用），視窗還在、不耗電、階梯不變', () => {
+    const login = content.events.find((e) => e.id === 'sys_login_prompt');
+    const wall = login?.kind === 'system' ? login.options?.find((o) => o.hints?.length) : undefined;
+    if (!wall?.hints) throw new Error('登入視窗沒有軟牆按鈕');
+    let s = run(afterCover(), [
+      { type: 'openApp', app: 'receipts' },
+      { type: 'test', card: 'card_bag', target: 'zonghan' },
+    ]).state;
+    for (let i = 0; i <= wall.hints.length; i++) {
+      const r = engine.step(s, { type: 'answerPrompt', option: wall.id });
+      expect(r.outcomes).toEqual([{ kind: 'promptHint', event: 'sys_login_prompt', text: wall.hints[i % wall.hints.length] }]);
+      expect(r.state.prompt).toBe('sys_login_prompt');
+      expect(r.state.battery).toBe(s.battery);
+      expect(r.state.ladder).toEqual(s.ladder);
+      s = r.state;
+    }
   });
 
   it('挑戰書：指錯人直接進結局；指對人但欄位沒選對就退回並扣電', () => {
