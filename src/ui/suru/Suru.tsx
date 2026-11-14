@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { AppIcon } from '../shell/icons';
 import { S } from '../strings';
 
 // Suru 這一層的視覺零件：深色底、琥珀色、明體標題、對稱版面。
@@ -46,18 +47,27 @@ export function SuruToken({ mark, name, active = false }: { mark: number; name: 
   );
 }
 
-/** Suru 從畫面上方滑下來說一句話。不擋操作，點一下或過幾秒就收起 */
+/**
+ * Suru 的心聲：像手機的系統通知一樣從畫面上方滑下來。不擋操作，點一下或過幾秒就收起。
+ * 外觀是她手機那一層的通知卡片，只有圖示是 Suru 的。
+ */
 export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): void }) {
   useEffect(() => {
     const timer = window.setTimeout(onDismiss, 6000);
     return () => window.clearTimeout(timer);
-    // 只在這則提醒出現時計時一次
+    // 只在這則通知出現時計時一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <button className="suru suru-banner" onClick={onDismiss} aria-label={S.noticeDismiss}>
-      <SuruMark pulse />
-      <span className="suru-banner__text" role="status">{text}</span>
+    <button className="sysnote" onClick={onDismiss} aria-label={S.noticeDismiss}>
+      <AppIcon icon="suru" size="sm" />
+      <span className="sysnote__main">
+        <span className="sysnote__head">
+          <span className="sysnote__app">Suru</span>
+          <span className="sysnote__when">{S.noticeNow}</span>
+        </span>
+        <span className="sysnote__text" role="status">{text}</span>
+      </span>
     </button>
   );
 }

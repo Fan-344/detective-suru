@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import fixture from './mock/fixture.json';
@@ -71,13 +71,17 @@ describe('外觀框架', () => {
     expect(screen.getByText(dm.options![0].text)).toBeTruthy();
   });
 
-  it('資料夾裡的 App 打得開', () => {
+  it('找裝置在資料夾裡，按定位之後才看得到位置紀錄', () => {
     render(<App />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /工具/ }));
     fireEvent.click(screen.getByRole('button', { name: /找裝置/ }));
-    expect(screen.getByText(S.placeholderScreen)).toBeTruthy();
+    const device = fixture.phone.finder[0];
+    expect(screen.queryByText(device.history[0])).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: `${S.finderLocate} ${device.name}` }));
+    expect(screen.getByText(device.history[0])).toBeTruthy();
+    expect(screen.getByText(device.history[1])).toBeTruthy();
   });
 
   it('電量歸零顯示沒電畫面，點一下回到開場', () => {
@@ -102,7 +106,7 @@ describe('外觀框架', () => {
     expect(screen.queryByText(demo.cards[0].title)).toBeNull();
   });
 
-  it('Suru 助理：從圖示打開，看得到心聲與備忘錄分頁，收起後回主畫面', () => {
+  it('Suru 助理：從圖示打開，有疑點、線索、時間軸三個分頁，收起後回主畫面', () => {
     render(<App />);
     passIntro();
     home();
@@ -112,8 +116,11 @@ describe('外觀框架', () => {
     fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
     expect(screen.getByText(suru.timeline[0].text!)).toBeTruthy();
     expect(screen.getAllByText(S.suruGap).length).toBe(2);
-    fireEvent.click(screen.getByRole('tab', { name: S.suruRecords }));
+    fireEvent.click(screen.getByRole('tab', { name: S.suruClues }));
     expect(screen.getByText(suru.records[0].title)).toBeTruthy();
+    expect(screen.getByText(suru.statements[0].title)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: S.suruSaid }));
+    expect(screen.getByText(suru.voice[1].text)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
     expect(screen.getByRole('button', { name: /發票雲/ })).toBeTruthy();
   });
@@ -129,9 +136,9 @@ describe('外觀框架', () => {
     });
     fireEvent.pointerUp(button);
     fireEvent.click(button);
-    expect(screen.getByRole('tab', { name: S.suruVoice })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: S.suruCards })).toBeTruthy();
     fireEvent.click(button);
-    expect(screen.queryByRole('tab', { name: S.suruVoice })).toBeNull();
+    expect(screen.queryByRole('tab', { name: S.suruCards })).toBeNull();
   });
 
   it('背景 App 真的能用：計算機、行事曆、設定', () => {
@@ -204,7 +211,7 @@ describe('外觀框架', () => {
     expect(screen.getByText(cast.intro[2])).toBeTruthy();
   });
 
-  it('指認兇手：從 Suru 助理進入，填完才能送出', () => {
+  it('指認兇手：一題一題問，答過的留在上方，中途離開回來從同一題繼續', () => {
     render(<App />);
     passIntro();
     home();
@@ -212,21 +219,37 @@ describe('外觀框架', () => {
     fireEvent.click(screen.getByRole('button', { name: S.accuseEntry }));
     const accuse = fixture.phone.suru.accuse;
     const records = fixture.phone.suru.records;
+    const prompt = () => screen.getByTestId('accuse-prompt').textContent;
     expect(screen.getByText(accuse.intro[0])).toBeTruthy();
-    const submit = screen.getByRole('button', { name: S.accuseSubmit }) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
+    expect(prompt()).toBe(accuse.steps[0].prompt);
+    const submit = () => screen.getByRole('button', { name: S.accuseSubmit }) as HTMLButtonElement;
+    expect(submit().disabled).toBe(true);
 
-    fireEvent.click(within(screen.getByRole('radiogroup', { name: S.accuseWho })).getByRole('radio', { name: accuse.suspects[0] }));
-    for (const field of accuse.fields) {
-      fireEvent.click(screen.getByRole('button', { name: new RegExp(field) }));
-      const options = screen.getAllByRole('button', { name: new RegExp(records[0].title) });
-      fireEvent.click(options[options.length - 1]);
-    }
-    expect(submit.disabled).toBe(true);
-    fireEvent.click(within(screen.getByRole('radiogroup', { name: S.accuseGive })).getByRole('radio', { name: accuse.recipients[1] }));
-    expect(submit.disabled).toBe(false);
-    fireEvent.click(submit);
+    const pickRecord = (i: number) => fireEvent.click(screen.getByRole('radio', { name: new RegExp(records[i].title) }));
+    pickRecord(0);
+    fireEvent.click(submit());
+    expect(prompt()).toBe(accuse.steps[1].prompt);
+    // 答過的那筆會留在上方，同時也還在下面的選單裡
+    expect(screen.getAllByText(records[0].title).length).toBe(2);
+
+    // 中途離開再回來，還在第二題
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    fireEvent.click(screen.getByRole('button', { name: S.accuseEntry }));
+    expect(prompt()).toBe(accuse.steps[1].prompt);
+
+    pickRecord(1);
+    fireEvent.click(submit());
+    fireEvent.click(screen.getByRole('radio', { name: accuse.steps[2].options![0] }));
+    fireEvent.click(submit());
+    pickRecord(2);
+    fireEvent.click(submit());
+    pickRecord(0);
+    fireEvent.click(submit());
+    expect(prompt()).toBe(accuse.steps[5].prompt);
+    fireEvent.click(screen.getByRole('radio', { name: accuse.steps[5].options![1] }));
+    fireEvent.click(submit());
     expect(screen.getByRole('status').textContent).toBe(fixture.accuseResult);
+    expect(screen.getByRole('tab', { name: S.suruCards })).toBeTruthy();
   });
 
   it('頭像和聊天裡的照片點一下看大圖，再點一下關閉', () => {
@@ -245,5 +268,18 @@ describe('外觀框架', () => {
     fireEvent.click(screen.getByRole('button', { name: /聯絡人丁/ }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${S.zoomOpen}：圖片`) }));
     expect(screen.getByRole('button', { name: S.zoomClose })).toBeTruthy();
+  });
+
+  it('心聲像系統通知一樣跳出來，點一下收起', () => {
+    vi.useFakeTimers();
+    render(<App />);
+    passIntro();
+    expect(screen.queryByRole('status')).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(4100);
+    });
+    expect(screen.getByRole('status').textContent).toBe(fixture.phone.suru.voice[0].text);
+    fireEvent.click(screen.getByRole('button', { name: S.noticeDismiss }));
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

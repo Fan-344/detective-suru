@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Calculator, Calendar, Camera, Clock, Music, Settings } from '../apps/Extras';
+import { Finder } from '../apps/Finder';
 import { SuruBanner } from '../suru/Suru';
 import { ChatList, ChatRoom } from '../layouts/Chat';
 import { ContactCard, ContactList } from '../layouts/Contacts';
@@ -131,6 +132,8 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   } else if (app?.layout === 'contacts') {
     const person = data.contacts.people.find((p) => p.name === nav.detail);
     body = person ? <ContactCard person={person} onZoom={onZoom} /> : <ContactList cast={data.contacts} onOpen={openDetail} />;
+  } else if (app?.layout === 'finder') {
+    body = <Finder devices={data.finder} onLocate={actions.onLocate} />;
   } else if (app?.layout === 'calculator') {
     body = <Calculator />;
   } else if (app?.layout === 'clock') {
@@ -160,7 +163,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
       <div className="phone__stage">
         {app?.layout === 'suru' ? (
           <div key="suru" className="suruwrap">
-            <SuruApp title={app.name} data={data.suru} onClose={back} onAccuse={actions.onAccuse} />
+            <SuruApp title={app.name} data={data.suru} onClose={back} onAccuseAnswer={actions.onAccuseAnswer} />
           </div>
         ) : app ? (
           <section key={viewKey} className={`appwin appwin--${motion}`} aria-label={title}>

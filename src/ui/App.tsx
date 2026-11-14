@@ -98,6 +98,7 @@ export function App() {
           onClearUnread={mock.clearUnread}
           onResetData={mock.resetData}
           onShowcase={() => setShowcase(true)}
+          onVoice={mock.showVoice}
         />
       )}
     </div>

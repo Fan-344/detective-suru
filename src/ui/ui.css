@@ -709,25 +709,53 @@ ul, ol { list-style: none; }
 .segment button { min-width: 48px; height: 30px; padding: 0 10px; border-radius: 7px; text-align: center; font-size: 14px; color: var(--text); }
 .segment button.on { background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); font-weight: 600; }
 
-/* Suru 的提醒：從上方滑下來，不擋操作 */
-.suru-banner {
+/* 心聲通知：像系統通知一樣從上方滑下來，不擋操作 */
+.sysnote {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
+  top: 8px;
+  left: 8px;
+  right: 8px;
   z-index: 8;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  border: 1px solid #5b5446;
-  border-radius: 14px;
-  background: rgba(10, 11, 14, 0.94);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px 12px 12px;
+  border-radius: 18px;
+  background: rgba(246, 246, 248, 0.9);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  color: #1a1b1f;
   animation: banner-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.suru-banner__text { flex: 1; font-size: 16px; line-height: 1.6; }
+.sysnote .app-icon { flex: none; width: 24px; height: 24px; margin-top: 1px; }
+.sysnote__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sysnote__head { display: flex; justify-content: space-between; font-size: 12px; color: #74777f; }
+.sysnote__app { letter-spacing: 0.04em; text-transform: uppercase; }
+.sysnote__text { font-size: 15px; line-height: 1.45; }
 @keyframes banner-in { from { opacity: 0; transform: translateY(-120%); } }
+
+/* 找裝置 */
+.finder { min-height: 100%; display: flex; flex-direction: column; }
+.finder__map {
+  flex: none;
+  height: 34vh;
+  position: relative;
+  background:
+    linear-gradient(0deg, transparent 46%, #d9e3d2 46%, #d9e3d2 54%, transparent 54%),
+    linear-gradient(90deg, transparent 30%, #e9e4d6 30%, #e9e4d6 34%, transparent 34%, transparent 68%, #e9e4d6 68%, #e9e4d6 71%, transparent 71%),
+    linear-gradient(0deg, transparent 22%, #e9e4d6 22%, #e9e4d6 25%, transparent 25%, transparent 78%, #e9e4d6 78%, #e9e4d6 81%, transparent 81%),
+    #f1efe8;
+}
+.finder__pin { position: absolute; width: 18px; height: 18px; margin: -9px; border-radius: 50%; background: #2fb457; border: 3px solid #fff; box-shadow: 0 0 0 10px rgba(47, 180, 87, 0.2), 0 2px 5px rgba(0, 0, 0, 0.3); }
+.finder__list { padding: 14px 12px 24px; display: flex; flex-direction: column; gap: 12px; }
+.finder__device { padding: 14px 16px; border-radius: var(--radius); background: var(--surface); }
+.finder__head { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+.finder__name { font-size: 17px; font-weight: 600; }
+.finder__locate { height: 34px; padding: 0 16px; border-radius: 17px; background: #2fb457; color: #fff; font-size: 14px; font-weight: 600; }
+.finder__idle { margin-top: 4px; font-size: 14px; color: var(--muted); }
+.finder__history { margin-top: 8px; border-left: 2px solid #2fb457; padding-left: 12px; }
+.finder__history li { padding: 5px 0; font-size: 15px; line-height: 1.5; }
 
 /* 行事曆 */
 .cal { padding: 14px 14px 24px; background: var(--surface); min-height: 100%; }
@@ -786,10 +814,16 @@ ul, ol { list-style: none; }
 .suru-app__top { flex: none; display: flex; align-items: center; }
 .suru-app__top .suru-head { flex: 1; padding-right: 8px; }
 .suru-app__close { flex: none; height: 44px; padding: 4px 22px 0 10px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 13px; letter-spacing: 0.2em; color: var(--s-dim); }
-.suru-app__now { flex: none; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 22px 30px 26px; }
-.suru-orb { width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--s-line); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 26px rgba(240, 181, 74, 0.18), inset 0 0 14px rgba(240, 181, 74, 0.1); }
-.suru-orb .suru-mark { width: 12px; height: 12px; }
-.suru-app__line { font-size: 20px; line-height: 1.8; text-align: center; min-height: 72px; }
+/* Suru 說過的話：只留一行，點一下展開回顧 */
+.suru-said { flex: none; margin: 2px 24px 14px; border: 1px solid var(--s-line); border-radius: 10px; }
+.suru-said__latest { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.suru-said__text { flex: 1; min-width: 0; font-size: 15px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.suru-said__more { flex: none; color: var(--s-dim); font-size: 12px; }
+.suru-said__list { max-height: 30vh; overflow-y: auto; border-top: 1px solid var(--s-line); padding: 4px 14px 8px 34px; }
+.suru-said__list li { padding: 9px 0; font-size: 14px; line-height: 1.6; color: #b8b2a4; border-bottom: 1px solid var(--s-line); }
+.suru-said__list li:last-child { border-bottom: 0; }
+.suru-clues + .suru-clues { margin-top: 26px; }
+.suru-clues .suru-label { margin-bottom: 2px; }
 .suru-tabs { flex: none; display: flex; border-top: 1px solid var(--s-line); border-bottom: 1px solid var(--s-line); font-family: -apple-system, "PingFang TC", sans-serif; }
 .suru-tabs__tab { flex: 1; height: 44px; font-size: 13px; letter-spacing: 0.14em; color: var(--s-dim); text-align: center; border-bottom: 2px solid transparent; }
 .suru-tabs__tab--on { color: var(--s-amber); border-bottom-color: var(--s-amber); }
@@ -811,21 +845,24 @@ ul, ol { list-style: none; }
 .suru-hand--wrap .suru-card { width: 100%; aspect-ratio: 5 / 6; }
 .suru-hand--wrap .suru-card__title { font-size: 16px; }
 
-/* 指認兇手 */
+/* 指認兇手：一題一題問 */
 .suru-app__accuse { margin: 10px 24px 14px; height: 46px; }
-.accuse__intro { padding: 2px 0 24px; font-size: 17px; line-height: 1.9; color: #cfc9bb; }
-.accuse__fields { margin-bottom: 28px; }
-.accuse__fields > li { display: block; padding: 0; }
-.accuse__field { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 2px; }
-.accuse__chosen { flex: 1; text-align: right; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 14px; color: var(--s-amber); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.accuse__picker { margin: 0 0 12px 30px; border-left: 1px solid #5b5446; }
-.accuse__picker button { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 15px; }
+.accuse__intro { padding: 2px 0 22px; font-size: 16px; line-height: 1.9; color: #cfc9bb; border-bottom: 1px solid var(--s-line); margin-bottom: 22px; }
+.accuse__chain { margin-bottom: 22px; border-left: 1px solid #5b5446; padding-left: 14px; }
+.accuse__chain li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; padding: 7px 0; font-family: -apple-system, "PingFang TC", sans-serif; }
+.accuse__chain-q { font-size: 12px; line-height: 1.5; color: var(--s-dim); }
+.accuse__chain-a { grid-column: 2; font-size: 15px; color: var(--s-amber); }
+.accuse__prompt { font-size: 20px; line-height: 1.75; padding-bottom: 20px; }
+.accuse__picker { border-left: 1px solid #5b5446; }
+.accuse__picker--open { border: 1px solid var(--s-line); border-radius: 10px; margin-bottom: 8px; }
+.accuse__picker li + li { border-top: 1px solid var(--s-line); }
+.accuse__picker button { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 16px; }
 .accuse__picker button small { font-size: 11px; color: var(--s-dim); }
+.accuse__picker button.on { background: rgba(240, 181, 74, 0.1); }
 .accuse__picker button.on span { color: var(--s-amber); }
-.accuse__give { display: flex; gap: 10px; padding-bottom: 26px; }
-.accuse__give button { flex: 1; height: 46px; border: 1px solid var(--s-line); text-align: center; font-size: 16px; color: #cfc9bb; }
+.accuse__give { display: flex; gap: 10px; padding-bottom: 12px; }
+.accuse__give button { flex: 1; height: 48px; border: 1px solid var(--s-line); text-align: center; font-size: 16px; color: #cfc9bb; }
 .accuse__give button.on { border-color: var(--s-amber); color: var(--s-amber); }
-.accuse .accuse__submit { margin: 0 0 8px; width: 100%; }
 
 /* ───────── 開場 ───────── */
 

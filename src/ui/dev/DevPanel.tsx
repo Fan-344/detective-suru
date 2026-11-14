@@ -8,10 +8,11 @@ interface Props {
   onClearUnread(): void;
   onResetData(): void;
   onShowcase(): void;
+  onVoice(): void;
 }
 
 /** 驗收用的小面板，只在開發模式或網址帶 ?dev 時出現。不是遊戲的一部分。 */
-export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUnread, onResetData, onShowcase }: Props) {
+export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUnread, onResetData, onShowcase, onVoice }: Props) {
   const [open, setOpen] = useState(false);
   return (
     <aside className={`dev ${open ? 'dev--open' : ''}`}>
@@ -39,6 +40,7 @@ export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUn
             <button onClick={onClearUnread}>清掉紅點</button>
             <button onClick={onResetData}>還原假資料</button>
             <button onClick={onShowcase}>Suru 樣式</button>
+            <button onClick={onVoice}>心聲通知</button>
           </div>
         </div>
       )}

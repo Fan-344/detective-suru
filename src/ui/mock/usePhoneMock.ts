@@ -39,6 +39,18 @@ export function usePhoneMock() {
   };
   useEffect(() => clearTimers, []);
 
+  // 示範用：進到手機畫面幾秒後，有一句新的心聲以通知的樣子跳出來
+  useEffect(() => {
+    if (stage !== 'phone') return;
+    const timer = window.setTimeout(() => {
+      setData((d) => {
+        const line = d.suru.voice.find((v) => v.isNew);
+        return line && !d.notice ? { ...d, notice: { id: Date.now(), text: line.text } } : d;
+      });
+    }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [stage, run]);
+
   const patchThread = (id: string, patch: (t: PhoneData['threads'][number]) => PhoneData['threads'][number]) =>
     setData((d) => ({ ...d, threads: d.threads.map((t) => (t.id === id ? patch(t) : t)) }));
 
@@ -101,7 +113,19 @@ export function usePhoneMock() {
         wander.current.shown += 1;
         setData((d) => ({ ...d, notice: { id: wander.current.shown, text } }));
       },
-      onAccuse: () => setData((d) => ({ ...d, notice: { id: Date.now(), text: fixture.accuseResult } })),
+      // 示範用：任何答案都接受並往下一題；全部答完跳一句佔位的結果，再從頭開始
+      onAccuseAnswer: (_stepId, value) =>
+        setData((d) => {
+          const answers = [...d.suru.accuse.answers, value];
+          const done = answers.length >= d.suru.accuse.steps.length;
+          return {
+            ...d,
+            suru: { ...d.suru, accuse: { ...d.suru.accuse, answers: done ? [] : answers } },
+            notice: done ? { id: Date.now(), text: fixture.accuseResult } : d.notice,
+          };
+        }),
+      onLocate: (deviceId) =>
+        setData((d) => ({ ...d, finder: d.finder.map((f) => (f.id === deviceId ? { ...f, located: true } : f)) })),
       onDismissNotice: () => setData((d) => ({ ...d, notice: undefined })),
       onOpenSuru: () =>
         setData((d) => ({
@@ -160,6 +184,11 @@ export function usePhoneMock() {
     suruDemo: fixture.suruDemo,
     afterIntro: fixture.afterIntro,
     finishIntro: () => setStage('phone'),
+    showVoice: () =>
+      setData((d) => {
+        const line = d.suru.voice[0];
+        return line ? { ...d, notice: { id: Date.now(), text: line.text } } : d;
+      }),
     setBattery,
     restart,
     clearUnread: () =>

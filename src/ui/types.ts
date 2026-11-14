@@ -8,6 +8,7 @@ export type LayoutKind =
   | 'gallery'
   | 'placeholder'
   | 'contacts'
+  | 'finder'
   | 'suru'
   // 以下是跟案情無關、但真的能用的背景 App
   | 'calculator'
@@ -171,19 +172,28 @@ export interface CastData {
   people: { name: string; brief: string; avatar?: string }[];
 }
 
-/** 指認兇手的表單：說明、可以指認的人、要填的欄位、可以交給誰 */
-export interface AccuseData {
-  intro: string[];
-  suspects: string[];
-  fields: string[];
-  recipients: string[];
+/** 指認兇手的一題：用一筆紀錄回答、選一個人，或選把證據交給誰 */
+export interface AccuseStep {
+  id: string;
+  prompt: string;
+  kind: 'record' | 'who' | 'give';
+  /** kind 是 who 或 give 時可以選的人 */
+  options?: string[];
 }
 
-export interface AccuseAnswer {
-  who: string;
-  /** 每一欄選的紀錄 id，順序同 fields */
-  records: string[];
-  giveTo: string;
+/** 指認兇手：開頭的說明、依序要問的題目、已經答過的答案（顯示用的文字） */
+export interface AccuseData {
+  intro: string[];
+  steps: AccuseStep[];
+  answers: string[];
+}
+
+export interface FinderDevice {
+  id: string;
+  name: string;
+  located: boolean;
+  /** 定位之後顯示的位置紀錄，一行一筆 */
+  history: string[];
 }
 
 export interface SuruData {
@@ -240,6 +250,7 @@ export interface PhoneData {
   suru: SuruData;
   /** 聯絡人 App：背景前言和每個人的簡介 */
   contacts: CastData;
+  finder: FinderDevice[];
   music: MusicTrack[];
   calendar: CalendarData;
   clock: ClockData;
@@ -254,7 +265,8 @@ export interface PhoneActions {
   onOpenSuru(): void;
   onOpenApp(appId: string): void;
   onDismissNotice(): void;
-  onAccuse(answer: AccuseAnswer): void;
+  onAccuseAnswer(stepId: string, value: string): void;
+  onLocate(deviceId: string): void;
 }
 
 export interface Nav {

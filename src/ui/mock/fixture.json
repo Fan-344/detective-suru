@@ -147,7 +147,7 @@
         "id": "finder",
         "name": "找裝置",
         "icon": "finder",
-        "layout": "placeholder",
+        "layout": "finder",
         "folder": "f_tools"
       },
       {
@@ -922,22 +922,49 @@
           "指認說明佔位第二行。",
           "指認說明佔位第三行。"
         ],
-        "suspects": [
-          "聯絡人甲",
-          "聯絡人乙",
-          "聯絡人丙",
-          "聯絡人丁"
-        ],
-        "fields": [
-          "欄位一",
-          "欄位二",
-          "欄位三",
-          "欄位四"
-        ],
-        "recipients": [
-          "聯絡人乙",
-          "聯絡人丙",
-          "聯絡人丁"
+        "answers": [],
+        "steps": [
+          {
+            "id": "q1",
+            "kind": "record",
+            "prompt": "問題佔位一：哪一筆紀錄說明了這件事？"
+          },
+          {
+            "id": "q2",
+            "kind": "record",
+            "prompt": "問題佔位二：哪一筆紀錄是對方自己留下的？"
+          },
+          {
+            "id": "q3",
+            "kind": "who",
+            "prompt": "問題佔位三：這個人是誰？",
+            "options": [
+              "聯絡人甲",
+              "聯絡人乙",
+              "聯絡人丙",
+              "聯絡人丁"
+            ]
+          },
+          {
+            "id": "q4",
+            "kind": "record",
+            "prompt": "問題佔位四：哪一筆紀錄看得出原因？"
+          },
+          {
+            "id": "q5",
+            "kind": "record",
+            "prompt": "問題佔位五：哪一筆紀錄跟對方的說法對不上？"
+          },
+          {
+            "id": "q6",
+            "kind": "give",
+            "prompt": "問題佔位六：把證據交給誰？",
+            "options": [
+              "聯絡人乙",
+              "聯絡人丙",
+              "聯絡人丁"
+            ]
+          }
         ]
       }
     },
@@ -1063,7 +1090,26 @@
           "avatar": "pinyu"
         }
       ]
-    }
+    },
+    "finder": [
+      {
+        "id": "dev1",
+        "name": "裝置佔位甲",
+        "located": false,
+        "history": [
+          "週五 至 週六 22:41：地點佔位一",
+          "週六 23:38 起：地點佔位二"
+        ]
+      },
+      {
+        "id": "dev2",
+        "name": "這支手機",
+        "located": true,
+        "history": [
+          "現在：地點佔位三"
+        ]
+      }
+    ]
   },
   "introTitle": "SURU",
   "suruDemo": {

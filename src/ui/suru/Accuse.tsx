@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { S } from '../strings';
-import type { AccuseAnswer, AccuseData, SuruMemoItem } from '../types';
+import type { AccuseData, SuruMemoItem } from '../types';
 import { SuruHeader, SuruToken } from './Suru';
 
 interface Props {
@@ -8,93 +8,95 @@ interface Props {
   data: AccuseData;
   records: SuruMemoItem[];
   onBack(): void;
-  onSubmit(answer: AccuseAnswer): void;
+  onAnswer(stepId: string, value: string): void;
 }
 
+const two = (n: number) => String(n).padStart(2, '0');
+
 /**
- * 指認兇手：先看幾行說明，選是誰、每一欄指向一筆紀錄，最後選把證據交給誰。
- * 這裡只負責讓玩家填，判定對錯是遊戲規則，步驟三才接。
+ * 指認兇手：Suru 照推理的順序一題一題問。
+ * 有的題目用一筆紀錄回答，有的選一個人，最後選把證據交給誰。
+ * 答過的題目留在上方，看得到推理是怎麼一步一步接起來的。可以中途離開，回來從同一題繼續。
+ * 這裡只負責問和收答案；答得對不對、指錯人會怎樣，是遊戲規則，步驟三才接。
  */
-export function Accuse({ title, data, records, onBack, onSubmit }: Props) {
-  const [who, setWho] = useState<number | null>(null);
-  const [picks, setPicks] = useState<(string | null)[]>(() => data.fields.map(() => null));
-  const [open, setOpen] = useState<number | null>(null);
-  const [give, setGive] = useState<number | null>(null);
-  const ready = who !== null && give !== null && picks.every(Boolean);
+export function Accuse({ title, data, records, onBack, onAnswer }: Props) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const index = Math.min(data.answers.length, data.steps.length - 1);
+  const step = data.steps[index];
+  const people = step.kind === 'record' ? [] : (step.options ?? []);
+
+  const answer = () => {
+    if (!picked) return;
+    const label = step.kind === 'record' ? (records.find((r) => r.id === picked)?.title ?? picked) : picked;
+    setPicked(null);
+    onAnswer(step.id, label);
+  };
 
   return (
     <section className="suru suru-app" aria-label={S.accuseEntry}>
       <div className="suru-app__top">
-        <SuruHeader title={title} />
+        <SuruHeader title={title} counter={`${two(index + 1)} / ${two(data.steps.length)}`} />
         <button className="suru-app__close" onClick={onBack}>{S.back}</button>
       </div>
+
       <div className="suru-app__body accuse">
-        <div className="accuse__intro">
-          {data.intro.map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
-        </div>
+        {data.answers.length === 0 && (
+          <div className="accuse__intro">
+            {data.intro.map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        )}
 
-        <h2 className="suru-label">{S.accuseWho}</h2>
-        <div className="suru-tokens" role="radiogroup" aria-label={S.accuseWho}>
-          {data.suspects.map((name, i) => (
-            <button key={name} role="radio" aria-checked={who === i} aria-label={name} onClick={() => setWho(i)}>
-              <SuruToken mark={i} name={name} active={who === i} />
-            </button>
-          ))}
-        </div>
-
-        <h2 className="suru-label">{S.accuseProof}</h2>
-        <ol className="suru-form accuse__fields">
-          {data.fields.map((field, i) => {
-            const chosen = records.find((r) => r.id === picks[i]);
-            return (
-              <li key={field}>
-                <button className="accuse__field" onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
-                  <span className="suru-form__no">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="suru-form__name">{field}</span>
-                  {chosen ? <span className="accuse__chosen">{chosen.title}</span> : <span className="suru-form__slot" />}
-                </button>
-                {open === i && (
-                  <ul className="accuse__picker">
-                    {records.map((r) => (
-                      <li key={r.id}>
-                        <button
-                          className={picks[i] === r.id ? 'on' : ''}
-                          onClick={() => {
-                            setPicks(picks.map((p, j) => (j === i ? r.id : p)));
-                            setOpen(null);
-                          }}
-                        >
-                          <span>{r.title}</span>
-                          <small>{r.source}・{r.when}</small>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+        {data.answers.length > 0 && (
+          <ol className="accuse__chain">
+            {data.answers.map((a, i) => (
+              <li key={i}>
+                <span className="suru-form__no">{two(i + 1)}</span>
+                <span className="accuse__chain-q">{data.steps[i].prompt}</span>
+                <span className="accuse__chain-a">{a}</span>
               </li>
-            );
-          })}
-        </ol>
+            ))}
+          </ol>
+        )}
 
-        <h2 className="suru-label">{S.accuseGive}</h2>
-        <div className="accuse__give" role="radiogroup" aria-label={S.accuseGive}>
-          {data.recipients.map((name, i) => (
-            <button key={name} role="radio" aria-checked={give === i} className={give === i ? 'on' : ''} onClick={() => setGive(i)}>
-              {name}
-            </button>
-          ))}
-        </div>
+        <p className="accuse__prompt" data-testid="accuse-prompt">{step.prompt}</p>
 
-        <button
-          className="suru-button accuse__submit"
-          disabled={!ready}
-          onClick={() => ready && onSubmit({ who: data.suspects[who!], records: picks as string[], giveTo: data.recipients[give!] })}
-        >
-          {S.accuseSubmit}
-        </button>
+        {step.kind === 'record' && (
+          <ul className="accuse__picker accuse__picker--open" role="radiogroup" aria-label={S.accuseProof}>
+            {records.map((r) => (
+              <li key={r.id}>
+                <button role="radio" aria-checked={picked === r.id} className={picked === r.id ? 'on' : ''} onClick={() => setPicked(r.id)}>
+                  <span>{r.title}</span>
+                  <small>{r.source}・{r.when}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {step.kind === 'who' && (
+          <div className="suru-tokens" role="radiogroup" aria-label={S.accuseWho}>
+            {people.map((name, i) => (
+              <button key={name} role="radio" aria-checked={picked === name} aria-label={name} onClick={() => setPicked(name)}>
+                <SuruToken mark={i} name={name} active={picked === name} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {step.kind === 'give' && (
+          <div className="accuse__give" role="radiogroup" aria-label={S.accuseGive}>
+            {people.map((name) => (
+              <button key={name} role="radio" aria-checked={picked === name} className={picked === name ? 'on' : ''} onClick={() => setPicked(name)}>
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      <button className="suru-button suru-app__accuse" disabled={!picked} onClick={answer}>{S.accuseSubmit}</button>
     </section>
   );
 }

@@ -1,37 +1,59 @@
 import { useState } from 'react';
 import { S } from '../strings';
-import type { AccuseAnswer, SuruData } from '../types';
+import type { SuruData, SuruMemoItem } from '../types';
 import { Accuse } from './Accuse';
 import { SuruCard, SuruHeader, SuruMark } from './Suru';
 
-type Tab = 'voice' | 'timeline' | 'records' | 'statements' | 'cards';
+type Tab = 'cards' | 'clues' | 'timeline';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'voice', label: S.suruVoice },
-  { id: 'timeline', label: S.suruTimeline },
-  { id: 'records', label: S.suruRecords },
-  { id: 'statements', label: S.suruStatements },
   { id: 'cards', label: S.suruCards },
+  { id: 'clues', label: S.suruClues },
+  { id: 'timeline', label: S.suruTimeline },
 ];
 
 interface Props {
   title: string;
   data: SuruData;
   onClose(): void;
-  onAccuse(answer: AccuseAnswer): void;
+  onAccuseAnswer(stepId: string, value: string): void;
+}
+
+function Items({ label, items }: { label: string; items: SuruMemoItem[] }) {
+  return (
+    <section className="suru-clues">
+      <h2 className="suru-label">{label}</h2>
+      {items.length === 0 ? (
+        <p className="suru-empty">{S.suruEmpty}</p>
+      ) : (
+        <ul className="suru-items">
+          {items.map((item) => (
+            <li key={item.id}>
+              <span className="suru-items__meta">
+                <span>{item.source}</span>
+                <span>{item.when}</span>
+              </span>
+              <span className="suru-items__title">{item.title}</span>
+              {item.body && <span className="suru-items__body">{item.body}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 /**
- * Suru 助理：玩家自己的那一層。心聲和推理備忘錄都住在這裡，
- * 跟以晴手機裡的備忘錄 App 是兩回事。
- * 這裡只有長相和分頁，比對、出牌等規則在步驟三才接。
+ * Suru 助理：玩家自己的那一層，只放推理要用的三樣東西：疑點、線索（紀錄與說法）、時間軸，
+ * 加上「指認兇手」的入口。心聲平常是從畫面上方跳出來的通知，這裡只留一行可以展開回顧。
+ * 這裡只有長相和分頁，比對、試探等規則在步驟三才接。
  */
-export function SuruApp({ title, data, onClose, onAccuse }: Props) {
-  const [accusing, setAccusing] = useState(false);
-  const [tab, setTab] = useState<Tab>('voice');
+export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
+  const [tab, setTab] = useState<Tab>('cards');
   const [card, setCard] = useState<number | null>(null);
+  const [history, setHistory] = useState(false);
+  const [accusing, setAccusing] = useState(false);
   const latest = data.voice[0];
-  const earlier = data.voice.slice(1);
 
   if (accusing) {
     return (
@@ -40,9 +62,10 @@ export function SuruApp({ title, data, onClose, onAccuse }: Props) {
         data={data.accuse}
         records={data.records}
         onBack={() => setAccusing(false)}
-        onSubmit={(answer) => {
-          setAccusing(false);
-          onAccuse(answer);
+        onAnswer={(stepId, value) => {
+          // 答完最後一題就回到 Suru 助理
+          if (data.accuse.answers.length + 1 >= data.accuse.steps.length) setAccusing(false);
+          onAccuseAnswer(stepId, value);
         }}
       />
     );
@@ -55,10 +78,22 @@ export function SuruApp({ title, data, onClose, onAccuse }: Props) {
         <button className="suru-app__close" onClick={onClose}>{S.suruClose}</button>
       </div>
 
-      <div className="suru-app__now">
-        <span className="suru-orb" aria-hidden="true"><SuruMark pulse /></span>
-        <p className="suru-app__line">{latest ? latest.text : S.suruSilent}</p>
-      </div>
+      {latest && (
+        <div className="suru-said">
+          <button className="suru-said__latest" onClick={() => setHistory(!history)} aria-expanded={history} aria-label={S.suruSaid}>
+            <SuruMark />
+            <span className="suru-said__text">{latest.text}</span>
+            <span className="suru-said__more" aria-hidden="true">{history ? '▴' : '▾'}</span>
+          </button>
+          {history && (
+            <ul className="suru-said__list">
+              {data.voice.slice(1).map((v) => (
+                <li key={v.id}>{v.text}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="suru-tabs" role="tablist">
         {TABS.map((t) => (
@@ -75,16 +110,23 @@ export function SuruApp({ title, data, onClose, onAccuse }: Props) {
       </div>
 
       <div className="suru-app__body" role="tabpanel">
-        {tab === 'voice' &&
-          (earlier.length === 0 ? (
+        {tab === 'cards' &&
+          (data.cards.length === 0 ? (
             <p className="suru-empty">{S.suruEmpty}</p>
           ) : (
-            <ul className="suru-voice">
-              {earlier.map((v) => (
-                <li key={v.id}>{v.text}</li>
+            <div className="suru-hand suru-hand--wrap">
+              {data.cards.map((c) => (
+                <SuruCard key={c.no} {...c} selected={card === c.no} onClick={() => setCard(card === c.no ? null : c.no)} />
               ))}
-            </ul>
+            </div>
           ))}
+
+        {tab === 'clues' && (
+          <>
+            <Items label={S.suruRecords} items={data.records} />
+            <Items label={S.suruStatements} items={data.statements} />
+          </>
+        )}
 
         {tab === 'timeline' && (
           <ol className="suru-time">
@@ -96,30 +138,8 @@ export function SuruApp({ title, data, onClose, onAccuse }: Props) {
             ))}
           </ol>
         )}
-
-        {(tab === 'records' || tab === 'statements') && (
-          <ul className="suru-items">
-            {(tab === 'records' ? data.records : data.statements).map((item) => (
-              <li key={item.id}>
-                <span className="suru-items__meta">
-                  <span>{item.source}</span>
-                  <span>{item.when}</span>
-                </span>
-                <span className="suru-items__title">{item.title}</span>
-                {item.body && <span className="suru-items__body">{item.body}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {tab === 'cards' && (
-          <div className="suru-hand suru-hand--wrap">
-            {data.cards.map((c) => (
-              <SuruCard key={c.no} {...c} selected={card === c.no} onClick={() => setCard(card === c.no ? null : c.no)} />
-            ))}
-          </div>
-        )}
       </div>
+
       <button className="suru-button suru-app__accuse" onClick={() => setAccusing(true)}>{S.accuseEntry}</button>
     </section>
   );
