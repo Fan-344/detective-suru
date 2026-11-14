@@ -423,6 +423,28 @@ describe('engine', () => {
     expect(e2.step(s, { type: 'spot', card: 'card_bag', option: 'b' }).state.cards).not.toContain('card_bag');
   });
 
+  it('每個人只有最新的一則能回：他傳了新訊息，舊的就不能再回', () => {
+    const fromOf = (id: string) => {
+      const e = content.events.find((x) => x.id === id);
+      return e?.kind === 'message' ? e.from : null;
+    };
+    let s = afterCover();
+    let expired: string | null = null;
+    // 一路只打開 App、不回任何人，讓大家自己繼續傳
+    for (const app of content.apps.apps) {
+      const before = s.awaiting;
+      s = engine.step(s, { type: 'openApp', app: app.id }).state;
+      if (s.phase === 'ended') break;
+      const senders = s.awaiting.map(fromOf);
+      expect(new Set(senders).size).toBe(senders.length);
+      expired ??= before.find((id) => !s.awaiting.includes(id)) ?? null;
+    }
+    expect(expired).not.toBeNull();
+    const option = (content.events.find((x) => x.id === expired) as { options?: { id: string }[] }).options![0].id;
+    expect(engine.menu(s).replies.some((r) => r.event === expired)).toBe(false);
+    if (s.phase !== 'ended') expect(engine.step(s, { type: 'reply', event: expired!, option }).outcomes[0].kind).toBe('invalid');
+  });
+
   it('備忘錄分兩欄、時間軸照故事時間排；心聲只在結論還沒到達時出現', () => {
     const s = run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state;
     const m = memo(content, s);

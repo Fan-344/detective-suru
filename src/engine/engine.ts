@@ -224,6 +224,11 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       s.threads[e.thread]?.appended.push({ from: e.from, text: e.text, image: e.image, signal: e.signal });
       out.push({ kind: 'message', thread: e.thread, from: e.from, text: e.text, image: e.image, signal: e.signal, event: id });
       see(e.reveals ?? []);
+      // 每個人只有最新的一則能回：他傳了新的（不管在哪個聊天室），之前沒回的就作廢，留在紀錄裡當作沒回
+      s.awaiting = s.awaiting.filter((old) => {
+        const before = events.get(old);
+        return before?.kind !== 'message' || before.from !== e.from;
+      });
       if (e.options?.length) s.awaiting.push(id);
       apply(e.effects, false);
     }
