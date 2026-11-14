@@ -61,7 +61,9 @@ export function concreteActions(engine: Engine, s: GameState): Action[] {
 export function correctFields(content: CaseContent, s: GameState): Record<string, ItemId[]> | null {
   const fields: Record<string, ItemId[]> = {};
   for (const f of content.endings.challenge.fields) {
-    const group = f.accept.find((g) => g.every((id) => s.seen.includes(id)));
+    // 一題一題問的時候一題只能用一筆回答
+    const single = Boolean(content.endings.challenge.sequence?.length);
+    const group = f.accept.find((g) => (!single || g.length === 1) && g.every((id) => s.seen.includes(id)));
     if (!group) return null;
     fields[f.id] = group;
   }
@@ -120,6 +122,9 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
   };
   const submitChance = profile === 'seeker' ? 1 : profile === 'calm' ? 0.02 : 0.08;
 
+  /** 一題一題問的時候：已經開始指認了，之後每一步都接著答 */
+  let accusing = false;
+
   let s = engine.start();
   const run: Run = { profile, final: s, actions: [], login: null, solvableAt: null, sentMessage: false, stuck: false, softDead: false, usedReactions: new Set() };
 
@@ -137,7 +142,25 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
       const nothingLeft = costly.length === 0;
       // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
       if (!fields && everything.every((a) => a.type === 'compare' || a.type === 'viewImage')) run.softDead = true;
-      if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) {
+      const ask = engine.menu(s).challenge!.ask;
+      if (ask) {
+        if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) accusing = true;
+        if (accusing) {
+          if (ask.question === null) action = { type: 'handOver', givenTo };
+          else if (ask.question === 'who') {
+            // 沒事可做、紀錄又不夠的時候，只剩指錯人這條路
+            const giveUp = nothingLeft && !fields;
+            action = { type: 'answerChallenge', answer: accused === ch.culprit && giveUp ? pick(ch.suspects.filter((x) => x !== ch.culprit)) : accused };
+          } else {
+            const field = ch.fields.find((f) => f.id === ask.question);
+            const known = field?.accept.find((g) => g.length === 1 && ask.options.includes(g[0]))?.[0];
+            // 偶爾故意答錯，確認答錯再答走得通；不知道答案就用猜的
+            const sloppy = rand() < 0.15;
+            if (ask.options.length) action = { type: 'answerChallenge', answer: known && !sloppy ? known : pick(ask.options) };
+            else accusing = false;
+          }
+        }
+      } else if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) {
         const records = engine.menu(s).challenge!.records;
         const anyFields = Object.fromEntries(ch.fields.map((f) => [f.id, [pick(records)]]));
         // 偶爾故意交一份選錯欄位的，確認退回重填走得通
@@ -220,6 +243,10 @@ const describe = (a: Action): string => {
       return `比對 ${a.statement}×${a.record}`;
     case 'answerPrompt':
       return `視窗 ${a.option ?? '不理'}`;
+    case 'answerChallenge':
+      return `回答 ${a.answer}`;
+    case 'handOver':
+      return `交給${a.givenTo}`;
     case 'submitChallenge':
       return `交卷 指${a.accused} 給${a.givenTo}`;
     case 'sendCover':
@@ -298,6 +325,13 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   report.push(`模擬 ${runs.length} 局。各結局出現次數：`);
   for (const e of content.endings.endings) report.push(`　${e.id}（${e.title}）：${runs.filter((r) => r.final.ended === e.id).length}`);
 
+  const solvedIds = content.endings.endings.filter((e) => e.trigger.kind === 'challenge' && e.trigger.accused === culprit).map((e) => e.id);
+  const wrongIds = content.endings.endings.filter((e) => e.trigger.kind === 'challenge' && e.trigger.accused !== undefined && e.trigger.accused !== culprit).map((e) => e.id);
+  const count = (ids: string[]) => runs.filter((r) => r.final.ended !== null && ids.includes(r.final.ended)).length;
+  report.push('', `破案（指對人、答完全部題目）：${count(solvedIds)} 局（${pct(count(solvedIds), runs.length)}）。指錯人：${count(wrongIds)} 局（${pct(count(wrongIds), runs.length)}）。`);
+  const tries = runs.filter((r) => r.final.ended !== null && solvedIds.includes(r.final.ended)).map((r) => r.final.challengeTries);
+  if (tries.length) report.push(`　破案的那些局，途中答錯的次數：中位數 ${median(tries)}、最多 ${Math.max(...tries)}。`);
+
   // 不傳任何訊息能不能破案
   const silent = runs.filter((r) => r.profile === 'silent');
   const silentSolvable = silent.filter((r) => correctFields(content, r.final) !== null || r.solvableAt !== null);
@@ -326,7 +360,7 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   const solved = runs.filter((r) => r.solvableAt !== null);
   report.push('', `湊齊全部答案的有 ${solved.length} 局（${pct(solved.length, runs.length)}），湊齊時剩餘電量的中位數 ${tidy(start - median(solved.map((r) => r.solvableAt!)))}%。`);
   const soft = runs.filter((r) => r.softDead);
-  report.push(`走到「沒有任何耗電的事可做、手上的紀錄又不夠破案」的有 ${soft.length} 局（${pct(soft.length, runs.length)}）。這時只剩指錯人一條路。`);
+  report.push(`走到「沒有任何耗電的事可做、手上的紀錄又不夠破案」的有 ${soft.length} 局（${pct(soft.length, runs.length)}）。這時只剩用猜的或指錯人。`);
   if (soft[0]) report.push(`　例（${soft[0].profile}）：${soft[0].actions.slice(-8).map(describe).join(' → ')}`);
   const battery = content.endings.endings.find((e) => e.trigger.kind === 'battery');
   const dead = runs.filter((r) => r.final.ended === battery?.id);

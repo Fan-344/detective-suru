@@ -61,6 +61,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   /** 指錯「哪裡有問題」時扣的電 */
   const spotMissCost = cost.spotMiss ?? 0;
 
+  /** 指認兇手的提問順序；沒寫就照舊一次填完 */
+  const sequence = content.endings.challenge.sequence?.length ? content.endings.challenge.sequence : null;
+
   const dmThread = (target: CharacterId): ThreadId | null =>
     content.threads.find((t) => t.members.length === 1 && t.members[0] === target)?.id ?? null;
 
@@ -123,6 +126,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       wanderIndex: 0,
       assistantUnread: false,
       challengeTries: 0,
+      accusation: { step: 0, tried: {} },
       ended: null,
     };
   }
@@ -502,8 +506,63 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
 
+      case 'answerChallenge': {
+        const ch = content.endings.challenge;
+        const question = sequence?.[s.accusation.step];
+        if (!sequence || question === undefined) return invalid('現在沒有題目要回答');
+        if (question === 'who') {
+          if (!ch.suspects.includes(action.answer)) return invalid('不能指認這個人');
+          const right = action.answer === ch.culprit;
+          out.push({ kind: 'challengeAnswer', question, answer: action.answer, right, cost: 0 });
+          if (right) {
+            s.accusation.step += 1;
+            return done();
+          }
+          // 人指錯了：不等其他題，直接進那個人的結局
+          const ending = content.endings.endings.find(
+            (e) => e.trigger.kind === 'challenge' && e.trigger.accused === action.answer && holds(s, { flags: e.trigger.flags }),
+          );
+          if (!ending) return invalid('沒有對應的結局');
+          end(ending.id);
+          return done();
+        }
+        const field = ch.fields.find((f) => f.id === question);
+        if (!field) return invalid('沒有這一題');
+        const tried = s.accusation.tried[question] ?? [];
+        if (!s.seen.includes(action.answer) || !isClue(action.answer) || items.get(action.answer)?.kind !== 'record') return invalid('只能選已經取得的紀錄');
+        if (tried.includes(action.answer)) return invalid('這一筆已經答過了');
+        // 一題只用一筆回答，所以只認「單獨一筆就成立」的答案
+        const right = field.accept.some((group) => group.length === 1 && group[0] === action.answer);
+        const retry = right ? 0 : (cost.challengeRetry ?? 0);
+        out.push({ kind: 'challengeAnswer', question, answer: action.answer, right, cost: retry });
+        if (right) s.accusation.step += 1;
+        else {
+          s.accusation.tried[question] = [...tried, action.answer];
+          s.challengeTries += 1;
+          spend(retry);
+        }
+        return done();
+      }
+
+      case 'handOver': {
+        const ch = content.endings.challenge;
+        if (!sequence || s.accusation.step < sequence.length) return invalid('還有題目沒答完');
+        if (!ch.recipients.includes(action.givenTo)) return invalid('不能交給這個人');
+        const ending = content.endings.endings.find(
+          (e) =>
+            e.trigger.kind === 'challenge' &&
+            (e.trigger.accused === undefined || e.trigger.accused === ch.culprit) &&
+            (e.trigger.givenTo === undefined || e.trigger.givenTo === action.givenTo) &&
+            holds(s, { flags: e.trigger.flags }),
+        );
+        if (!ending) return invalid('沒有對應的結局');
+        end(ending.id);
+        return done();
+      }
+
       case 'submitChallenge': {
         const ch = content.endings.challenge;
+        if (sequence) return invalid('這個案子要一題一題回答');
         if (!ch.suspects.includes(action.accused)) return invalid('不能指認這個人');
         if (!ch.recipients.includes(action.givenTo)) return invalid('不能交給這個人');
         for (const field of ch.fields) {
@@ -534,6 +593,16 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
     }
+  }
+
+  /** 一題一題問的時候，現在問到哪一題、還能選什麼 */
+  function askOf(s: GameState, records: ItemId[]): NonNullable<Menu['challenge']>['ask'] {
+    if (!sequence) return null;
+    const ch = content.endings.challenge;
+    const question = sequence[s.accusation.step] ?? null;
+    const tried = question ? (s.accusation.tried[question] ?? []) : [];
+    const options = question === null ? ch.recipients : question === 'who' ? ch.suspects : records.filter((id) => !tried.includes(id));
+    return { index: s.accusation.step, total: sequence.length, question, options, retryCost: cost.challengeRetry ?? 0 };
   }
 
   function historyItems(thread: ThreadId): ItemId[] {
@@ -592,7 +661,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       }),
       compare: records.length && statements.length ? { statements, records } : null,
       challenge: records.length
-        ? { suspects: ch.suspects, fields: ch.fields.map((f) => f.id), records, recipients: ch.recipients, maxPicks: rules.maxPicksPerField }
+        ? { suspects: ch.suspects, fields: ch.fields.map((f) => f.id), records, recipients: ch.recipients, maxPicks: rules.maxPicksPerField, ask: askOf(s, records) }
         : null,
     };
   }

@@ -92,6 +92,12 @@ export interface GameState {
   /** 助理 App 裡有玩家還沒看過的新東西（畫面上是圖示的紅點） */
   assistantUnread: boolean;
   challengeTries: number;
+  /**
+   * 指認兇手一題一題問的進度（資料有寫 challenge.sequence 時才用）。
+   * step 是下一題在 sequence 裡的位置（等於長度表示都答完了，只剩選交給誰）；
+   * tried 是每一題已經答錯過的紀錄。中途離開不會清掉。
+   */
+  accusation: { step: number; tried: Record<string, ItemId[]> };
   /** 結局 id */
   ended: string | null;
 }
@@ -116,7 +122,11 @@ export type Action =
       /** 每一欄選的紀錄 */
       fields: Record<string, ItemId[]>;
       givenTo: CharacterId;
-    };
+    }
+  /** 一題一題問的時候，回答目前這一題。紀錄題給紀錄的 id，「是誰」那一題給人的 id。 */
+  | { type: 'answerChallenge'; answer: string }
+  /** 一題一題問、全部答完之後，選交給誰 */
+  | { type: 'handOver'; givenTo: CharacterId };
 
 /** 一個動作造成的結果，依發生順序。文字版和畫面版各自決定怎麼呈現。 */
 export type Outcome =
@@ -141,6 +151,8 @@ export type Outcome =
   | { kind: 'promptClosed'; event: EventId; ignored: boolean }
   | { kind: 'ladder'; character: CharacterId; from: number; to: number; auto: boolean }
   | { kind: 'challengeRejected'; fields: string[]; cost: number }
+  /** 一題一題問時，這一題答得對不對。question 是欄位 id 或 "who"；答錯的紀錄題會扣 cost。 */
+  | { kind: 'challengeAnswer'; question: string; answer: string; right: boolean; cost: number }
   /** 在背景 App 裡逛太久的提醒。不擋操作、不扣電。 */
   | { kind: 'wander'; text: string }
   | { kind: 'ending'; ending: string }
@@ -166,5 +178,17 @@ export interface Menu {
   replies: { event: EventId; thread: ThreadId; options: string[]; cost: number }[];
   tests: { card: CardId; thread: ThreadId | null; targets: CharacterId[]; cost: number }[];
   compare: { statements: ItemId[]; records: ItemId[] } | null;
-  challenge: { suspects: CharacterId[]; fields: string[]; records: ItemId[]; recipients: CharacterId[]; maxPicks: number } | null;
+  challenge: {
+    suspects: CharacterId[];
+    fields: string[];
+    records: ItemId[];
+    recipients: CharacterId[];
+    maxPicks: number;
+    /**
+     * 一題一題問的時候，現在問到哪一題；資料沒寫 sequence 時是 null（照舊一次填完）。
+     * question 是欄位 id 或 "who"，null 表示都答完了、只剩選交給誰。
+     * options 是這一題還能選的東西（紀錄、人，或交付對象）。
+     */
+    ask: { index: number; total: number; question: string | null; options: string[]; retryCost: number } | null;
+  } | null;
 }

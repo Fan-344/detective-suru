@@ -233,8 +233,45 @@ describe('engine', () => {
     }
   });
 
-  it('挑戰書：指錯人直接進結局；指對人但欄位沒選對就退回並扣電', () => {
-    const s = run(afterCover(), [
+  it('指認兇手一題一題問：答錯扣電、同一筆不能再選，答對才問下一題，全部答完才選交給誰', () => {
+    const ch = content.endings.challenge;
+    const sequence = ch.sequence!;
+    // 直接把所有東西都當作看過，不依賴資料檔裡怎麼拿到
+    let s: GameState = { ...afterCover(), seen: content.items.map((i) => i.id) };
+    const ask = () => engine.menu(s).challenge!.ask!;
+    expect(engine.step(s, { type: 'submitChallenge', accused: ch.culprit, fields: {}, givenTo: ch.recipients[0] }).outcomes[0].kind).toBe('invalid');
+    expect(engine.step(s, { type: 'handOver', givenTo: ch.recipients[0] }).outcomes[0].kind).toBe('invalid');
+    sequence.forEach((question, index) => {
+      expect(ask()).toMatchObject({ index, total: sequence.length, question });
+      if (question === 'who') {
+        expect(ask().options).toEqual(ch.suspects);
+        const wrongWho = ch.suspects.find((x) => x !== ch.culprit)!;
+        expect(engine.step(s, { type: 'answerChallenge', answer: wrongWho }).state.ended).toBe(`end_wrong_${wrongWho}`);
+        s = engine.step(s, { type: 'answerChallenge', answer: ch.culprit }).state;
+        return;
+      }
+      const field = ch.fields.find((f) => f.id === question)!;
+      const wrong = ask().options.find((id) => !field.accept.some((g) => g.includes(id)))!;
+      const miss = engine.step(s, { type: 'answerChallenge', answer: wrong });
+      expect(miss.outcomes).toContainEqual({ kind: 'challengeAnswer', question, answer: wrong, right: false, cost: cost.challengeRetry });
+      expect(s.battery - miss.state.battery).toBe(cost.challengeRetry);
+      expect(miss.state.accusation.step).toBe(index);
+      expect(engine.menu(miss.state).challenge!.ask!.options).not.toContain(wrong);
+      expect(engine.step(miss.state, { type: 'answerChallenge', answer: wrong }).outcomes[0].kind).toBe('invalid');
+      const hit = engine.step(miss.state, { type: 'answerChallenge', answer: field.accept[0][0] });
+      expect(hit.outcomes).toContainEqual({ kind: 'challengeAnswer', question, answer: field.accept[0][0], right: true, cost: 0 });
+      expect(hit.state.battery).toBe(miss.state.battery);
+      s = hit.state;
+    });
+    expect(ask()).toMatchObject({ question: null, options: ch.recipients });
+    expect(engine.step(s, { type: 'handOver', givenTo: 'pinyu' }).state.ended).toBe('end_pinyu');
+  });
+
+  it('挑戰書（沒寫提問順序時的舊流程）：指錯人直接進結局；指對人但欄位沒選對就退回並扣電', () => {
+    const copy = structuredClone(content);
+    delete copy.endings.challenge.sequence;
+    const engine = createEngine(copy);
+    const s = run(engine.step(engine.start(), { type: 'sendCover' }).state, [
       { type: 'openApp', app: 'photos' },
       { type: 'viewImage', item: 'ph_compare' },
       { type: 'viewImage', item: 'ph_ipad' },

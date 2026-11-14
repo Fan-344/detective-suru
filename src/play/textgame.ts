@@ -200,6 +200,12 @@ export class TextGame {
       case 'ladder':
         if (this.debug) this.say(`　〔除錯：${this.name(o.character)} ${o.from} → ${o.to}${o.auto ? '（自動）' : ''}〕`);
         break;
+      case 'challengeAnswer': {
+        // 答錯時只給那一題的提示；答對不多說，直接問下一題
+        const f = this.content.endings.challenge.fields.find((x) => x.id === o.question);
+        if (!o.right && f) this.say('', f.hint);
+        break;
+      }
       case 'challengeRejected':
         this.say('', '這份推理站不住，被退回來了。');
         for (const id of o.fields) {
@@ -522,12 +528,49 @@ export class TextGame {
   // 推理（資料裡叫挑戰書）：是誰 → 四欄各選紀錄 → 交給誰
   private startChallenge() {
     const ch = this.content.endings.challenge;
+    if (this.engine.menu(this.state).challenge?.ask) return this.askChallenge(true);
     // 開頭的說明是劇情文字，從資料檔讀
     this.say('', '── 指認兇手 ──', ...(ch.intro ?? []), '', ch.whoPrompt);
     this.screen = () => [
       ...ch.suspects.map((id) => ({ label: this.name(id), run: () => this.challengeField(id, 0, {}) })),
       this.toSuru('先不指認'),
     ];
+  }
+
+  // 一題一題問：題目照資料檔原文印出來，答對才問下一題；離開後再進來從同一題繼續
+  private askChallenge(entering: boolean) {
+    const ch = this.content.endings.challenge;
+    const ask = this.engine.menu(this.state).challenge?.ask;
+    if (!ask) return;
+    if (entering) {
+      const fresh = this.state.accusation.step === 0 && Object.keys(this.state.accusation.tried).length === 0;
+      this.say('', '── 指認兇手 ──', ...(fresh ? (ch.intro ?? []) : ['（從上次問到的地方接下去。）']));
+    }
+    const answer = (value: string) => {
+      this.act(ask.question === null ? { type: 'handOver', givenTo: value } : { type: 'answerChallenge', answer: value });
+      if (this.state.phase === 'ended') return;
+      if (this.state.prompt) this.screen = this.home;
+      else this.askChallenge(false);
+    };
+    const leave = this.toSuru(ask.question === null ? '先不交' : '先不指認');
+    if (ask.question === null) {
+      this.say('', '證據要交給誰？交出去就不能收回。');
+      this.screen = () => [...ask.options.map((id) => ({ label: `把證據交給${this.name(id)}`, run: () => answer(id) })), leave];
+    } else if (ask.question === 'who') {
+      this.say('', ch.whoPrompt);
+      this.screen = () => [...ask.options.map((id) => ({ label: this.name(id), run: () => answer(id) })), leave];
+    } else {
+      const field = ch.fields.find((f) => f.id === ask.question);
+      this.say('', field?.prompt ?? '');
+      this.say(ask.options.length ? `（從看過的紀錄裡選一筆${ask.retryCost ? `，答錯 -${ask.retryCost}%` : ''}）` : '（看過的紀錄都試過了。先去找找別的。）');
+      this.screen = () => [
+        ...ask.options.flatMap((id) => {
+          const item = this.item(id);
+          return item ? [{ label: this.label(item), run: () => answer(id) }] : [];
+        }),
+        leave,
+      ];
+    }
   }
 
   private challengeField(accused: string, index: number, fields: Record<string, string[]>) {
