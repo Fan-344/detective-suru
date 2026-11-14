@@ -557,7 +557,12 @@ describe('engine', () => {
     expect(m.timeline.map((r) => r.item).indexOf('rcp_1628')).toBeLessThan(m.timeline.map((r) => r.item).indexOf('rcp_2207'));
     // 時間軸只放資料裡寫了 timeline 的列，每一列帶自己的時間和文字
     const rowsWanted = s.seen.flatMap((id) => content.items.find((i) => i.id === id && !i.flavor)?.timeline ?? []);
-    expect(m.timeline).toHaveLength(rowsWanted.length);
+    const startRows = content.meta.timelineStart ?? [];
+    expect(m.timeline).toHaveLength(rowsWanted.length + startRows.length);
+    // 開局就有的列不用看過任何東西，還沒送出開局那句也在
+    const atStart = memo(content, engine.start()).timeline;
+    expect(atStart.map((r) => r.text)).toEqual(startRows.map((r) => r.text));
+    expect(atStart.every((r) => r.item === undefined && r.id.startsWith('start#'))).toBe(true);
     expect(m.timeline.every((r) => r.when && r.label && r.text)).toBe(true);
     expect(new Set(m.timeline.map((r) => r.id)).size).toBe(m.timeline.length);
     expect(reachedConclusions(content, s)).toContain('time_window');
@@ -620,6 +625,28 @@ describe('engine', () => {
     expect(engine.menu(s).threads.find((t) => t.thread === thread.id)?.unseen).toEqual([]);
     // 沒給 visible（文字試玩整串印出來）就整串都算
     const whole = engine.step(engine.step(afterCover(), { type: 'openApp', app: content.apps.apps.find((a) => a.view === 'chat')!.id }).state, { type: 'readThread', thread: thread.id }).state;
+    expect(all.every((id) => whole.seen.includes(id) || whole.unopened.includes(id))).toBe(true);
+  });
+
+  it('開局那個群組的舊訊息也是滑到才算看過', () => {
+    const thread = content.threads.find((t) => t.id === (content.meta.coverThread ?? content.threads[0].id))!;
+    const all = (thread.history ?? []).flatMap((m) => (m.item ? [m.item] : []));
+    expect(all.length).toBeGreaterThan(1);
+    const shown = all.slice(-1);
+    const above = all.slice(0, -1);
+    let s = engine.step(engine.start(), { type: 'sendCover', visible: shown }).state;
+    const reached = (id: string) => s.seen.includes(id) || s.unopened.includes(id);
+    expect(s.readThreads).toContain(thread.id);
+    expect(shown.every(reached)).toBe(true);
+    expect(above.some(reached)).toBe(false);
+    // 沒滑到的說法不會讓助理先記下「在意的地方」
+    const early = content.cards.filter((c) => c.spot && above.includes(c.spot.item)).map((c) => c.id);
+    expect(s.concerns.some((x) => early.includes(x.card))).toBe(false);
+    expect(engine.menu(s).threads.find((t) => t.thread === thread.id)?.unseen).toEqual(above);
+    s = engine.step(s, { type: 'seeMessages', thread: thread.id, items: above }).state;
+    expect(above.every(reached)).toBe(true);
+    // 沒給 visible（文字試玩整串印出來）就整串都算
+    const whole = afterCover();
     expect(all.every((id) => whole.seen.includes(id) || whole.unopened.includes(id))).toBe(true);
   });
 

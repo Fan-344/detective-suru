@@ -40,7 +40,12 @@ const isMessage = (a: Action) => a.type === 'reply' || a.type === 'test';
 /** 目前所有能做的具體動作（不含挑戰書；比對只列資料裡有結果、還沒比過的組合） */
 export function concreteActions(engine: Engine, s: GameState): Action[] {
   const m = engine.menu(s);
-  if (m.cover) return [{ type: 'sendCover' }];
+  if (m.cover) {
+    // 開局那個群組也一樣：只看得到最後幾則，其餘的之後往上滑
+    const thread = engine.content.threads.find((t) => t.id === (engine.content.meta.coverThread ?? engine.content.threads[0]?.id));
+    const history = (thread?.history ?? []).flatMap((x) => (x.item ? [x.item] : []));
+    return [{ type: 'sendCover', visible: history.slice(-OPENING_VIEW) }];
+  }
   const list: Action[] = [];
   // 視窗不擋操作，所以它的按鈕和其他動作一起列出來
   if (m.prompt) list.push(...m.prompt.options.map((option): Action => ({ type: 'answerPrompt', option })), { type: 'answerPrompt', option: null });

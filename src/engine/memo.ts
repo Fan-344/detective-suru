@@ -8,16 +8,16 @@ import type { GameState } from './types';
 export interface Memo {
   records: Item[];
   statements: Item[];
-  /** 發生過的事：看過的 item 寫在 timeline 欄位裡的每一列，依故事內的時間排序 */
+  /** 發生過的事：一開局就有的列（meta.timelineStart），加上看過的 item 寫在 timeline 欄位裡的每一列，依故事內的時間排序 */
   timeline: TimelineRow[];
 }
 
 /** 時間軸上的一列。一筆 item 可以有好幾列 */
 export interface TimelineRow {
-  /** 這一列自己的 id（item id 加第幾列），畫面拿來當 key */
+  /** 這一列自己的 id（item id 加第幾列；開局就有的列是 start#1 這類），畫面拿來當 key */
   id: string;
-  /** 這一列出自哪一筆 item */
-  item: ItemId;
+  /** 這一列出自哪一筆 item。開局就有的列（開場就告訴玩家的事）沒有 */
+  item?: ItemId;
   /** 只拿來排先後，不給玩家看 */
   when: When;
   /** 畫面上顯示的大概時段，例如「週六晚上」。同一個 label 的列會排在一起 */
@@ -32,8 +32,11 @@ export function memo(content: CaseContent, state: GameState): Memo {
   // 跟案情無關的生活內容看得到，但不進備忘錄
   const seen = state.seen.flatMap((id) => byId.get(id) ?? []).filter((i) => !i.flavor);
   // 每一列用自己的時間排，不看 item 本身的 when；時間讀不懂的排最後
-  const timeline = seen
-    .flatMap((item) => (item.timeline ?? []).map((row, i): TimelineRow => ({ id: item.id + '#' + (i + 1), item: item.id, when: row.when, label: row.label, text: row.text, ...(row.who ? { who: row.who } : {}) })))
+  const fromStart = (content.meta.timelineStart ?? []).map((row, i): TimelineRow => ({ id: 'start#' + (i + 1), when: row.when, label: row.label, text: row.text, ...(row.who ? { who: row.who } : {}) }));
+  const fromItems = seen
+    .flatMap((item) => (item.timeline ?? []).map((row, i): TimelineRow => ({ id: item.id + '#' + (i + 1), item: item.id, when: row.when, label: row.label, text: row.text, ...(row.who ? { who: row.who } : {}) })));
+  // 開局就有的列不看有沒有看過；時間一樣時排在前面
+  const timeline = [...fromStart, ...fromItems]
     .map((row) => ({ row, key: parseWhen(row.when, content.meta.dayOrder)?.sort ?? Infinity }))
     .sort((a, b) => a.key - b.key)
     .map((x) => x.row);

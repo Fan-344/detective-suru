@@ -398,7 +398,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         // 送出那句話的人一定已經打開了那個聊天室
         for (const app of chatApps) if (!s.openedApps.includes(app)) s.openedApps.push(app);
         if (!s.readThreads.includes(thread)) s.readThreads.push(thread);
-        see(historyItems(thread));
+        // 舊訊息只算畫面上看得到的那幾則（沒說就當整串都看到了），其餘的要往上滑
+        const history = historyItems(thread);
+        see(action.visible ? history.filter((id) => action.visible?.includes(id)) : history);
         say(thread, meta.coverStory);
       }
       for (const id of meta.afterCover ?? []) fire(id);

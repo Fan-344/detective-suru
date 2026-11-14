@@ -107,7 +107,11 @@ export interface GameState {
 }
 
 export type Action =
-  | { type: 'sendCover' }
+  /**
+   * 送出開局那句掩護說法（在群組裡）。visible 跟 readThread 的一樣：送出時畫面上看得到的那幾則舊訊息，
+   * 只有它們算看過，其餘的要往上滑（seeMessages）。沒給表示整串都看到了（文字試玩）。
+   */
+  | { type: 'sendCover'; visible?: ItemId[] }
   | { type: 'openApp'; app: AppId }
   /**
    * 打開聊天室。visible 是一打開就在畫面上的那幾則舊訊息（訊息上的 item id），只有它們算看過；
