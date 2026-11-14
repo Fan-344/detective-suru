@@ -134,14 +134,15 @@ export interface Character {
 
 // ───────────────────────── apps.json ─────────────────────────
 
-export type AppView = 'chat' | 'list' | 'gallery' | 'map' | 'none';
+/** assistant 是助理自己的 App：心聲、時間軸、紀錄、說法、牌都在裡面，內容由遊戲狀態產生。 */
+export type AppView = 'chat' | 'list' | 'gallery' | 'map' | 'assistant' | 'none';
 
 export interface AppDef {
   id: AppId;
   name: string;
   /** 圖示的 id。圖示本身由外觀框架畫，這裡只給名字。 */
   icon: string;
-  /** 用哪一種版型顯示。none 是沒有內容的背景 App。 */
+  /** 用哪一種版型顯示。none 是沒有內容的背景 App；assistant 是助理 App。 */
   view: AppView;
   /** 放在主畫面底部那一排 */
   dock?: boolean;

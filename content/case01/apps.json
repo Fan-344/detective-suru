@@ -1,16 +1,91 @@
 {
-  "folders": [{ "id": "f_tools", "name": "工具", "icon": "tools" }],
+  "folders": [
+    {
+      "id": "f_tools",
+      "name": "工具",
+      "icon": "tools"
+    }
+  ],
   "apps": [
-    { "id": "sms", "name": "簡訊", "icon": "sms", "view": "list" },
-    { "id": "notes", "name": "備忘錄", "icon": "notes", "view": "list" },
-    { "id": "receipts", "name": "雲端發票", "icon": "receipts", "view": "list" },
-    { "id": "moments", "name": "片刻", "icon": "moments", "view": "gallery" },
-    { "id": "weather", "name": "天氣", "icon": "weather", "view": "list" },
-    { "id": "music", "name": "音樂", "icon": "music", "view": "none", "emptyText": "上次播放停在週六下午。" },
-    { "id": "finder", "name": "找裝置", "icon": "finder", "view": "map", "folder": "f_tools" },
-    { "id": "camera", "name": "相機", "icon": "camera", "view": "none", "folder": "f_tools", "emptyText": "鏡頭是黑的。" },
-    { "id": "phone", "name": "電話", "icon": "phone", "view": "list", "dock": true },
-    { "id": "chat", "name": "聊聊", "icon": "chat", "view": "chat", "dock": true },
-    { "id": "photos", "name": "相簿", "icon": "photos", "view": "gallery", "dock": true }
+    {
+      "id": "sms",
+      "name": "簡訊",
+      "icon": "sms",
+      "view": "list"
+    },
+    {
+      "id": "notes",
+      "name": "備忘錄",
+      "icon": "notes",
+      "view": "list"
+    },
+    {
+      "id": "receipts",
+      "name": "雲端發票",
+      "icon": "receipts",
+      "view": "list"
+    },
+    {
+      "id": "moments",
+      "name": "片刻",
+      "icon": "moments",
+      "view": "gallery"
+    },
+    {
+      "id": "weather",
+      "name": "天氣",
+      "icon": "weather",
+      "view": "list"
+    },
+    {
+      "id": "music",
+      "name": "音樂",
+      "icon": "music",
+      "view": "none",
+      "emptyText": "上次播放停在週六下午。"
+    },
+    {
+      "id": "finder",
+      "name": "找裝置",
+      "icon": "finder",
+      "view": "map",
+      "folder": "f_tools"
+    },
+    {
+      "id": "camera",
+      "name": "相機",
+      "icon": "camera",
+      "view": "none",
+      "folder": "f_tools",
+      "emptyText": "鏡頭是黑的。"
+    },
+    {
+      "id": "phone",
+      "name": "電話",
+      "icon": "phone",
+      "view": "list",
+      "dock": true
+    },
+    {
+      "id": "chat",
+      "name": "聊聊",
+      "icon": "chat",
+      "view": "chat",
+      "dock": true
+    },
+    {
+      "id": "photos",
+      "name": "相簿",
+      "icon": "photos",
+      "view": "gallery",
+      "dock": true
+    },
+    {
+      "id": "suru",
+      "name": "Suru",
+      "icon": "suru",
+      "view": "assistant",
+      "dock": true
+    }
   ]
 }

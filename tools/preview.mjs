@@ -68,6 +68,10 @@ for (const app of apps.apps) {
     p(`背景 App，沒有線索。打開時顯示：「${app.emptyText ?? ''}」`);
     continue;
   }
+  if (app.view === 'assistant') {
+    p('助理自己的 App。心聲、時間軸、紀錄、說法、牌都在這裡，內容隨遊戲進行產生。');
+    continue;
+  }
   if (app.view === 'chat') {
     p('內容見下方「聊天室」。');
     continue;

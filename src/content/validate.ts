@@ -212,7 +212,7 @@ export function validateCase(raw: RawCase): Issue[] {
   }
 
   // ── apps ──
-  const VIEWS = ['chat', 'list', 'gallery', 'map', 'none'];
+  const VIEWS = ['chat', 'list', 'gallery', 'map', 'assistant', 'none'];
   for (const { entry, say } of apps) {
     need(entry, say, 'name', 'icon');
     if (!VIEWS.includes(entry.view as string)) say(`view 應該是 ${VIEWS.join('、')} 其中之一`);
