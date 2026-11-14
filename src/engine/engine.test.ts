@@ -532,7 +532,7 @@ describe('engine', () => {
     // 時間軸只放資料裡寫了 timeline 的列，每一列帶自己的時間和文字
     const rowsWanted = s.seen.flatMap((id) => content.items.find((i) => i.id === id && !i.flavor)?.timeline ?? []);
     expect(m.timeline).toHaveLength(rowsWanted.length);
-    expect(m.timeline.every((r) => r.when && r.text)).toBe(true);
+    expect(m.timeline.every((r) => r.when && r.label && r.text)).toBe(true);
     expect(new Set(m.timeline.map((r) => r.id)).size).toBe(m.timeline.length);
     expect(reachedConclusions(content, s)).toContain('time_window');
     const lines = voice(engine, s).map((l) => l.id);

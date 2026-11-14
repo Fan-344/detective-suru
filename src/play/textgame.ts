@@ -455,7 +455,13 @@ export class TextGame {
     const rows = memo(this.content, this.state).timeline;
     this.say('', '── 時間軸 ──');
     if (rows.length === 0) this.say('（還沒有東西）');
-    for (const row of rows) this.say('・' + row.when + '　' + row.text);
+    // 時段當小標題，同一個時段只印一次
+    let label = '';
+    for (const row of rows) {
+      if (row.label !== label) this.say('【' + row.label + '】');
+      label = row.label;
+      this.say('・' + row.text);
+    }
   }
 
   private showCards() {
