@@ -135,7 +135,7 @@
         },
         "effects": {
           "ladder": {
-            "zonghan": 1
+            "zonghan": 0
           }
         }
       },

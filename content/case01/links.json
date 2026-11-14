@@ -2,10 +2,7 @@
   {
     "statement": "say_aze_stoodup",
     "record": "rcp_1842",
-    "result": "conflict",
-    "unlocks": [
-      "card_latte"
-    ]
+    "result": "conflict"
   },
   {
     "statement": "say_yq_meet",
@@ -15,10 +12,7 @@
   {
     "statement": "say_zh_deposit",
     "record": "ph_deposit",
-    "result": "conflict",
-    "unlocks": [
-      "card_deposit"
-    ]
+    "result": "conflict"
   },
   {
     "statement": "say_zh_sunday",
@@ -33,10 +27,7 @@
   {
     "statement": "mo_sat_market",
     "record": "wx_taichung_sat",
-    "result": "conflict",
-    "unlocks": [
-      "card_market"
-    ]
+    "result": "conflict"
   },
   {
     "statement": "say_aze_rain",
@@ -56,9 +47,16 @@
   {
     "statement": "say_aze_studio",
     "record": "fd_ipad",
-    "result": "match",
-    "unlocks": [
-      "card_ipad"
-    ]
+    "result": "match"
+  },
+  {
+    "statement": "say_aze_bio",
+    "record": "fd_ipad",
+    "result": "match"
+  },
+  {
+    "statement": "say_jw_doodle",
+    "record": "ph_compare",
+    "result": "conflict"
   }
 ]

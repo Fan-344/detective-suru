@@ -84,6 +84,8 @@ export interface CaseMeta {
       openIdleApp?: number;
       /** 在「在意的地方」指錯細節一次扣的電量 */
       spotMiss?: number;
+      /** 在疑點上按一次「提示」耗的電。沒寫就不耗電。 */
+      hint?: number;
       /** 指對了人但證據沒選對、挑戰書被退回時扣的電量 */
       challengeRetry?: number;
     };
@@ -129,6 +131,11 @@ export interface CaseMeta {
    */
   readIgnore?: { nudgeAfterActions: number; raiseAfterActions: number };
   /** 開局固定送出的那句話 */
+  /**
+   * 時間軸上一開局就有的列：開場就告訴玩家的事（送醫、轉加護、Suru 被喚醒）。
+   * 形狀跟 Item.timeline 的列一樣。規則要把它們和看過的 item 的列排在一起。
+   */
+  timelineStart?: { when: When; label: string; text: string; who?: CharacterId }[];
   coverStory: string;
   /** 【待確認】掩護說法送到哪個聊天室 */
   coverThread?: ThreadId;
@@ -144,11 +151,15 @@ export interface CaseMeta {
   intro?: IntroSegment[];
 }
 
-/** 開場的一段。三種樣式與外觀框架的開場畫面一致。 */
+/**
+ * 開場的一段。text 旁白、quote 以晴留的話、notice 通知，
+ * goal 是遊戲目標：放在最後，畫面要做得比旁白醒目。
+ */
 export type IntroSegment =
   | { kind: 'text'; lines: string[] }
   | { kind: 'quote'; lines: string[]; signature?: string }
-  | { kind: 'notice'; label: string; lines: string[] };
+  | { kind: 'notice'; label: string; lines: string[] }
+  | { kind: 'goal'; lines: string[] };
 
 // ───────────────────────── characters.json ─────────────────────────
 
@@ -165,6 +176,12 @@ export interface LadderStep {
    * 開局固定送出的掩護說法不算。自動推進和事件效果造成的上升都受這個限制；條件成立後照常。
    */
   needsContact?: boolean | 'self' | 'anyone';
+  /**
+   * 這一級的門檻：條件成立之前進不去（停在前一級），成立之後照常。
+   * 例如宗翰要先被問過押金（看過他承認的那句），才會主動退錢。
+   * 跟 needsContact 一樣，玩家說的話和已讀不回造成的上升都受這個限制。
+   */
+  when?: Condition;
 }
 
 export interface Character {
@@ -177,6 +194,11 @@ export interface Character {
   brief?: string;
   /** 自介：這個人自己寫在個人頁面上的話（他本人的口氣），可以用 \n 換行。跟 brief（旁白寫的介紹）不同。 */
   bio?: string;
+  /**
+   * 自介裡有可以拿去比對的話時才寫：指向一筆 hidden 的說法（item）。
+   * 玩家打開這個人的個人頁面、看到自介，這筆說法就算看過，進到「說法」清單。
+   */
+  bioItem?: ItemId;
   /** 一行語氣摘要（給寫作的人看，玩家看不到）。完整的語氣指南在 docs/voice/ */
   style: string;
   /**
@@ -260,10 +282,13 @@ export interface Item {
   date?: string;
   /** 行事曆用的時刻，寫成 16:30。整天的行程不寫。 */
   time?: string;
+  /** 社群 App（Instory）的貼文資訊：發文帳號、按讚數、留言數。只是畫面裝飾，不是線索。 */
+  social?: { handle?: string; likes?: number; comments?: number };
   /**
    * 時間軸上的列。有寫才會進 Suru 的時間軸，而且要玩家看過這筆才出現。
    * 目的是讓玩家對每個人那幾天的行蹤：誰在什麼時候、在哪裡（或自稱在哪裡）。
-   * 一筆可以有好幾列。text 只描述，不下結論；出自某人說法的，寫成「某某說：…」。
+   * 一筆可以有好幾列。只放事實：紀錄上有的，或說法加上佐證之後確定的事。
+   * 單純某人說自己在哪（沒有別的東西佐證）不放。
    * - when：排先後用，可以寫得很細，玩家看不到
    * - label：畫面上顯示的大概時段（例如「週六晚上」），同一個 label 的列排在一起
    * - who：這一列講的是誰的行蹤（角色 id，或機主的 id）。講東西的（例如 iPad）不寫
@@ -318,8 +343,19 @@ export interface Card {
   id: CardId;
   /** 牌面上的短標題 */
   title: string;
-  /** 送出時包成的那句話（機主的口氣） */
-  say: string;
+  /** 送出時包成的那句話（機主的口氣）。thinkOnly 的疑點不寫。 */
+  say?: string;
+  /**
+   * 只能自己想、不能拿去問人的疑點（例如「她是什麼時候出事的」）。
+   * 沒有 say、targets，靠 availableWhen 出現，只能按「提示」。
+   */
+  thinkOnly?: boolean;
+  /**
+   * 「提示」：玩家在這個疑點上自己按了才給的話，一次給一句，照順序越講越明
+   * （先提疑問、再指向哪一類資料、最後點名哪一筆）。只提問、不下結論。
+   * 取代原本自己跳出來的心聲。每按一次扣 meta.battery.cost.hint。
+   */
+  hints?: string[];
   /** 對特定對象要換一種說法時才寫 */
   sayTo?: Record<CharacterId, string>;
   /** 可以拿去測試的對象。沒寫表示四個人都可以。 */
@@ -529,6 +565,22 @@ export interface FlavorFile {
   playlist?: { title: string; artist: string }[];
   /** 碎念：動態牆上的貼文。帳號都是虛構的。 */
   posts?: { author: string; text: string; when: string; handle?: string; likes?: number; replies?: number }[];
+  /**
+   * Instory：不是那四個人發的動態（店家、陌生帳號、贊助貼文），跟案情無關，只能看。
+   * when 是顯示用的文字（例如「週日 20:14」「贊助」），畫面請照陣列順序由新到舊排，
+   * 跟四個角色的動態（items 裡 app 為 moments 的）穿插。
+   */
+  moments?: {
+    id: string;
+    author: string;
+    handle: string;
+    when: string;
+    text: string;
+    image: ImageRef;
+    likes?: number;
+    comments?: number;
+    sponsored?: boolean;
+  }[];
   /**
    * Link：跟案情無關的聊天室，只能看、不能回，不進推理。
    * from 寫 "self" 代表機主自己，其他直接寫顯示的名字。

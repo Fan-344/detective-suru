@@ -111,15 +111,27 @@
     "text": "阿澤和靖雯是一對",
     "routes": [
       [
-        "say_aze_wen"
-      ],
-      [
         "fd_ipad",
         "say_aze_studio"
       ],
       [
         "rec_login",
         "say_aze_studio"
+      ],
+      [
+        "fd_ipad",
+        "say_aze_bio"
+      ],
+      [
+        "rec_login",
+        "say_aze_bio"
+      ],
+      [
+        "say_aze_couple"
+      ],
+      [
+        "say_py_guess",
+        "say_aze_wen"
       ]
     ]
   }

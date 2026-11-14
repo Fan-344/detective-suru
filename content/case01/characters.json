@@ -81,7 +81,8 @@
     "id": "aze",
     "name": "阿澤",
     "brief": "31 歲，攝影師，拍婚禮也接案。常傳自己拍的照片給以晴。訊息很短，話不多。",
-    "bio": "修圖中 晚點回",
+    "bio": "澤光影像工作室｜婚禮紀錄、商業攝影\n台北市大安區泰順街（巷內白色鐵門）\n預約請來電 0900-123-456",
+    "bioItem": "say_aze_bio",
     "style": "字最少、幾乎不用標點、「蛤」「是喔」「哈哈」、打「你」、只有他叫靖雯「雯」",
     "startLevel": 0,
     "ladder": [
@@ -105,7 +106,8 @@
         "onEnter": [
           "msg_aze_confess",
           "msg_aze_tipoff"
-        ]
+        ],
+        "needsContact": "self"
       }
     ],
     "genericReplies": [
@@ -152,7 +154,12 @@
         "id": "refund",
         "onEnter": [
           "msg_zh_refund"
-        ]
+        ],
+        "when": {
+          "seen": [
+            "say_zh_admit"
+          ]
+        }
       },
       {
         "level": 3,

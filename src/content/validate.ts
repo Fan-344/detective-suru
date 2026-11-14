@@ -221,6 +221,7 @@ export function validateCase(raw: RawCase): Issue[] {
       if (!isObj(step)) return void say(`ladder 第 ${i + 1} 級應該是一個物件`);
       if (step.level !== i + 1) say(`ladder 第 ${i + 1} 級的 level 應該是 ${i + 1}，等級要從 1 連續編號`);
       if (!isStr(step.id)) say(`ladder 第 ${i + 1} 級缺少 id`);
+      if (isObj(step)) checkCondition(say, `ladder 第 ${i + 1} 級的 when`, step.when);
       if (step.needsContact !== undefined && typeof step.needsContact !== 'boolean' && step.needsContact !== 'self' && step.needsContact !== 'anyone') {
         say(`ladder 第 ${i + 1} 級的 needsContact 應該是 "self"、"anyone"、true 或 false`);
       }
@@ -306,11 +307,23 @@ export function validateCase(raw: RawCase): Issue[] {
 
   // ── cards ──
   for (const { entry, say } of cards) {
-    need(entry, say, 'title', 'say');
+    if (entry.thinkOnly === true) {
+      need(entry, say, 'title');
+      if (entry.say !== undefined || entry.sayTo !== undefined || entry.targets !== undefined || entry.spot !== undefined) say('thinkOnly 的疑點不能拿去問人，不要寫 say、sayTo、targets、spot');
+      if (entry.availableWhen === undefined) say('thinkOnly 的疑點要寫 availableWhen，不然永遠不會出現');
+      if (entry.hints === undefined) say('thinkOnly 的疑點要寫 hints，不然玩家什麼都不能做');
+    } else need(entry, say, 'title', 'say');
     refs(say, 'targets', entry.targets, characterIds, '人物');
     refs(say, 'thread', entry.thread, threadIds, '聊天室');
     if (isObj(entry.sayTo)) refs(say, 'sayTo', Object.keys(entry.sayTo), characterIds, '人物');
     checkCondition(say, 'availableWhen', entry.availableWhen);
+    if (entry.hints !== undefined) {
+      if (!Array.isArray(entry.hints) || entry.hints.length === 0) say('hints 應該是陣列，至少一句');
+      else entry.hints.forEach((h, i) => {
+        if (!isStr(h) || h.trim() === '') say(`hints 第 ${i + 1} 句是空的`);
+        else if (!/[？?]$/.test(h.trim())) say(`hints 第 ${i + 1} 句要用問句結尾（只提問、不下結論）`);
+      });
+    }
     if (entry.spot !== undefined) {
       const spot = isObj(entry.spot) ? entry.spot : {};
       if (!isObj(entry.spot)) say('spot 應該是一個物件');
@@ -333,6 +346,13 @@ export function validateCase(raw: RawCase): Issue[] {
 
   // ── reactions ──
   const revealed = new Set<string>();
+  // 個人頁面的自介也會帶出一筆說法
+  for (const { entry, say } of characters) {
+    if (entry.bioItem === undefined) continue;
+    if (!isStr(entry.bioItem) || !itemIds.has(entry.bioItem)) say(`bioItem「${String(entry.bioItem)}」不是任何一筆 item 的 id`);
+    else revealed.add(entry.bioItem);
+    if (!isStr(entry.bio)) say('寫了 bioItem 就要有 bio（自介的文字）');
+  }
   const noteReveals = (value: unknown) => {
     if (Array.isArray(value)) for (const v of value) if (isStr(v)) revealed.add(v);
   };
@@ -428,6 +448,7 @@ export function validateCase(raw: RawCase): Issue[] {
       need2('worldClocks', ['city']);
       need2('playlist', ['title', 'artist']);
       need2('posts', ['author', 'text', 'when']);
+      need2('moments', ['id', 'author', 'handle', 'when', 'text']);
       need2('chats', ['id', 'title', 'when']);
       const chats = (raw.flavor as Obj).chats;
       if (Array.isArray(chats)) {
@@ -471,7 +492,8 @@ export function validateCase(raw: RawCase): Issue[] {
     if (entry.conclusion !== undefined && ![1, 2, 3].includes(entry.level as number)) say('對應結論的心聲要寫 level（1、2 或 3）');
     checkCondition(say, 'when', entry.when);
   }
-  for (const id of conclusionIds) {
+  // 心聲已取消（併進疑點的「提示」），voice.json 可以是空的；有寫的話才要求三級齊全
+  for (const id of voice.length ? conclusionIds : []) {
     for (const level of [1, 2, 3]) {
       if (!voice.some(({ entry }) => entry.conclusion === id && entry.level === level)) {
         reporter('voice', `結論「${id}」`)(`缺少第 ${level} 級的心聲`);

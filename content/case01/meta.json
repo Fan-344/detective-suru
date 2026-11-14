@@ -19,7 +19,8 @@
       "test": 2,
       "challengeRetry": 2,
       "spotMiss": 1,
-      "openIdleApp": 0.2
+      "openIdleApp": 0.2,
+      "hint": 1
     },
     "ladderTickEvery": 10,
     "ladderTickEveryIgnored": 7,
@@ -166,6 +167,14 @@
         "她交代的事還沒有人做。",
         "沒有人會來幫這支手機充電。"
       ]
+    },
+    {
+      "kind": "goal",
+      "lines": [
+        "害她摔下樓的人，就在「永和四樓」這個群組裡。",
+        "用她的口氣回訊息，別讓兇手發現回話的不是她。",
+        "在電量用完之前，把這個人找出來。"
+      ]
     }
   ],
   "afterCover": [
@@ -199,5 +208,30 @@
   "readIgnore": {
     "nudgeAfterActions": 2,
     "raiseAfterActions": 4
-  }
+  },
+  "timelineStart": [
+    {
+      "when": "週六 16:28",
+      "label": "週六下午",
+      "text": "以晴把手機送到維修店換電池",
+      "who": "yiqing"
+    },
+    {
+      "when": "週六 23:12",
+      "label": "週六深夜",
+      "text": "以晴被救護車送到景和綜合醫院急診",
+      "who": "yiqing"
+    },
+    {
+      "when": "週日 08:40",
+      "label": "週日",
+      "text": "以晴轉入加護病房",
+      "who": "yiqing"
+    },
+    {
+      "when": "週一 13:30",
+      "label": "週一",
+      "text": "Suru 被兩天前設定的指令喚醒"
+    }
+  ]
 }

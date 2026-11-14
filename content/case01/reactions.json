@@ -194,54 +194,6 @@
     ]
   },
   {
-    "card": "card_wen",
-    "target": "aze",
-    "tone": "evasive",
-    "reply": [
-      "蛤",
-      "什麼雯",
-      "打錯啦"
-    ],
-    "signal": {
-      "readDelay": "已讀後隔了幾分鐘"
-    },
-    "reveals": [
-      "say_aze_typo"
-    ],
-    "effects": {
-      "ladder": {
-        "aze": 1
-      }
-    }
-  },
-  {
-    "card": "card_wen",
-    "target": "pinyu",
-    "tone": "engaged",
-    "reply": [
-      "對欸",
-      "他幹嘛叫那麼親",
-      "我以為只有我覺得怪"
-    ]
-  },
-  {
-    "card": "card_watch",
-    "target": "pinyu",
-    "tone": "evasive",
-    "reply": [
-      "……",
-      "妳眼睛也太利",
-      "好啦是宗翰 我們在一起一陣子了",
-      "本來想等妳也有對象再講 怕妳覺得只剩妳一個"
-    ],
-    "signal": {
-      "typingStops": true
-    },
-    "reveals": [
-      "say_py_dating"
-    ]
-  },
-  {
     "card": "card_watch",
     "target": "zonghan",
     "tone": "engaged",
@@ -262,5 +214,261 @@
     "reveals": [
       "say_zh_left"
     ]
+  },
+  {
+    "card": "card_files",
+    "target": "jingwen",
+    "tone": "evasive",
+    "reply": [
+      "什麼圖呀",
+      "妳說以前隨手畫的那些嗎😂",
+      "欸妳先休息啦 不要想這些🥺"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_jw_doodle"
+    ],
+    "effects": {
+      "ladder": {
+        "jingwen": 2
+      }
+    }
+  },
+  {
+    "card": "card_files",
+    "target": "aze",
+    "tone": "evasive",
+    "reply": [
+      "圖？",
+      "我不知道裡面有什麼",
+      "……那很重要嗎"
+    ],
+    "signal": {
+      "typingStops": true
+    },
+    "effects": {
+      "ladder": {
+        "aze": 1
+      },
+      "flags": {
+        "aze_doubts": true
+      }
+    }
+  },
+  {
+    "card": "card_files",
+    "target": "pinyu",
+    "tone": "confused",
+    "reply": [
+      "什麼圖",
+      "妳畫的喔",
+      "幹嘛突然講這個"
+    ]
+  },
+  {
+    "card": "card_files",
+    "target": "zonghan",
+    "tone": "confused",
+    "reply": [
+      "以晴，這個我真的不太清楚，是妳工作上的檔案嗎？需要我幫忙找什麼再跟我說。"
+    ]
+  },
+  {
+    "card": "card_couple",
+    "target": "jingwen",
+    "tone": "evasive",
+    "reply": [
+      "蛤😂",
+      "誰跟妳說的",
+      "沒有啦 妳想太多"
+    ],
+    "signal": {
+      "typingStops": true
+    },
+    "reveals": [
+      "say_jw_deny"
+    ],
+    "effects": {
+      "ladder": {
+        "jingwen": 1
+      }
+    }
+  },
+  {
+    "card": "card_watch",
+    "target": "pinyu",
+    "tone": "evasive",
+    "when": {
+      "seen": [
+        "say_py_guess"
+      ]
+    },
+    "reply": [
+      "……",
+      "妳眼睛也太利",
+      "好啦是宗翰 我們在一起一陣子了",
+      "那兩個如果也是 不就只剩妳一個 所以我才沒講"
+    ],
+    "reveals": [
+      "say_py_dating"
+    ]
+  },
+  {
+    "card": "card_watch",
+    "target": "pinyu",
+    "tone": "evasive",
+    "reply": [
+      "……",
+      "妳眼睛也太利",
+      "好啦是宗翰 我們在一起一陣子了",
+      "本來想等妳也有對象再講 怕妳覺得只剩妳一個"
+    ],
+    "reveals": [
+      "say_py_dating",
+      "say_py_alone"
+    ]
+  },
+  {
+    "card": "card_wen",
+    "target": "pinyu",
+    "tone": "engaged",
+    "when": {
+      "seen": [
+        "say_py_guess"
+      ]
+    },
+    "reply": [
+      "看吧",
+      "我就說他們怪怪的",
+      "他以前都叫靖雯的"
+    ]
+  },
+  {
+    "card": "card_wen",
+    "target": "pinyu",
+    "tone": "engaged",
+    "reply": [
+      "對欸",
+      "他幹嘛叫那麼親",
+      "我就覺得阿澤跟靖雯怪怪的"
+    ],
+    "reveals": [
+      "say_py_guess"
+    ]
+  },
+  {
+    "card": "card_wen",
+    "target": "aze",
+    "tone": "engaged",
+    "when": {
+      "seen": [
+        "say_aze_couple"
+      ]
+    },
+    "reply": [
+      "……",
+      "都知道了還問"
+    ]
+  },
+  {
+    "card": "card_wen",
+    "target": "aze",
+    "tone": "evasive",
+    "reply": [
+      "蛤",
+      "什麼雯",
+      "打錯啦"
+    ],
+    "reveals": [
+      "say_aze_typo"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      }
+    }
+  },
+  {
+    "card": "card_alone",
+    "target": "pinyu",
+    "tone": "engaged",
+    "when": {
+      "seen": [
+        "say_py_guess"
+      ]
+    },
+    "reply": [
+      "就妳上次問的那個啊",
+      "阿澤跟靖雯",
+      "他們要是在一起 不就剩妳"
+    ]
+  },
+  {
+    "card": "card_alone",
+    "target": "pinyu",
+    "tone": "evasive",
+    "reply": [
+      "……",
+      "我亂猜的啦",
+      "我就覺得阿澤跟靖雯怪怪的",
+      "妳不要說是我講的"
+    ],
+    "reveals": [
+      "say_py_guess"
+    ]
+  },
+  {
+    "card": "card_couple",
+    "target": "aze",
+    "tone": "evasive",
+    "when": {
+      "seen": [
+        "say_aze_typo"
+      ]
+    },
+    "reply": [
+      "……",
+      "好啦 不是打錯",
+      "我們在一起",
+      "雯說先不要講"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_aze_couple"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      }
+    }
+  },
+  {
+    "card": "card_couple",
+    "target": "aze",
+    "tone": "evasive",
+    "reply": [
+      "……",
+      "誰跟你說的",
+      "好啦 我們在一起",
+      "雯說先不要講"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_aze_couple"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      }
+    }
   }
 ]
