@@ -22,7 +22,9 @@
       "openIdleApp": 0.2
     },
     "ladderTickEvery": 10,
-    "ladderTickEveryIgnored": 7
+    "ladderTickEveryIgnored": 7,
+    "ladderAuto": false,
+    "voiceTickEvery": 10
   },
   "coverStory": "欸 我週六在舊家樓梯滑了一跤 沒大礙 在家躺著 那天的事有點記不清",
   "coverThread": "group",
@@ -135,6 +137,13 @@
       ]
     },
     {
+      "kind": "notice",
+      "label": "相簿",
+      "lines": [
+        "週五從雲端同步了 6 個新項目"
+      ]
+    },
+    {
       "kind": "text",
       "lines": [
         "她沒有回來。",
@@ -177,5 +186,9 @@
     "群組叫「永和四樓」。",
     "五個人從 2019 年起合租永和一間老公寓的四樓，上個月房東要賣屋，一起搬走了。",
     "除了以晴，群組裡還有四個人。"
-  ]
+  ],
+  "readIgnore": {
+    "nudgeAfterActions": 2,
+    "raiseAfterActions": 4
+  }
 }

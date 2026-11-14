@@ -207,6 +207,9 @@ export function validateCase(raw: RawCase): Issue[] {
   for (const { entry, say } of characters) {
     need(entry, say, 'name', 'style');
     if (entry.brief !== undefined && !isStr(entry.brief)) say('brief 應該是一段文字');
+    if (entry.nudges !== undefined && (!Array.isArray(entry.nudges) || entry.nudges.length === 0 || !entry.nudges.every(isStrArr))) {
+      say('nudges 至少要有一組追問，每一組是幾則訊息的陣列');
+    }
     if (!Array.isArray(entry.genericReplies) || entry.genericReplies.length === 0 || !entry.genericReplies.every(isStrArr)) {
       say('genericReplies 至少要有一組通用反應，每一組是幾則訊息的陣列');
     }

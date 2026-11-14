@@ -87,7 +87,15 @@ export interface CaseMeta {
       /** 指對了人但證據沒選對、挑戰書被退回時扣的電量 */
       challengeRetry?: number;
     };
-    /** 電量每掉多少，沒有被安撫的人自動升一級 */
+    /**
+     * false 表示關掉「電量每掉一段就自動升級」。電量只當上限，不影響任何人的情緒；
+     * 階梯改由玩家說的話和「已讀不回」（見 CaseMeta.readIgnore）推動。
+     * 沒寫或 true 時照 ladderTickEvery 自動升級（舊做法）。
+     */
+    ladderAuto?: boolean;
+    /** 心聲的提示升級用的間隔：某個結論隔這麼多電量還沒被摸到，提示就升一級。沒寫就用 ladderTickEvery。 */
+    voiceTickEvery?: number;
+    /** 電量每掉多少，沒有被安撫的人自動升一級。ladderAuto 為 false 時不使用。 */
     ladderTickEvery: number;
     /**
      * 從來沒被玩家理過的人（玩家沒對他送過任何訊息，回覆選項和測試牌都算）改用這個間隔，
@@ -110,6 +118,16 @@ export interface CaseMeta {
   today?: string;
   /** 人物簡介前面的一小段背景，交代這幾個人是什麼關係。顯示在「聯絡人」App 的最上面。 */
   castIntro?: string[];
+  /**
+   * 已讀不回。玩家打開某人的聊天室、看到他等回的訊息卻沒回就離開，從離開那一刻起算：
+   * - 再做 nudgeAfterActions 個動作還沒回，他追問一句（Character.nudges，輪流用）。
+   * - 追問之後再做 raiseAfterActions 個動作還沒回，他的階梯升一級。
+   * - 同一則訊息最多只追問一次、只讓他升一級。要等他傳了新的一則、玩家又讀了沒回，才重新開始算。
+   * 動作指玩家做的任何一步（開 App、讀聊天室、定位、比對、傳訊息給別人等），跟電量無關。
+   * 追問只是催促，不是新的問題：能回的還是原本那一則，選項不變。
+   * 玩家沒打開過的聊天室不會觸發（對方看不到已讀）。
+   */
+  readIgnore?: { nudgeAfterActions: number; raiseAfterActions: number };
   /** 開局固定送出的那句話 */
   coverStory: string;
   /** 【待確認】掩護說法送到哪個聊天室 */
@@ -159,6 +177,11 @@ export interface Character {
   brief?: string;
   /** 一行語氣摘要（給寫作的人看，玩家看不到）。完整的語氣指南在 docs/voice/ */
   style: string;
+  /**
+   * 已讀不回時的追問。外層是幾種不同的追法，輪流使用；內層是一次追問裡的幾則訊息。
+   * 只是催促，不帶新的資訊，也沒有回覆選項。
+   */
+  nudges?: string[][];
   /** 開局時的階梯等級。0 表示還沒踏上第一級。 */
   startLevel?: number;
   ladder: LadderStep[];
@@ -187,6 +210,11 @@ export interface AppDef {
   dock?: boolean;
   /** 收在哪個資料夾（FolderDef.id） */
   folder?: string;
+  /**
+   * 開局時 App 上的未讀標示，例如「3 則未讀」。就是真的手機上的紅點，讓玩家知道裡面有新東西。
+   * 玩家打開過這個 App 之後就不再顯示。聊天 App 的數字之後可以改由各聊天室的未讀數加總。
+   */
+  badge?: string;
   /** true 表示跟案情無關的背景 App。打開它只耗很少的電（meta.battery.cost.openIdleApp），逛太久會跳出提醒。 */
   background?: boolean;
   /** 【待確認】沒有內容的背景 App 打開時顯示的一句話 */

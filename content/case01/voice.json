@@ -203,6 +203,15 @@
     }
   },
   {
+    "id": "v_find_device",
+    "text": "這台 iPad 還掛在她的帳號底下。帳號底下的裝置，查得到在哪裡嗎？",
+    "when": {
+      "seen": [
+        "ph_ipad"
+      ]
+    }
+  },
+  {
     "id": "v_ipad",
     "text": "iPad 是她的。它為什麼不在她身邊？",
     "when": {

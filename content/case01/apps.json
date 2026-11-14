@@ -17,7 +17,8 @@
       "id": "sms",
       "name": "簡訊",
       "icon": "sms",
-      "view": "list"
+      "view": "list",
+      "badge": "3 則未讀"
     },
     {
       "id": "notes",
@@ -29,7 +30,8 @@
       "id": "receipts",
       "name": "發票雲",
       "icon": "receipts",
-      "view": "list"
+      "view": "list",
+      "badge": "新增 6 張"
     },
     {
       "id": "moments",
@@ -106,21 +108,24 @@
       "name": "電話",
       "icon": "phone",
       "view": "list",
-      "dock": true
+      "dock": true,
+      "badge": "8 通未接"
     },
     {
       "id": "chat",
       "name": "Link",
       "icon": "chat",
       "view": "chat",
-      "dock": true
+      "dock": true,
+      "badge": "37 則未讀"
     },
     {
       "id": "photos",
       "name": "相簿",
       "icon": "photos",
       "view": "gallery",
-      "dock": true
+      "dock": true,
+      "badge": "6 個新項目"
     },
     {
       "id": "suru",
