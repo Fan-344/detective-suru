@@ -82,6 +82,8 @@ export interface CaseMeta {
       test?: number;
       /** 第一次打開背景 App 的耗電。可以是小數，比 openApp 低很多。 */
       openIdleApp?: number;
+      /** 在「在意的地方」指錯細節一次扣的電量 */
+      spotMiss?: number;
       /** 指對了人但證據沒選對、挑戰書被退回時扣的電量 */
       challengeRetry?: number;
     };
@@ -287,6 +289,23 @@ export interface Card {
   thread?: ThreadId;
   /** 【待確認】不靠矛盾比對解鎖的牌：條件成立就拿到 */
   availableWhen?: Condition;
+  /**
+   * 疑點成立前多一層「哪裡有問題？」。有寫 spot 的牌，availableWhen 成立時不直接成為疑點，
+   * 先成為助理「在意的地方」；玩家指出是那一筆資料的哪個細節，指對了才成為疑點。
+   * 指錯一次扣 meta.battery.cost.spotMiss，同一個選項不能再指。
+   */
+  spot?: {
+    /** 讓助理在意的那一筆 */
+    item: ItemId;
+    /** 助理問的那句，只提問 */
+    prompt?: string;
+    /** 這一筆資料上可以指的細節。都要是資料上真的有的東西，用一樣中性的寫法，不能一眼看出答案。 */
+    options: { id: string; text: string }[];
+    /** 正確的選項 id。有不只一個合理答案時寫成陣列，指到任何一個都算對。 */
+    answer: string | string[];
+    /** 指錯時助理說的話，只提問、不提示答案 */
+    miss?: string;
+  };
 }
 
 // ───────────────────────── reactions.json ─────────────────────────

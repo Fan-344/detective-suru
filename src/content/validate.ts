@@ -295,6 +295,24 @@ export function validateCase(raw: RawCase): Issue[] {
     refs(say, 'thread', entry.thread, threadIds, '聊天室');
     if (isObj(entry.sayTo)) refs(say, 'sayTo', Object.keys(entry.sayTo), characterIds, '人物');
     checkCondition(say, 'availableWhen', entry.availableWhen);
+    if (entry.spot !== undefined) {
+      const spot = isObj(entry.spot) ? entry.spot : {};
+      if (!isObj(entry.spot)) say('spot 應該是一個物件');
+      if (entry.availableWhen === undefined) say('有 spot 的牌一定要有 availableWhen');
+      refs(say, 'spot.item', spot.item, itemIds, ' item ');
+      if (!isStr(spot.item)) say('spot 缺少 item');
+      const optionIds = new Set<string>();
+      if (!Array.isArray(spot.options) || spot.options.length < 2) say('spot.options 至少要有兩個選項');
+      else
+        for (const o of spot.options) {
+          if (!isObj(o) || !isStr(o.id) || !isStr(o.text)) say('spot.options 每個選項都要有 id 和 text');
+          else if (optionIds.has(o.id)) say(`spot.options 的 id「${o.id}」重複了`);
+          else optionIds.add(o.id);
+        }
+      const answers = Array.isArray(spot.answer) ? spot.answer : [spot.answer];
+      if (answers.length === 0 || !answers.every(isStr)) say('spot 缺少 answer');
+      else for (const a of answers) if (!optionIds.has(a)) say(`spot.answer「${a}」不在 options 裡`);
+    }
   }
 
   // ── reactions ──

@@ -34,6 +34,18 @@
       "seen": [
         "rcp_2016"
       ]
+    },
+    "spot": {
+      "item": "rcp_2016",
+      "prompt": "這張發票，哪裡讓你在意？",
+      "options": [
+        { "id": "print", "text": "A3 彩色輸出 ×6" },
+        { "id": "bag", "text": "牛皮紙袋 ×1" },
+        { "id": "time", "text": "時間 20:16" },
+        { "id": "amount", "text": "金額 195 元" }
+      ],
+      "answer": "bag",
+      "miss": "這一項，跟她後來發生的事有關嗎？"
     }
   },
   {
@@ -51,6 +63,18 @@
       "seen": [
         "say_aze_wen"
       ]
+    },
+    "spot": {
+      "item": "say_aze_wen",
+      "prompt": "這句話，哪裡不對勁？",
+      "options": [
+        { "id": "name", "text": "「雯」" },
+        { "id": "day", "text": "「昨天」" },
+        { "id": "hour", "text": "「快三點」" },
+        { "id": "sleep", "text": "「才睡」" }
+      ],
+      "answer": ["name", "hour"],
+      "miss": "這幾個字，換成別人來說也一樣嗎？"
     }
   },
   {
@@ -65,6 +89,18 @@
       "seen": [
         "say_py_snack"
       ]
+    },
+    "spot": {
+      "item": "say_py_snack",
+      "prompt": "這張照片，哪裡讓你在意？",
+      "options": [
+        { "id": "food", "text": "桌上那盒滷味" },
+        { "id": "drinks", "text": "兩杯手搖飲" },
+        { "id": "hand", "text": "伸進畫面的手" },
+        { "id": "room", "text": "休息室的桌子" }
+      ],
+      "answer": ["hand", "drinks"],
+      "miss": "這個東西，會讓你想問品妤什麼？"
     }
   },
   {
@@ -78,6 +114,18 @@
       "seen": [
         "say_zh_open"
       ]
+    },
+    "spot": {
+      "item": "say_zh_open",
+      "prompt": "這句話，哪裡值得再問他？",
+      "options": [
+        { "id": "ok", "text": "「OK的」" },
+        { "id": "work", "text": "「帶看到九點」" },
+        { "id": "direct", "text": "「結束直接過去」" },
+        { "id": "arrive", "text": "「大概九點多到」" }
+      ],
+      "answer": "arrive",
+      "miss": "這幾個字，有什麼是需要他再說清楚的嗎？"
     }
   }
 ]

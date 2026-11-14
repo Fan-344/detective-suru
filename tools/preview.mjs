@@ -234,6 +234,12 @@ if (cards.length) {
     const where = c.thread ? `｜在「${threadById[c.thread]?.title ?? c.thread}」送出` : '';
     const need = c.availableWhen?.seen ? `｜看過 ${c.availableWhen.seen.map(itemLabel).join('、')} 就拿到` : '';
     p(`- **${c.title}**：「${c.say}」${to}${where}${need}`);
+    if (c.spot) {
+      const right = [].concat(c.spot.answer);
+      const opts = c.spot.options.map((o) => (right.includes(o.id) ? `**${o.text}**（對）` : o.text)).join('／');
+      p(`  - 要先指出細節才成立。Suru 問：「${c.spot.prompt ?? ''}」　選項：${opts}`);
+      if (c.spot.miss) p(`  - 指錯時 Suru 說：「${c.spot.miss}」`);
+    }
   }
 }
 
