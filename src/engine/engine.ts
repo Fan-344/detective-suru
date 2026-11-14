@@ -33,6 +33,11 @@ export interface Engine {
 /** 疑點成立前多的一層（見 Card.spot）。沒寫或沒有選項就當作沒有這一層。 */
 export type Spot = NonNullable<Card['spot']>;
 
+/** 只能自己想、不能拿去問人的疑點（沒有 say、沒有對象，只能按「再想想」） */
+export function isThinkOnly(card: Card): boolean {
+  return card.thinkOnly === true;
+}
+
 export function spotOf(card: Card): Spot | null {
   return card.spot && card.spot.options.length > 0 ? card.spot : null;
 }
@@ -68,6 +73,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
     content.threads.find((t) => t.members.length === 1 && t.members[0] === target)?.id ?? null;
 
   function testThread(card: Card, target: CharacterId): ThreadId | null {
+    if (isThinkOnly(card)) return null;
     if (card.targets && !card.targets.includes(target)) return null;
     if (!characters.has(target)) return null;
     if (card.thread) return threads.get(card.thread)?.members.includes(target) ? card.thread : null;
@@ -108,9 +114,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       readThreads: [],
       located: [],
       threads: Object.fromEntries(content.threads.map((t) => [t.id, { appended: [] }])),
-      links: [],
       cards: [],
       concerns: [],
+      hints: {},
       cardsUsed: [],
       fired: [],
       scheduled: [],
@@ -121,7 +127,6 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       lastTick: Object.fromEntries(content.characters.map((c) => [c.id, 0])),
       attended: [],
       genericIndex,
-      voiceClock: Object.fromEntries(content.conclusions.map((c) => [c.id, 0])),
       wanderStreak: 0,
       wanderIndex: 0,
       assistantUnread: false,
@@ -159,9 +164,6 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       if (fresh.length === 0) return;
       s.seen.push(...fresh);
       out.push({ kind: 'items', items: fresh });
-      for (const c of content.conclusions) {
-        if (c.routes.some((route) => route.some((id) => fresh.includes(id)))) s.voiceClock[c.id] = s.spent;
-      }
     };
 
     const moveLadder = (who: CharacterId, delta: number, auto: boolean) => {
@@ -183,6 +185,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         // self 是要理過這個角色本人，其餘（true、anyone）是理過任何人就算
         const contacted = rung?.needsContact === 'self' ? s.attended.includes(who) : s.attended.length > 0;
         if (rung?.needsContact && !contacted) break;
+        // 這一級自己帶的門檻（when）：條件還沒成立也停在前一級，成立之後照常
+        if (rung?.when && !holds(s, rung.when)) break;
         s.ladder[who] = level;
         for (const id of rung?.onEnter ?? []) fire(id);
         for (const e of content.endings.endings) {
@@ -470,8 +474,16 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         if (first) s.readThreads.push(action.thread);
         s.wanderStreak = 0;
         out.push({ kind: 'thread', thread: action.thread, first });
-        see(historyItems(action.thread));
+        const history = historyItems(action.thread);
+        see(action.visible ? history.filter((id) => action.visible?.includes(id)) : history);
         if (first) spend(cost.readThread);
+        return done();
+      }
+
+      case 'seeMessages': {
+        if (!threads.has(action.thread)) return invalid('沒有這個聊天室');
+        if (!s.readThreads.includes(action.thread)) return invalid('要先打開這個聊天室');
+        see(historyItems(action.thread).filter((id) => action.items.includes(id)));
         return done();
       }
 
@@ -493,6 +505,14 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         s.unopened = s.unopened.filter((id) => id !== item.id);
         out.push({ kind: 'image', item: item.id });
         see([item.id]);
+        return done();
+      }
+
+      case 'viewProfile': {
+        const character = characters.get(action.character);
+        if (!character) return invalid('沒有這個人');
+        out.push({ kind: 'profile', character: character.id });
+        if (character.bioItem) see([character.bioItem]);
         return done();
       }
 
@@ -531,26 +551,6 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
 
-      case 'compare': {
-        const statement = items.get(action.statement);
-        const record = items.get(action.record);
-        if (!statement || !record || !s.seen.includes(statement.id) || !s.seen.includes(record.id)) return invalid('只能比對看過的東西');
-        if (statement.flavor || record.flavor) return invalid('這筆不在備忘錄裡');
-        if (statement.kind !== 'statement' || record.kind !== 'record') return invalid('要選一則說法和一筆紀錄');
-        const link = content.links.find((l) => l.statement === statement.id && l.record === record.id);
-        const result = link?.result ?? 'none';
-        if (!s.links.some((l) => l.statement === statement.id && l.record === record.id)) {
-          s.links.push({ statement: statement.id, record: record.id, result });
-        }
-        out.push({ kind: 'link', statement: statement.id, record: record.id, result });
-        const fresh = (link?.unlocks ?? []).filter((c) => cards.has(c) && !s.cards.includes(c));
-        if (fresh.length) {
-          s.cards.push(...fresh);
-          out.push({ kind: 'cards', cards: fresh, via: 'found' });
-        }
-        return done();
-      }
-
       case 'test': {
         const card = cards.get(action.card);
         if (!card || !s.cards.includes(card.id)) return invalid('手上沒有這張牌');
@@ -561,7 +561,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         if (s.cardsUsed.includes(key)) return invalid('這張牌已經問過這個人了');
         s.cardsUsed.push(key);
         attend(action.target);
-        say(thread, card.sayTo?.[action.target] ?? card.say);
+        say(thread, card.sayTo?.[action.target] ?? card.say ?? '');
         const reaction = content.reactions.find((r) => r.card === card.id && r.target === action.target && holds(s, r.when));
         if (reaction) {
           hear(thread, action.target, reaction.reply, reaction.signal);
@@ -578,6 +578,18 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           }
         }
         spend(testCost);
+        return done();
+      }
+
+      case 'think': {
+        const card = cards.get(action.card);
+        if (!card || !(s.cards.includes(card.id) || s.concerns.some((x) => x.card === card.id))) return invalid('手上沒有這個疑點');
+        const lines = card.hints ?? [];
+        const index = s.hints[card.id] ?? 0;
+        if (index >= lines.length) return invalid('這個疑點沒有更多可以想的了');
+        s.hints[card.id] = index + 1;
+        out.push({ kind: 'hint', card: card.id, index, text: lines[index], more: index + 1 < lines.length });
+        spend(cost.hint ?? 0);
         return done();
       }
 
@@ -685,13 +697,11 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   }
 
   function menu(s: GameState): Menu {
-    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], images: [], assistantUnread: false, concerns: [], replies: [], tests: [], compare: null, challenge: null };
+    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], images: [], assistantUnread: false, profiles: [], concerns: [], replies: [], tests: [], thoughts: [], challenge: null };
     if (s.phase === 'ended') return empty;
     if (s.phase === 'cover') return { ...empty, cover: true };
     const chatOpen = chatApps.some((a) => s.openedApps.includes(a));
-    const seenOf = (kind: Item['kind']) => s.seen.filter((id) => isClue(id) && items.get(id)?.kind === kind);
-    const records = seenOf('record');
-    const statements = seenOf('statement');
+    const records = s.seen.filter((id) => isClue(id) && items.get(id)?.kind === 'record');
     const ch = content.endings.challenge;
     const promptEvent = s.prompt ? events.get(s.prompt) : undefined;
     return {
@@ -704,10 +714,17 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       threads: chatOpen
         ? content.threads.map((t) => {
             const read = s.readThreads.includes(t.id);
-            return { thread: t.id, read, cost: read ? 0 : cost.readThread };
+            const unseen = historyItems(t.id).filter((id) => !s.seen.includes(id) && !s.unopened.includes(id));
+            return { thread: t.id, read, cost: read ? 0 : cost.readThread, unseen };
           })
         : [],
       assistantUnread: s.assistantUnread,
+      profiles: content.characters.flatMap((c) => {
+        const item = c.bioItem;
+        if (!item || !items.has(item)) return [];
+        const met = content.threads.some((t) => t.members.includes(c.id) && s.readThreads.includes(t.id));
+        return met ? [{ character: c.id, item, seen: s.seen.includes(item) }] : [];
+      }),
       locate: s.openedApps
         .filter((a) => !s.located.includes(a) && content.items.some((i) => i.app === a && i.needsLocate && !i.hidden))
         .map((app) => ({ app, cost: cost.locate })),
@@ -734,7 +751,13 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           });
         return targets.length ? [{ card: id, thread: card.thread ?? null, targets, cost: testCost }] : [];
       }),
-      compare: records.length && statements.length ? { statements, records } : null,
+      thoughts: [...s.concerns.map((x) => ({ id: x.card, concern: true })), ...s.cards.map((id) => ({ id, concern: false }))].flatMap((x) => {
+        const card = cards.get(x.id);
+        if (!card) return [];
+        const lines = card.hints ?? [];
+        const given = Math.min(s.hints[x.id] ?? 0, lines.length);
+        return [{ card: x.id, concern: x.concern, thinkOnly: isThinkOnly(card), shown: lines.slice(0, given), more: given < lines.length, cost: cost.hint ?? 0 }];
+      }),
       challenge: records.length
         ? { suspects: ch.suspects, fields: ch.fields.map((f) => f.id), records, recipients: ch.recipients, maxPicks: rules.maxPicksPerField, ask: askOf(s, records) }
         : null,

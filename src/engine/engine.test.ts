@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadCase } from '../content';
-import { createEngine, isRightSpot, memo, reachedConclusions, spotOf, voice, type Action, type Engine, type GameState, type Outcome } from './index';
+import { createEngine, isRightSpot, memo, reachedConclusions, spotOf, type Action, type Engine, type GameState, type Outcome } from './index';
 
 const content = loadCase('case01');
 const engine = createEngine(content);
@@ -26,6 +26,8 @@ function legacy(): typeof content {
   const copy = structuredClone(content);
   copy.meta.battery.ladderAuto = true;
   delete copy.meta.readIgnore;
+  // 階梯上各級自己的門檻（when）也拿掉，要測門檻的測試自己標
+  for (const c of copy.characters) for (const l of c.ladder) delete l.when;
   return copy;
 }
 
@@ -93,22 +95,15 @@ describe('engine', () => {
     expect(a.battery - b.battery).toBe(cost.locate);
   });
 
-  it('比對：矛盾解鎖牌、沒有對應回傳看不出關聯、不耗電', () => {
-    const s = run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state;
-    const none = engine.step(s, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1628' });
-    expect(none.outcomes).toContainEqual({ kind: 'link', statement: 'say_aze_stoodup', record: 'rcp_1628', result: 'none' });
-    const hit = engine.step(s, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' });
-    expect(hit.state.cards).toContain('card_latte');
-    expect(hit.state.battery).toBe(s.battery);
-  });
-
   it('測試：有反應用反應表，沒有就輪流用通用反應', () => {
     let s = run(afterCover(), [
       { type: 'openApp', app: 'receipts' },
-      { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' },
       { type: 'readThread', thread: 'dm_aze' },
       { type: 'readThread', thread: 'dm_zonghan' },
     ]).state;
+    // 疑點從「在意的地方」來：指對了才成立
+    s = spotAll(engine, s);
+    expect(s.cards).toContain('card_latte');
     const hit = run(s, [{ type: 'test', card: 'card_latte', target: 'aze' }]);
     expect(hit.state.seen).toContain('say_aze_admit');
     expect(hit.state.fired).toContain('msg_aze_after_admit');
@@ -174,6 +169,35 @@ describe('engine', () => {
     expect(s.attended.length).toBeGreaterThan(0);
     expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(gate.level);
     expect(s.seen).toContain('rec_login');
+  });
+
+  it('階梯某一級帶了條件（when）：條件成立前停在前一級，成立之後照常', () => {
+    // 用副本自己標：第二級要先看過一張發票
+    const copy = legacy();
+    const jw = copy.characters.find((c) => c.id === copy.endings.challenge.culprit)!;
+    for (const l of jw.ladder) {
+      delete l.needsContact;
+      delete l.when;
+    }
+    jw.ladder.find((l) => l.level === 2)!.when = { seen: ['rcp_1628'] };
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    // 耗電讓她自己往上：一直輪流看聊天室，不開發票
+    const burn = (target: number) => {
+      for (let i = 0; i < 200 && s.phase === 'play' && (s.ladder[jw.id] ?? 0) < target; i++) {
+        s = e2.step(s, { type: 'readThread', thread: copy.threads[i % copy.threads.length].id }).state;
+        if (s.prompt) break;
+      }
+    };
+    burn(2);
+    expect(s.phase).toBe('play');
+    expect(s.seen).not.toContain('rcp_1628');
+    expect(s.ladder[jw.id]).toBe(1);
+    // 看過發票之後，下一次輪到她就照常往上
+    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
+    expect(s.seen).toContain('rcp_1628');
+    burn(2);
+    expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(2);
   });
 
   it('needsContact 是 self 時，要理過本人才進得去；理過別人不算', () => {
@@ -358,7 +382,7 @@ describe('engine', () => {
     expect(spotAll(strict, s).cards).toContain(card.id);
   });
 
-  it('助理自己記下的疑點只給一個未讀記號，不重複，打開助理 App 就清掉；比對出來的不算', () => {
+  it('助理自己記下的疑點只給一個未讀記號，不重複，打開助理 App 就清掉；玩家自己指對的不算', () => {
     const first = engine.step(engine.start(), { type: 'sendCover' });
     // 開局讀群組，助理就會記下一筆（疑點或在意的地方）
     const noted = (s: GameState) => s.cards.length + s.concerns.length;
@@ -369,9 +393,11 @@ describe('engine', () => {
     const more = run(first.state, [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }]);
     expect(noted(more.state)).toBeGreaterThan(noted(first.state));
     expect(more.outcomes.some((o) => o.kind === 'assistantUnread')).toBe(false);
-    // 比對出來的直接告訴玩家，不動未讀記號
-    const withReceipts = run(more.state, [{ type: 'openApp', app: 'receipts' }]).state;
-    const found = engine.step(withReceipts, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' });
+    // 玩家自己指對的直接告訴玩家，不動未讀記號
+    const concern = engine.menu(more.state).concerns[0];
+    const spot = spotOf(content.cards.find((c) => c.id === concern.card)!)!;
+    const found = engine.step(more.state, { type: 'spot', card: concern.card, option: spot.options.find((o) => isRightSpot(spot, o.id))!.id });
+    expect(found.outcomes.some((o) => o.kind === 'assistantUnread')).toBe(false);
     expect(found.outcomes).toContainEqual(expect.objectContaining({ kind: 'cards', via: 'found' }));
     const assistant = content.apps.apps.find((a) => a.view === 'assistant')!;
     const opened = engine.step(found.state, { type: 'openApp', app: assistant.id });
@@ -535,8 +561,107 @@ describe('engine', () => {
     expect(m.timeline.every((r) => r.when && r.label && r.text)).toBe(true);
     expect(new Set(m.timeline.map((r) => r.id)).size).toBe(m.timeline.length);
     expect(reachedConclusions(content, s)).toContain('time_window');
-    const lines = voice(engine, s).map((l) => l.id);
-    expect(lines).toContain('v_coma_1');
-    expect(lines.some((id) => id.startsWith('v_time'))).toBe(false);
+  });
+
+  it('再想想：一次給一句、照順序、每次扣電；給完就不能再按', () => {
+    // 用副本自己寫三句，不依賴資料檔的句子
+    const copy = structuredClone(content);
+    const card = copy.cards.find((c) => c.id === 'card_oldipad')!;
+    card.hints = ['第一句', '第二句', '第三句'];
+    copy.meta.battery.cost.hint = 1;
+    const e2 = createEngine(copy);
+    let s = run(e2.step(e2.start(), { type: 'sendCover' }).state, [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }], e2).state;
+    // 還在「在意的地方」階段或已經成立，都可以想
+    const before = e2.menu(s).thoughts.find((t) => t.card === card.id)!;
+    expect(before).toMatchObject({ shown: [], more: true, cost: 1, thinkOnly: false });
+    const battery = s.battery;
+    const first = e2.step(s, { type: 'think', card: card.id });
+    expect(first.outcomes[0]).toMatchObject({ kind: 'hint', card: card.id, index: 0, text: '第一句', more: true });
+    s = first.state;
+    expect(s.battery).toBe(battery - 1);
+    s = e2.step(s, { type: 'think', card: card.id }).state;
+    const last = e2.step(s, { type: 'think', card: card.id });
+    expect(last.outcomes[0]).toMatchObject({ kind: 'hint', index: 2, text: '第三句', more: false });
+    s = last.state;
+    expect(s.battery).toBe(battery - 3);
+    expect(e2.menu(s).thoughts.find((t) => t.card === card.id)).toMatchObject({ shown: ['第一句', '第二句', '第三句'], more: false });
+    expect(e2.step(s, { type: 'think', card: card.id }).outcomes[0].kind).toBe('invalid');
+    // 手上沒有的疑點不能想
+    expect(e2.step(e2.step(e2.start(), { type: 'sendCover' }).state, { type: 'think', card: card.id }).outcomes[0].kind).toBe('invalid');
+    // 指對之後，想過的句子還在
+    s = spotAll(e2, s);
+    expect(e2.menu(s).thoughts.find((t) => t.card === card.id)).toMatchObject({ concern: false, shown: ['第一句', '第二句', '第三句'] });
+  });
+
+  it('聊天室的舊訊息滑到才算看過：打開只算畫面上那幾則，其餘要往上滑', () => {
+    // 挑一個開局還沒讀過的聊天室（送出掩護說法的那個群組開局就讀了）
+    const opened = afterCover().readThreads;
+    const thread = content.threads.find((t) => !opened.includes(t.id) && (t.history ?? []).filter((m) => m.item).length >= 2)!;
+    const all = (thread.history ?? []).flatMap((m) => (m.item ? [m.item] : []));
+    const shown = all.slice(-1);
+    const above = all.slice(0, -1);
+    let s = engine.step(afterCover(), { type: 'openApp', app: content.apps.apps.find((a) => a.view === 'chat')!.id }).state;
+    expect(engine.menu(s).threads.find((t) => t.thread === thread.id)?.unseen).toEqual(all);
+    // 還沒打開聊天室不能滑
+    expect(engine.step(s, { type: 'seeMessages', thread: thread.id, items: above }).outcomes[0].kind).toBe('invalid');
+    s = engine.step(s, { type: 'readThread', thread: thread.id, visible: shown }).state;
+    const reached = (id: string) => s.seen.includes(id) || s.unopened.includes(id);
+    expect(shown.every(reached)).toBe(true);
+    expect(above.some(reached)).toBe(false);
+    expect(engine.menu(s).threads.find((t) => t.thread === thread.id)?.unseen).toEqual(above);
+    // 往上滑：不耗電，滑到的才算；別的聊天室的東西不會被算進來
+    const battery = s.battery;
+    const stranger = content.items.find((i) => !all.includes(i.id) && !reached(i.id))!;
+    s = engine.step(s, { type: 'seeMessages', thread: thread.id, items: [above[0], stranger.id] }).state;
+    expect(reached(above[0])).toBe(true);
+    expect(reached(stranger.id)).toBe(false);
+    expect(s.battery).toBe(battery);
+    s = engine.step(s, { type: 'seeMessages', thread: thread.id, items: above }).state;
+    expect(engine.menu(s).threads.find((t) => t.thread === thread.id)?.unseen).toEqual([]);
+    // 沒給 visible（文字試玩整串印出來）就整串都算
+    const whole = engine.step(engine.step(afterCover(), { type: 'openApp', app: content.apps.apps.find((a) => a.view === 'chat')!.id }).state, { type: 'readThread', thread: thread.id }).state;
+    expect(all.every((id) => whole.seen.includes(id) || whole.unopened.includes(id))).toBe(true);
+  });
+
+  it('看個人頁面：自介是一筆說法的，打開才算看過，不耗電；沒有的人打開沒有效果', () => {
+    // 用副本自己指定，不依賴資料檔是哪個人
+    const copy = structuredClone(content);
+    const who = copy.characters[0];
+    const other = copy.characters[1];
+    const bio = copy.items.find((i) => i.kind === 'statement' && !i.flavor && !i.image)!;
+    bio.hidden = true;
+    who.bioItem = bio.id;
+    delete other.bioItem;
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    s.seen = s.seen.filter((id) => id !== bio.id);
+    expect(e2.menu(s).profiles.some((p) => p.character === who.id && p.seen)).toBe(false);
+    for (const t of copy.threads) s = e2.step(s, { type: 'readThread', thread: t.id }).state;
+    s.seen = s.seen.filter((id) => id !== bio.id);
+    expect(e2.menu(s).profiles).toContainEqual({ character: who.id, item: bio.id, seen: false });
+    const battery = s.battery;
+    const nothing = e2.step(s, { type: 'viewProfile', character: other.id });
+    expect(nothing.outcomes.map((o) => o.kind)).not.toContain('items');
+    const result = e2.step(s, { type: 'viewProfile', character: who.id });
+    expect(result.state.seen).toContain(bio.id);
+    expect(result.state.battery).toBe(battery);
+    expect(e2.menu(result.state).profiles).toContainEqual({ character: who.id, item: bio.id, seen: true });
+    expect(memo(copy, result.state).statements.map((i) => i.id)).toContain(bio.id);
+  });
+
+  it('只能自己想的疑點（thinkOnly）：條件成立就出現，可以再想想，不能拿去問任何人', () => {
+    const copy = structuredClone(content);
+    const mine = { id: 'card_only_think', title: '只能自己想', thinkOnly: true, hints: ['想一下'], availableWhen: { seen: ['rcp_1628'] } };
+    copy.cards.push(mine as unknown as (typeof copy.cards)[number]);
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    for (const t of copy.threads) s = e2.step(s, { type: 'readThread', thread: t.id }).state;
+    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
+    expect(s.cards).toContain(mine.id);
+    const m = e2.menu(s);
+    expect(m.tests.some((t) => t.card === mine.id)).toBe(false);
+    expect(m.thoughts.find((t) => t.card === mine.id)).toMatchObject({ thinkOnly: true, more: true });
+    for (const c of copy.characters) expect(e2.step(s, { type: 'test', card: mine.id, target: c.id }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step(s, { type: 'think', card: mine.id }).outcomes[0]).toMatchObject({ kind: 'hint', text: '想一下', more: false });
   });
 });

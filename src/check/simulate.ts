@@ -20,7 +20,9 @@ export interface CheckResult {
 /** 玩法的傾向。每一種都帶隨機性，跑很多次來涵蓋各種走法。 */
 // seeker：衝著「需要某個旗標才有的結局」去玩，會優先選能設下那個旗標的回覆
 type Profile = 'random' | 'reader' | 'talker' | 'calm' | 'provoke' | 'silent' | 'seeker';
-const PROFILES: Profile[] = ['random', 'reader', 'talker', 'calm', 'provoke', 'silent', 'seeker'];
+/** 模擬的玩家打開聊天室時，畫面上看得到最後幾則帶線索的舊訊息（真正的數字由畫面決定，這裡只是假設） */
+const OPENING_VIEW = 2;
+const PROFILES: Profile[] =['random', 'reader', 'talker', 'calm', 'provoke', 'silent', 'seeker'];
 
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -43,17 +45,17 @@ export function concreteActions(engine: Engine, s: GameState): Action[] {
   // 視窗不擋操作，所以它的按鈕和其他動作一起列出來
   if (m.prompt) list.push(...m.prompt.options.map((option): Action => ({ type: 'answerPrompt', option })), { type: 'answerPrompt', option: null });
   for (const a of m.apps) if (!a.opened) list.push({ type: 'openApp', app: a.app });
-  for (const t of m.threads) if (!t.read) list.push({ type: 'readThread', thread: t.thread });
+  // 打開聊天室只看得到最後幾則舊訊息，其餘的要往上滑（一次滑到頂）
+  for (const t of m.threads) {
+    if (!t.read) list.push({ type: 'readThread', thread: t.thread, visible: t.unseen.slice(-OPENING_VIEW) });
+    else if (t.unseen.length) list.push({ type: 'seeMessages', thread: t.thread, items: t.unseen });
+  }
   for (const l of m.locate) list.push({ type: 'locate', app: l.app });
   for (const item of m.images) if (!s.viewedImages.includes(item)) list.push({ type: 'viewImage', item });
+  for (const p of m.profiles) if (!p.seen) list.push({ type: 'viewProfile', character: p.character });
   for (const c of m.concerns) for (const option of c.options) list.push({ type: 'spot', card: c.card, option });
   for (const r of m.replies) for (const option of r.options) list.push({ type: 'reply', event: r.event, option });
   for (const t of m.tests) for (const target of t.targets) list.push({ type: 'test', card: t.card, target });
-  for (const l of engine.content.links) {
-    if (s.seen.includes(l.statement) && s.seen.includes(l.record) && !s.links.some((x) => x.statement === l.statement && x.record === l.record)) {
-      list.push({ type: 'compare', statement: l.statement, record: l.record });
-    }
-  }
   return list;
 }
 
@@ -136,7 +138,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
     const options = profile === 'silent' ? everything.filter((a) => !isMessage(a)) : everything;
     const fields = correctFields(content, s);
     if (fields && run.solvableAt === null) run.solvableAt = s.spent;
-    const costly = options.filter((a) => a.type !== 'compare' && a.type !== 'viewImage');
+    const costly = options.filter((a) => a.type !== 'viewImage');
     const canChallenge = engine.menu(s).challenge !== null;
 
     let action: Action | null = null;
@@ -144,7 +146,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
       const ready = (accused !== ch.culprit || fields !== null) && goalFlags.every(([flag, value]) => (s.flags[flag] ?? false) === value);
       const nothingLeft = costly.length === 0;
       // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
-      if (!fields && everything.every((a) => a.type === 'compare' || a.type === 'viewImage')) run.softDead = true;
+      if (!fields && everything.every((a) => a.type === 'viewImage')) run.softDead = true;
       const ask = engine.menu(s).challenge!.ask;
       if (ask) {
         if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) accusing = true;
@@ -177,12 +179,12 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
         run.stuck = true;
         break;
       }
-      const compares = options.filter((a) => a.type === 'compare' || a.type === 'viewImage');
-      const reading = options.filter((a) => a.type === 'openApp' || a.type === 'readThread' || a.type === 'locate');
+      const looks = options.filter((a) => a.type === 'viewImage');
+      const reading = options.filter((a) => a.type === 'openApp' || a.type === 'readThread' || a.type === 'seeMessages' || a.type === 'locate');
       const messages = options.filter(isMessage);
       const toGoal = options.filter(setsGoalFlag);
       if (toGoal.length) action = pick(toGoal);
-      else if (compares.length && rand() < 0.6) action = pick(compares);
+      else if (looks.length && rand() < 0.6) action = pick(looks);
       else if (profile === 'seeker') {
         // 有目標的玩法：視窗不理它，先做會通往目標旗標或登入視窗的測試，其餘時間把東西翻完
         const reaction = (a: Action) => (a.type === 'test' ? content.reactions.find((r) => r.card === a.card && r.target === a.target && engine.holds(s, r.when)) : undefined);
@@ -250,8 +252,12 @@ const describe = (a: Action): string => {
       return `回 ${a.event}:${a.option}`;
     case 'test':
       return `問 ${a.card}>${a.target}`;
-    case 'compare':
-      return `比對 ${a.statement}×${a.record}`;
+    case 'seeMessages':
+      return `往上滑 ${a.thread}`;
+    case 'viewProfile':
+      return `看個人頁面 ${a.character}`;
+    case 'think':
+      return `再想想 ${a.card}`;
     case 'answerPrompt':
       return `視窗 ${a.option ?? '不理'}`;
     case 'answerChallenge':
@@ -355,6 +361,13 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   for (const p of PROFILES) {
     const mine = runs.filter((r) => r.profile === p);
     report.push('　' + p + '：登入視窗出現 ' + pct(mine.filter((r) => r.login).length, mine.length) + '，結束時靖雯等級中位數 ' + median(mine.map((r) => r.final.ladder[culprit] ?? 0)) + '，升級次數中位數 ' + median(mine.map((r) => r.raises)));
+  }
+
+  // 每個人結束時停在第幾級
+  report.push('', '結束時每個人停在第幾級（局數）：');
+  for (const c of content.characters) {
+    const levels = Array.from({ length: c.ladder.length + 1 }, (_, level) => level);
+    report.push('　' + c.id + '：' + levels.map((level) => level + ' 級 ' + pct(runs.filter((r) => (r.final.ladder[c.id] ?? 0) === level).length, runs.length)).join('、'));
   }
 
   // 不傳任何訊息能不能破案

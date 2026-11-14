@@ -3,7 +3,7 @@
 // 這裡的字串只有介面用語；劇情文字全部來自資料檔。
 
 import type { CaseContent, ImageRef, Item, Message, Signal } from '../content/types';
-import { createEngine, memo, spotOf, voice, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
+import { createEngine, memo, spotOf, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
 
 export interface Choice {
   label: string;
@@ -180,11 +180,17 @@ export class TextGame {
         if (!o.right) this.say(spot?.miss ?? '（不是這裡。）');
         break;
       }
+      case 'profile': {
+        const c = this.content.characters.find((x) => x.id === o.character);
+        const bio = c?.bioItem ? this.item(c.bioItem)?.body : c?.bio;
+        this.say('', '── ' + this.name(o.character) + ' ──', bio ? '自介：' + bio : '（沒有自介）');
+        break;
+      }
+      case 'hint':
+        this.say('　……' + o.text + (o.more ? '' : '（這個疑點沒有更多提示了。）'));
+        break;
       case 'assistantUnread':
         this.say(`　（${this.appName(this.content.apps.apps.find((a) => a.view === 'assistant')?.id ?? '')} 記下了一筆新的東西。）`);
-        break;
-      case 'link':
-        this.say(o.result === 'match' ? '→ 吻合。' : o.result === 'conflict' ? '→ 矛盾。' : '→ 看不出關聯。');
         break;
       case 'prompt': {
         const e = this.content.events.find((x) => x.id === o.event);
@@ -361,6 +367,11 @@ export class TextGame {
   private threadScreen(id: string): Choice[] {
     const m = this.engine.menu(this.state);
     const list: Choice[] = [];
+    // 聊天室裡的人，個人頁面上有東西可看的
+    const members = this.content.threads.find((t) => t.id === id)?.members ?? [];
+    for (const p of m.profiles.filter((x) => members.includes(x.character))) {
+      list.push({ label: '看' + this.name(p.character) + '的個人頁面', run: () => void this.act({ type: 'viewProfile', character: p.character }) });
+    }
     for (const r of m.replies.filter((x) => x.thread === id)) {
       const e = this.content.events.find((x) => x.id === r.event);
       if (e?.kind !== 'message') continue;
@@ -393,19 +404,35 @@ export class TextGame {
   private suru = (): Choice[] => {
     const m = this.engine.menu(this.state);
     const list: Choice[] = [
-      { label: '心聲', run: () => this.showVoice() },
       { label: '時間軸', run: () => this.showTimeline() },
       { label: '紀錄', run: () => this.showList('紀錄', memo(this.content, this.state).records) },
       { label: '說法', run: () => this.showList('說法', memo(this.content, this.state).statements) },
       { label: '疑點', run: () => this.showCards() },
     ];
     if (m.concerns.length) list.push({ label: `在意的地方（${m.concerns.length}）`, run: () => (this.screen = this.concernList) });
-    if (m.compare) list.push({ label: '比對一則說法和一筆紀錄', run: () => (this.screen = this.pickStatement) });
+    if (m.thoughts.some((t) => t.more)) list.push({ label: '提示（挑一個疑點）', run: () => (this.screen = this.thinkList) });
     // 疑點、拿疑點去試探人、指認兇手都收在助理 App 裡，主畫面不放
     if (m.tests.length) list.push({ label: '試探某個人（拿疑點去問）', run: () => (this.screen = this.probeWho) });
     if (m.challenge) list.push({ label: '指認兇手', run: () => this.startChallenge() });
     list.push(this.back());
     return list;
+  };
+
+  // 提示（規則裡的動作叫 think）：挑一個疑點，一次給一句。還在「在意的地方」階段的不顯示疑點標題（標題會洩漏答案），顯示那一筆資料
+  private thinkList = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    return [
+      ...m.thoughts
+        .filter((t) => t.more)
+        .map((t) => {
+          const card = this.content.cards.find((c) => c.id === t.card);
+          const spot = card ? spotOf(card) : null;
+          const item = t.concern && spot ? this.item(spot.item) : undefined;
+          const name = item ? '在意的地方：' + this.label(item) : (card?.title ?? t.card);
+          return { label: name + (t.cost ? '（-' + t.cost + '%）' : ''), run: () => void this.act({ type: 'think', card: t.card }) };
+        }),
+      this.toSuru(),
+    ];
   };
 
   // 在意的地方：助理只指出是哪一筆，玩家要說出哪裡有問題
@@ -441,10 +468,6 @@ export class TextGame {
     };
   }
 
-  private showVoice() {
-    this.say('', '── 心聲 ──', ...voice(this.engine, this.state).map((l) => `・${l.text}`));
-  }
-
   private showList(title: string, items: Item[]) {
     this.say('', `── ${title} ──`);
     if (items.length === 0) this.say('（還沒有東西）');
@@ -466,51 +489,13 @@ export class TextGame {
 
   private showCards() {
     this.say('', '── 疑點 ──');
-    if (this.state.cards.length === 0) this.say('（還沒有疑點。在備忘錄裡比對出矛盾，或看到某些東西，就會發現。發現的疑點可以拿去試探人。）');
+    if (this.state.cards.length === 0) this.say('（還沒有疑點。Suru 會記下「在意的地方」，指出哪裡有問題，就會成為疑點。疑點可以拿去試探人。）');
     for (const id of this.state.cards) {
       const card = this.content.cards.find((c) => c.id === id);
-      if (card) this.say(`・${card.title}：「${card.say}」`);
+      if (!card) continue;
+      this.say('・' + card.title + (card.say ? '：「' + card.say + '」' : '（不能拿去問人，只能看提示）'));
+      for (const line of (card.hints ?? []).slice(0, this.state.hints[id] ?? 0)) this.say('　　……' + line);
     }
-    const done = this.state.links.filter((l) => l.result !== 'none');
-    if (done.length) this.say('', '比對過的：');
-    for (const l of done) {
-      const a = this.item(l.statement);
-      const b = this.item(l.record);
-      if (a && b) this.say(`・${this.label(a)} × ${this.label(b)}　→ ${l.result === 'match' ? '吻合' : '矛盾'}`);
-    }
-  }
-
-  private pickStatement = (): Choice[] => {
-    const m = this.engine.menu(this.state);
-    return [
-      ...(m.compare?.statements ?? []).flatMap((id) => {
-        const item = this.item(id);
-        return item ? [{ label: this.label(item), run: () => (this.screen = () => this.pickRecord(id)) }] : [];
-      }),
-      { label: '回 Suru', run: () => (this.screen = this.suru) },
-    ];
-  };
-
-  private pickRecord(statement: string): Choice[] {
-    const m = this.engine.menu(this.state);
-    return [
-      ...(m.compare?.records ?? []).flatMap((id) => {
-        const item = this.item(id);
-        if (!item) return [];
-        return [
-          {
-            label: this.label(item),
-            run: () => {
-              const a = this.item(statement);
-              if (a) this.say('', `比對：${this.label(a)} × ${this.label(item)}`);
-              this.act({ type: 'compare', statement, record: id });
-              this.screen = this.suru;
-            },
-          },
-        ];
-      }),
-      { label: '換一則說法', run: () => (this.screen = this.pickStatement) },
-    ];
   }
 
   // 試探：先選人，再選要對他說哪一句（每一句背後是一個疑點）

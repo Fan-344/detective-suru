@@ -7,8 +7,6 @@ import type { AppId, CardId, CharacterId, EventId, ImageRef, ItemId, Signal, Thr
 export interface Rules {
   /** 挑戰書每一欄最多能選幾筆紀錄 */
   maxPicksPerField: number;
-  /** 某個結論隔多少電量沒有新進展，心聲就升一級。null 表示沿用 meta.battery.ladderTickEvery。 */
-  voiceEvery: number | null;
   /**
    * true：有照片的 item 要點開照片才算看過（才進備忘錄、才會帶出疑點）。
    * false：讀到那則訊息或打開那個 App 就算看過，點開照片只是看細節。
@@ -16,7 +14,7 @@ export interface Rules {
   imagesMustBeOpened: boolean;
 }
 
-export const DEFAULT_RULES: Rules = { maxPicksPerField: 2, voiceEvery: null, imagesMustBeOpened: true };
+export const DEFAULT_RULES: Rules = { maxPicksPerField: 2, imagesMustBeOpened: true };
 
 /** 遊戲開始後才出現在聊天室裡的訊息 */
 export interface AppendedMessage {
@@ -24,12 +22,6 @@ export interface AppendedMessage {
   text: string[];
   image?: ImageRef;
   signal?: Signal;
-}
-
-export interface LinkResult {
-  statement: ItemId;
-  record: ItemId;
-  result: 'match' | 'conflict' | 'none';
 }
 
 export interface GameState {
@@ -52,7 +44,6 @@ export interface GameState {
   /** 已經做過定位的 App */
   located: AppId[];
   threads: Record<ThreadId, { appended: AppendedMessage[] }>;
-  links: LinkResult[];
   /** 手上的牌（玩家面前叫疑點） */
   cards: CardId[];
   /**
@@ -60,6 +51,8 @@ export interface GameState {
    * tried 是已經指錯過的選項。
    */
   concerns: { card: CardId; tried: string[] }[];
+  /** 每個疑點（含還在「在意的地方」階段的）已經按過幾次「再想想」，也就是給到第幾句 */
+  hints: Record<CardId, number>;
   /** 用過的「牌>對象」 */
   cardsUsed: string[];
   /** 已經發生過的事件。每個事件整場只發生一次。 */
@@ -83,8 +76,6 @@ export interface GameState {
   attended: CharacterId[];
   /** 各角色下一次通用反應用第幾種 */
   genericIndex: Record<CharacterId, number>;
-  /** 各結論最後一次有新進展時的累計耗電 */
-  voiceClock: Record<string, number>;
   /** 連續打開了幾個背景 App（中間沒有打開有線索的 App 或聊天室） */
   wanderStreak: number;
   /** 下一次亂逛提醒用第幾句 */
@@ -118,15 +109,25 @@ export interface GameState {
 export type Action =
   | { type: 'sendCover' }
   | { type: 'openApp'; app: AppId }
-  | { type: 'readThread'; thread: ThreadId }
+  /**
+   * 打開聊天室。visible 是一打開就在畫面上的那幾則舊訊息（訊息上的 item id），只有它們算看過；
+   * 其餘的要玩家往上滑到（seeMessages）才算。沒給 visible 表示整串都看到了（文字試玩是整串印出來的）。
+   * 開局之後才進來的訊息不受影響，出現就算看過。
+   */
+  | { type: 'readThread'; thread: ThreadId; visible?: ItemId[] }
+  /** 往上滑，這幾則舊訊息捲進畫面了。不耗電。只收這個聊天室舊訊息上的 item，其餘的會被忽略。 */
+  | { type: 'seeMessages'; thread: ThreadId; items: ItemId[] }
   | { type: 'locate'; app: AppId }
   /** 點開某個 item 的照片。不耗電。 */
   | { type: 'viewImage'; item: ItemId }
+  /** 打開某個人的個人頁面。不耗電。他的自介如果是一筆說法（Character.bioItem），這時才算看過。 */
+  | { type: 'viewProfile'; character: CharacterId }
   | { type: 'reply'; event: EventId; option: string }
-  | { type: 'compare'; statement: ItemId; record: ItemId }
   /** 對某個在意的地方，指出哪裡有問題 */
   | { type: 'spot'; card: CardId; option: string }
   | { type: 'test'; card: CardId; target: CharacterId }
+  /** 再想想：對手上的某個疑點（或還在「在意的地方」階段的）要下一句提示 */
+  | { type: 'think'; card: CardId }
   /** option 為 null 表示把視窗關掉（不理它） */
   | { type: 'answerPrompt'; option: string | null }
   | {
@@ -148,15 +149,17 @@ export type Outcome =
   | { kind: 'thread'; thread: ThreadId; first: boolean }
   | { kind: 'items'; items: ItemId[] }
   | { kind: 'image'; item: ItemId }
+  | { kind: 'profile'; character: CharacterId }
   | { kind: 'sent'; thread: ThreadId; text: string }
   | { kind: 'message'; thread: ThreadId; from: CharacterId; text: string[]; image?: ImageRef; signal?: Signal; event?: EventId }
-  | { kind: 'link'; statement: ItemId; record: ItemId; result: 'match' | 'conflict' | 'none' }
   /** found：玩家自己比對出來的；noted：看到某些東西後助理自己記下的（不主動告訴玩家是什麼） */
   | { kind: 'cards'; cards: CardId[]; via: 'found' | 'noted' }
   /** 助理 App 有新東西了。只是一個記號，不說內容；到玩家打開助理 App 之前只出現一次。 */
   | { kind: 'assistantUnread' }
   /** 指出哪裡有問題的結果。指對了那個疑點就成立（另有一筆 cards）；指錯會扣電。 */
   | { kind: 'spot'; card: CardId; option: string; right: boolean }
+  /** 按了「再想想」得到的那一句。index 從 0 起算；more 表示後面還有沒有下一句 */
+  | { kind: 'hint'; card: CardId; index: number; text: string; more: boolean }
   | { kind: 'prompt'; event: EventId }
   /** 按了視窗上的軟牆按鈕：只丟出一句提醒，視窗還在 */
   | { kind: 'promptHint'; event: EventId; text: string }
@@ -181,16 +184,23 @@ export interface Menu {
   cover: boolean;
   prompt: { event: EventId; options: string[] } | null;
   apps: { app: AppId; opened: boolean; cost: number }[];
-  threads: { thread: ThreadId; read: boolean; cost: number }[];
+  /** unseen：這個聊天室的舊訊息裡，玩家還沒滑到的那幾則（訊息上的 item id）。還沒打開過的聊天室是整串 */
+  threads: { thread: ThreadId; read: boolean; cost: number; unseen: ItemId[] }[];
   locate: { app: AppId; cost: number }[];
   /** 現在可以點開照片的 item（含已經點開過的） */
   images: ItemId[];
   assistantUnread: boolean;
+  /** 個人頁面上有東西可看的人（自介是一筆說法的），而且玩家已經讀過有他在的聊天室。seen 表示那筆已經看過 */
+  profiles: { character: CharacterId; item: ItemId; seen: boolean }[];
   /** 在意的地方，以及還能指的選項 */
   concerns: { card: CardId; item: ItemId; options: string[]; missCost: number }[];
   replies: { event: EventId; thread: ThreadId; options: string[]; cost: number }[];
   tests: { card: CardId; thread: ThreadId | null; targets: CharacterId[]; cost: number }[];
-  compare: { statements: ItemId[]; records: ItemId[] } | null;
+  /**
+   * 再想想：手上每個疑點（concern 為 true 的是還在「在意的地方」階段的）已經給過的句子、還有沒有下一句。
+   * thinkOnly 是只能自己想、不能拿去問人的疑點。cost 是按一次耗的電。
+   */
+  thoughts: { card: CardId; concern: boolean; thinkOnly: boolean; shown: string[]; more: boolean; cost: number }[];
   challenge: {
     suspects: CharacterId[];
     fields: string[];
