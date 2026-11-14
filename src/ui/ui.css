@@ -263,6 +263,13 @@ ul, ol { list-style: none; }
 @keyframes heartbeat { 0%, 100% { opacity: 0.15; } 12% { opacity: 1; } 24% { opacity: 0.35; } 36% { opacity: 0.9; } 60% { opacity: 0.15; } }
 @keyframes flicker { 0%, 88%, 90.5%, 93.5%, 100% { opacity: 1; } 89% { opacity: 0.55; } 92% { opacity: 0.75; } 93% { opacity: 0.4; } }
 
+/* 鎖住的時候：只有送出鍵能按，其他都點不動 */
+.phone--locked .appwin__bar,
+.phone--locked .room__scroll { pointer-events: none; }
+.phone--locked .appwin__back { opacity: 0.25; }
+.phone--locked .composer__send { animation: send-hint 1.800s ease-in-out infinite; }
+@keyframes send-hint { 0%, 100% { box-shadow: 0 0 0 0 rgba(210, 87, 28, 0); } 50% { box-shadow: 0 0 0 7px rgba(210, 87, 28, 0.22); } }
+
 /* ───────── 主畫面 ───────── */
 
 .homewrap {
@@ -837,13 +844,14 @@ ul, ol { list-style: none; }
 .suru-app__body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 18px 24px 24px; }
 .suru-empty { color: var(--s-dim); text-align: center; padding-top: 20px; font-size: 15px; }
 .suru-voice li { padding: 14px 0; border-bottom: 1px solid var(--s-line); font-size: 17px; line-height: 1.8; color: #b8b2a4; }
-.suru-time li { display: flex; gap: 16px; padding: 12px 0 12px 16px; border-left: 1px solid #5b5446; position: relative; font-family: -apple-system, "PingFang TC", sans-serif; }
-.suru-time li::before { content: ""; position: absolute; left: -4px; top: 19px; width: 7px; height: 7px; background: var(--s-amber); transform: rotate(45deg); }
-.suru-time__when { flex: none; width: 96px; font-size: 13px; color: var(--s-amber); font-variant-numeric: tabular-nums; padding-top: 2px; }
-.suru-time__text { font-size: 15px; }
-.suru-time__gap { border-left-style: dashed; }
-.suru-time__gap::before { background: var(--s-bg); border: 1px solid #5b5446; }
-.suru-time__gap .suru-time__when, .suru-time__gap .suru-time__text { color: var(--s-dim); }
+.suru-time section + section { margin-top: 22px; }
+.suru-time__when { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.3em; color: var(--s-amber); margin: 0 0 6px; }
+.suru-time ol { border-left: 1px solid #5b5446; margin-left: 13px; }
+.suru-time li { display: flex; align-items: center; gap: 12px; padding: 9px 0 9px 0; margin-left: -14px; font-family: -apple-system, "PingFang TC", sans-serif; }
+.suru-time li .avatar { width: 28px; height: 28px; font-size: 12px; background: #23221d; border-color: #5b5446; color: #cfc9bb; }
+.suru-time__thing { flex: none; width: 9px; height: 9px; margin: 0 9.500px; background: var(--s-amber); transform: rotate(45deg); }
+.suru-time__text { font-size: 15px; line-height: 1.55; }
+.suru-time__gap .suru-time__text { color: var(--s-dim); }
 .suru-items li { display: flex; flex-direction: column; gap: 4px; padding: 14px 0; border-bottom: 1px solid var(--s-line); }
 .suru-items__meta { display: flex; justify-content: space-between; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--s-amber); }
 .suru-items__title { font-size: 17px; }
@@ -932,6 +940,26 @@ ul, ol { list-style: none; }
 .profile__bio { width: 100%; margin-top: 26px; padding: 16px 18px; border-radius: var(--radius); background: var(--ink); -webkit-user-select: text; user-select: text; }
 .profile__bio h3 { margin: 0 0 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
 .profile__bio p { font-size: 16px; line-height: 1.7; }
+
+/* Instory 的動態牆 */
+.pfeed { background: var(--surface); min-height: 100%; }
+.pfeed__post { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.pfeed__head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.pfeed__avatar { flex: none; width: 34px; height: 34px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; font-weight: 600; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.500px #e0548e; }
+.pfeed__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pfeed__who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.pfeed__author { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pfeed__when { font-size: 12px; color: var(--muted); }
+.pfeed__more { color: var(--muted); letter-spacing: 1px; }
+.pfeed__img { width: 100%; aspect-ratio: 4 / 5; display: flex; }
+.pfeed__img.img--photo { aspect-ratio: 4 / 5; }
+.pfeed__img .img__text { font-size: 15px; max-width: 80%; }
+.pfeed__actions { display: flex; gap: 18px; padding: 10px 16px 4px; font-size: 22px; line-height: 1; }
+.pfeed__actions span:last-child { margin-left: auto; }
+.pfeed__likes { padding: 2px 16px; font-size: 14px; font-weight: 700; }
+.pfeed__text { padding: 2px 16px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.pfeed__text b { margin-right: 6px; }
+.pfeed__comments { padding: 4px 16px 0; font-size: 13px; color: var(--muted); }
 
 /* Throws 的動態牆 */
 .feed { background: var(--surface); min-height: 100%; }

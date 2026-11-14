@@ -154,17 +154,22 @@ describe('接上遊戲規則', () => {
     expect(screen.getByText(posts[0].text)).toBeTruthy();
   });
 
-  it('時間軸只放紀錄，不放聊天裡說的話', () => {
+  it('時間軸只放資料檔標成「發生的事」的那幾列，而且看過才出現', () => {
     startGame();
     home();
+    openApp('suru');
+    fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
+    const texts = () => [...document.querySelectorAll('.suru-time__text')].map((el) => el.textContent);
+    const receipts = content.items.filter((i) => i.app === 'receipts' && i.timeline?.length);
+    expect(receipts.length).toBeGreaterThan(0);
+    // 還沒打開發票雲，發票上的事不會出現
+    expect(texts()).not.toContain(receipts[0].timeline![0].text);
+    fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
     openApp('receipts');
     home();
     openApp('suru');
     fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
-    const rows = [...document.querySelectorAll('.suru-time__text')].map((el) => el.textContent);
-    expect(rows.length).toBeGreaterThan(0);
-    // 說法的寫法是「某人：「…」」，時間軸裡不該出現
-    expect(rows.some((t) => t?.includes('：「'))).toBe(false);
+    for (const item of receipts) for (const row of item.timeline!) expect(texts()).toContain(row.text);
   });
 
   it('Link 裡有跟案情無關的聊天室：排在後面，打開不扣電，也不能回', () => {
@@ -204,5 +209,75 @@ describe('接上遊戲規則', () => {
     // 私訊裡標題和頭像都能開個人頁面
     expect(screen.getAllByRole('button', { name: S.profileOpen + '：' + dm.title }).length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: new RegExp(dm.title), level: 1 })).toBeTruthy();
+  });
+
+  it('開局那句話一定要先送出：送出前返回、home 鍵、往右滑、長按都沒有作用', () => {
+    render(<App mode="game" />);
+    passIntro();
+    const group = content.threads.find((t) => t.id === content.meta.coverThread)!;
+    const still = () => {
+      expect(screen.getByRole('heading', { name: group.title })).toBeTruthy();
+      expect(screen.getByRole('button', { name: S.send })).toBeTruthy();
+    };
+    const homeButton = screen.getByRole('button', { name: S.home }) as HTMLButtonElement;
+    expect(homeButton.disabled).toBe(true);
+    expect((screen.getByRole('button', { name: S.back }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    still();
+    const stage = document.querySelector('.phone__stage') as HTMLElement;
+    fireEvent.touchStart(stage, { touches: [{ clientX: 20, clientY: 300 }] });
+    fireEvent.touchEnd(stage, { changedTouches: [{ clientX: 200, clientY: 305 }] });
+    still();
+    fireEvent.pointerDown(homeButton);
+    wait(1200);
+    fireEvent.pointerUp(homeButton);
+    still();
+    expect(battery()).toBe(start);
+
+    // 送出之後就解鎖了
+    fireEvent.click(screen.getByRole('button', { name: S.send }));
+    expect((screen.getByRole('button', { name: S.home }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    expect(screen.getByRole('heading', { name: appName('chat') })).toBeTruthy();
+  });
+
+  it('品妤私訊裡那張班表是真的照片，點得開', () => {
+    startGame();
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    const dm = content.threads.find((t) => t.id === 'dm_pinyu')!;
+    fireEvent.click(screen.getByRole('button', { name: new RegExp('^.?' + dm.title) }));
+    const roster = dm.history.find((m) => m.image?.label === '班表')!;
+    const photo = screen.getByRole('button', { name: S.zoomOpen + '：' + roster.image!.description });
+    expect(photo.querySelector('img')).toBeTruthy();
+    fireEvent.click(photo);
+    expect(screen.getByRole('button', { name: S.zoomClose }).querySelector('img')).toBeTruthy();
+  });
+
+  it('Instory 是動態牆：四個人的動態和無關的貼文由新到舊排在一起；線索要點開圖才算看過', () => {
+    startGame();
+    home();
+    openApp('moments');
+    const mine = content.items.filter((x) => x.app === 'moments' && x.image && !x.hidden);
+    const others = content.flavor?.moments ?? [];
+    expect(document.querySelectorAll('.pfeed__post').length).toBe(mine.length + others.length);
+    // 最上面是最新的一則
+    const texts = [...document.querySelectorAll('.pfeed__text')].map((el) => el.textContent ?? '');
+    expect(texts[0]).toContain(others[0].text);
+    const market = mine.find((x) => x.id === 'mo_sat_market')!;
+    expect(texts.findIndex((t) => t.includes(market.body))).toBeLessThan(texts.findIndex((t) => t.includes(mine[0].body)));
+    // 滑過去不算看過：還沒點開，Suru 的說法裡沒有這一則
+    const statementCount = () => {
+      home();
+      openApp('suru');
+      fireEvent.click(screen.getByRole('tab', { name: S.suruClues }));
+      const n = [...document.querySelectorAll('.suru-items__title')].filter((el) => el.textContent?.includes(market.body.split('\n')[0])).length;
+      fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
+      return n;
+    };
+    expect(statementCount()).toBe(0);
+    openApp('moments');
+    fireEvent.click(screen.getByRole('button', { name: S.zoomOpen + '：' + market.image!.description }));
+    fireEvent.click(screen.getByRole('button', { name: S.zoomClose }));
+    expect(statementCount()).toBe(1);
   });
 });

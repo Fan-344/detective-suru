@@ -7,7 +7,7 @@ import { ChatList, ChatRoom, ImageBlock } from '../layouts/Chat';
 import type { ZoomTarget } from '../layouts/Chat';
 import { ContactCard, ContactList } from '../layouts/Contacts';
 import { GalleryGrid, GalleryViewer } from '../layouts/Gallery';
-import { Feed } from '../layouts/Feed';
+import { Feed, PhotoFeed } from '../layouts/Feed';
 import { Profile } from '../layouts/Profile';
 import { DetailView, ListView } from '../layouts/ListDetail';
 import { SuruApp } from '../suru/SuruApp';
@@ -44,6 +44,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   const [motion, setMotion] = useState<Motion>('open');
   const [zoom, setZoom] = useState<ZoomTarget | null>(null);
   const onZoom = (target: ZoomTarget) => {
+    if (data.locked) return;
     // 點開照片要讓遊戲規則知道「看過了」
     if (target.image?.itemId) actions.onViewImage(target.image.itemId);
     setZoom(target);
@@ -58,7 +59,10 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
 
   const app = data.apps.find((a) => a.id === nav.app) ?? null;
 
+  const locked = !!data.locked;
   const go = (next: Nav, how: Motion) => {
+    // 鎖住的時候不能換畫面
+    if (locked) return;
     setMotion(how);
     setNav(next);
   };
@@ -83,6 +87,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   useEffect(() => {
     if (homePress === seenPress.current) return;
     seenPress.current = homePress;
+    if (locked) return;
     setMotion('close');
     setNav(HOME);
     setZoom(null);
@@ -92,6 +97,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   useEffect(() => {
     if (assistPress === seenAssist.current) return;
     seenAssist.current = assistPress;
+    if (locked) return;
     const suru = data.apps.find((a) => a.layout === 'suru');
     if (!suru) return;
     actions.onOpenApp(suru.id);
@@ -115,7 +121,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     const from = swipe.current;
     const t = e.changedTouches[0];
     swipe.current = null;
-    if (!from || !t) return;
+    if (!from || !t || locked) return;
     const dx = t.clientX - from.x;
     const dy = Math.abs(t.clientY - from.y);
     if (dx > 70 && dy < dx * 0.6) {
@@ -211,6 +217,8 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     body = person ? <ContactCard person={person} onZoom={onZoom} /> : <ContactList cast={data.contacts} onOpen={openDetail} />;
   } else if (app?.layout === 'finder') {
     body = <Finder devices={data.finder} onLocate={actions.onLocate} />;
+  } else if (app?.layout === 'photofeed') {
+    body = <PhotoFeed posts={data.photoFeeds[app.id] ?? []} onZoom={onZoom} />;
   } else if (app?.layout === 'feed') {
     body = <Feed posts={data.feed} />;
   } else if (app?.layout === 'calculator') {
@@ -234,7 +242,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
 
   return (
     <div
-      className={`phone ${prefs.reduceMotion ? 'phone--calm' : ''}`}
+      className={`phone ${prefs.reduceMotion ? 'phone--calm' : ''} ${locked ? 'phone--locked' : ''}`}
       data-stage={tensionStage(tension)}
       style={{ '--tension': tensionVisual(tension).toFixed(3) } as CSSProperties}
     >
@@ -247,7 +255,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
         ) : app ? (
           <section key={viewKey} className={`appwin appwin--${motion}`} aria-label={title}>
             <div className="appwin__bar">
-              <button className="appwin__back" onClick={back} aria-label={S.back}>
+              <button className="appwin__back" onClick={back} aria-label={S.back} disabled={locked}>
                 <BackGlyph />
                 <span aria-hidden="true">{S.back}</span>
               </button>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Avatar } from '../layouts/Chat';
 import { S } from '../strings';
 import type { SuruData, SuruMemoItem } from '../types';
 import { Accuse } from './Accuse';
@@ -17,6 +18,17 @@ interface Props {
   data: SuruData;
   onClose(): void;
   onAccuseAnswer(stepId: string, value: string): void;
+}
+
+/** 同一個時段的列排在一起 */
+function groupByTime(rows: SuruData['timeline']): { time: string; rows: SuruData['timeline'] }[] {
+  const groups: { time: string; rows: SuruData['timeline'] }[] = [];
+  for (const row of rows) {
+    const last = groups[groups.length - 1];
+    if (last && last.time === row.time) last.rows.push(row);
+    else groups.push({ time: row.time, rows: [row] });
+  }
+  return groups;
 }
 
 function Items({ label, items }: { label: string; items: SuruMemoItem[] }) {
@@ -131,14 +143,22 @@ export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
         )}
 
         {tab === 'timeline' && (
-          <ol className="suru-time">
-            {data.timeline.map((row) => (
-              <li key={row.id} className={row.gap ? 'suru-time__gap' : ''}>
-                <span className="suru-time__when">{row.time}</span>
-                <span className="suru-time__text">{row.gap ? S.suruGap : row.text}</span>
-              </li>
+          <div className="suru-time">
+            {data.timeline.length === 0 && <p className="suru-empty">{S.suruEmpty}</p>}
+            {groupByTime(data.timeline).map((g) => (
+              <section key={g.time}>
+                <h2 className="suru-time__when">{g.time}</h2>
+                <ol>
+                  {g.rows.map((row) => (
+                    <li key={row.id} className={row.gap ? 'suru-time__gap' : ''}>
+                      {row.who ? <Avatar name={row.who.name} avatar={row.who.avatar} /> : <span className="suru-time__thing" aria-hidden="true" />}
+                      <span className="suru-time__text">{row.gap ? S.suruGap : row.text}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             ))}
-          </ol>
+          </div>
         )}
       </div>
 

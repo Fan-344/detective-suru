@@ -12,6 +12,7 @@ export type LayoutKind =
   | 'suru'
   // 以下是跟案情無關、但真的能用的背景 App
   | 'feed'
+  | 'photofeed'
   | 'calculator'
   | 'clock'
   | 'calendar'
@@ -176,7 +177,10 @@ export interface SuruVoiceLine {
 
 export interface SuruTimelineRow {
   id: string;
+  /** 大概的時段（例如「週六晚上」）。同一個時段的列排在一起，當成小標 */
   time: string;
+  /** 這一列講的是誰的行蹤。沒有的話講的是東西 */
+  who?: { name: string; avatar?: string };
   text?: string;
   /** 這段時間沒有任何紀錄，要明確顯示成空白 */
   gap?: boolean;
@@ -236,6 +240,20 @@ export interface SuruData {
   accuse: AccuseData;
 }
 
+/** 照片社群動態牆上的一則貼文（一張圖加一段話） */
+export interface PhotoPost {
+  id: string;
+  author: string;
+  handle?: string;
+  avatar?: string;
+  when: string;
+  text: string;
+  image: ImagePlaceholder;
+  likes: number;
+  comments: number;
+  sponsored?: boolean;
+}
+
 /** 社群動態牆上的一則貼文 */
 export interface FeedPost {
   id: string;
@@ -283,6 +301,8 @@ export interface SuruNotice {
 }
 
 export interface PhoneData {
+  /** 鎖住：只能按輸入框旁的送出，其他什麼都不能做（開局還沒送出掩護說法的時候） */
+  locked?: boolean;
   selfId: string;
   wifiName: string;
   apps: AppDef[];
@@ -297,6 +317,8 @@ export interface PhoneData {
   finder: FinderDevice[];
   music: MusicTrack[];
   feed: FeedPost[];
+  /** 照片社群動態牆，依 App 的 id 分開放 */
+  photoFeeds: Record<string, PhotoPost[]>;
   calendar: CalendarData;
   clock: ClockData;
   notice?: SuruNotice;

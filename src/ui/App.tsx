@@ -92,7 +92,7 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
           <button
             className={`chin__home ${suruCalling ? 'chin__home--calling' : ''}`}
             aria-label={S.home}
-            disabled={stage !== 'phone'}
+            disabled={stage !== 'phone' || !!data?.locked}
             onClick={pressClick}
             onPointerDown={pressStart}
             onPointerUp={pressEnd}

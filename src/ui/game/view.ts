@@ -23,11 +23,12 @@ import type {
   ListGroup,
   MusicTrack,
   PhoneData,
+  PhotoPost,
   SuruData,
   SuruMemoItem,
   SuruNotice,
 } from '../types';
-import { PHOTO_OF_ITEM } from './assetMap';
+import { PHOTO_OF_ITEM, PHOTO_OF_MESSAGE, photoKeyOfFile } from './assetMap';
 
 /** 畫面自己記的東西：跟規則無關，只影響呈現（訊息一則一則出現、未讀數、心聲的紀錄）。 */
 export interface GameUi {
@@ -64,7 +65,8 @@ function layoutOf(app: CaseContent['apps']['apps'][number]): LayoutKind {
     case 'list':
       return 'list';
     case 'gallery':
-      return 'gallery';
+      // 有社群資訊的相簿類 App（Instory）畫成動態牆
+      return app.id === 'moments' ? 'photofeed' : 'gallery';
     case 'map':
       return 'finder';
     case 'calendar':
@@ -95,8 +97,10 @@ function toneOf(id: string): number {
   return n % 6;
 }
 
-function toImage(image: ImageRef, key: string, itemId?: string): ImagePlaceholder {
-  return { tone: toneOf(key), description: image.description, label: image.label, src: itemId ? PHOTO_OF_ITEM[itemId] : undefined, itemId };
+/** 要用哪一張圖：資料檔有寫檔名就用它，沒有就查對照表（先查資料項目，再查是哪一則訊息） */
+function toImage(image: ImageRef, key: string, itemId?: string, messageKey?: string): ImagePlaceholder {
+  const src = photoKeyOfFile(image.file) ?? (itemId ? PHOTO_OF_ITEM[itemId] : undefined) ?? (messageKey ? PHOTO_OF_MESSAGE[messageKey] : undefined);
+  return { tone: toneOf(key), description: image.description, label: image.label, src, itemId };
 }
 
 export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): PhoneData {
@@ -115,7 +119,7 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     const revealed = Math.min(ui.revealed[t.id] ?? 0, appended.length);
     const messages: ChatMessage[] = t.history.map((m, i) => {
       const { day, time } = splitWhen(m.when);
-      return { id: `${t.id}-h${i}`, from: m.from, day, time, text: m.text, image: m.image ? toImage(m.image, `${t.id}-h${i}`, m.item) : undefined };
+      return { id: `${t.id}-h${i}`, from: m.from, day, time, text: m.text, image: m.image ? toImage(m.image, `${t.id}-h${i}`, m.item, `${t.id}#${i}`) : undefined };
     });
     appended.slice(0, revealed).forEach((m, i) => {
       m.text.forEach((text, j) => messages.push({ id: `${t.id}-a${i}-${j}`, from: m.from, day: S.today, time: '', text }));
@@ -168,7 +172,7 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
   for (const c of content.characters) {
     const dm = content.threads.find((t) => t.members.length === 1 && t.members[0] === c.id);
     // 自介是這個人自己寫的話，資料檔有寫（Character.bio）才顯示
-    profiles.push({ id: c.id, name: c.name, avatar: c.id, bio: (c as { bio?: string }).bio, threadId: dm?.id });
+    profiles.push({ id: c.id, name: c.name, avatar: c.id, bio: c.bio, threadId: dm?.id });
   }
   for (const t of threads) {
     for (const m of t.members) {
@@ -243,6 +247,44 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
       .map((i) => ({ id: i.id, when: i.when ?? '', caption: i.kind === 'statement' ? i.body : (i.title ?? i.body), image: toImage(i.image, i.id, i.id) }));
   }
 
+  // ── 照片社群動態牆（Instory）：四個人發的動態加上無關的貼文，由新到舊 ──
+  const photoFeeds: Record<string, PhotoPost[]> = {};
+  const feedApp = content.apps.apps.find((a) => layoutOf(a) === 'photofeed');
+  if (feedApp) {
+    const dated: { post: PhotoPost; key: number | null }[] = [];
+    for (const i of content.items) {
+      if (i.app !== feedApp.id || i.thread || !i.image || !shown(i.id)) continue;
+      dated.push({
+        key: feedSortKey(i.when ?? ''),
+        post: {
+          id: i.id,
+          author: i.speaker ? nameOf(i.speaker) : (i.title ?? ''),
+          handle: i.social?.handle,
+          avatar: i.speaker,
+          when: i.when ?? '',
+          text: i.body,
+          // 四個人的動態要點開圖片才算看過，所以帶著資料項目的 id
+          image: toImage(i.image, i.id, i.id),
+          likes: i.social?.likes ?? 0,
+          comments: i.social?.comments ?? 0,
+        },
+      });
+    }
+    // 無關的貼文只有在打開過這個 App 之後才跟著出現
+    if (state.openedApps.includes(feedApp.id)) {
+      for (const m of content.flavor?.moments ?? []) {
+        dated.push({
+          key: feedSortKey(m.when),
+          post: { id: m.id, author: m.author, handle: m.handle, when: m.sponsored ? S.sponsored : m.when, text: m.text, image: toImage(m.image, m.id), likes: m.likes ?? 0, comments: m.comments ?? 0, sponsored: m.sponsored },
+        });
+      }
+    }
+    const sorted = dated.filter((d) => d.key !== null).sort((a, b) => (b.key as number) - (a.key as number)).map((d) => d.post);
+    // 排不出時間的（贊助貼文）插在中間
+    dated.filter((d) => d.key === null).forEach((d, n) => sorted.splice(Math.min(sorted.length, 3 + n * 4), 0, d.post));
+    photoFeeds[feedApp.id] = sorted;
+  }
+
   // ── 找裝置、行事曆、聯絡人 ──
   const mapApp = content.apps.apps.find((a) => a.view === 'map');
   const locateCost = menu.locate.find((l) => l.app === mapApp?.id)?.cost;
@@ -278,6 +320,8 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
   };
 
   return {
+    // 開局那句話一定要先送出，送出前不能做別的事
+    locked: state.phase === 'cover',
     selfId,
     wifiName: content.meta.wifiName ?? '',
     apps,
@@ -291,6 +335,7 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     finder,
     music,
     feed,
+    photoFeeds,
     calendar,
     clock,
     notice: ui.notice,
@@ -302,6 +347,19 @@ interface Names {
   threadTitle(id: string): string;
   appName(id: string): string;
   itemOf: Map<string, Item>;
+}
+
+/**
+ * 動態牆排序用：把「週六 22:30」「上週四 15:20」換成可以比大小的數字，越新越大。
+ * 只用來決定貼文的上下順序，不是遊戲規則。看不懂的寫法回傳 null。
+ */
+function feedSortKey(when: string): number | null {
+  const m = /^(上)?週([一二三四五六日])(?:\s+(\d{1,2}):(\d{2}))?/.exec(when);
+  if (!m) return null;
+  // 以助理醒來的週一為第 0 天：週四到週日是前幾天，「上週」再往前七天
+  const offset: Record<string, number> = { 四: -4, 五: -3, 六: -2, 日: -1, 一: 0, 二: 1, 三: 2 };
+  const day = offset[m[2]] - (m[1] ? 7 : 0);
+  return day * 1440 + (m[3] ? Number(m[3]) * 60 + Number(m[4]) : 0);
 }
 
 /** 一行就能認出是哪一筆的短標籤 */
@@ -340,8 +398,14 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
   };
   return {
     voice: [...log].reverse().map((v, i) => ({ id: v.id, text: v.text, isNew: log.length - 1 - i >= ui.voiceRead })),
-    // 時間軸只放紀錄（發生過的事），聊天裡說的話留在「說法」
-    timeline: m.timeline.filter((item) => item.kind === 'record').map((item) => ({ id: item.id, time: item.when ?? '', text: labelOf(item, n.nameOf) })),
+    // 時間軸由遊戲規則算好：只放看過的、標成「發生的事」的那幾列，已照時間排好。
+    // 畫面只顯示大概的時段（label）和這一列講的是誰（who），確切時刻不給玩家看
+    timeline: m.timeline.map((row) => ({
+      id: row.id,
+      time: row.label,
+      text: row.text,
+      who: row.who ? { name: n.nameOf(row.who), avatar: row.who } : undefined,
+    })),
     records: m.records.map(toMemo),
     statements: m.statements.map(toMemo),
     cards: state.cards.flatMap((id) => {
