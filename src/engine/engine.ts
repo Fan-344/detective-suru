@@ -804,7 +804,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           const thread = testThread(card, t);
           return thread ? [[t, thread]] : [];
         }));
-        return targets.length ? [{ card: id, thread: card.thread ?? null, threadOf, targets, cost: testCost }] : [];
+        return targets.length ? [{ card: id, threadOf, targets, cost: testCost }] : [];
       }),
       thoughts: [...s.concerns.map((x) => ({ id: x.card, concern: true })), ...s.cards.map((id) => ({ id, concern: false }))].flatMap((x) => {
         const card = cards.get(x.id);

@@ -218,9 +218,8 @@ export interface Menu {
   replies: { event: EventId; thread: ThreadId; options: string[]; cost: number }[];
   /**
    * 可以拿去問人的疑點。threadOf 是問每個對象時會在哪個聊天室送出（同一張牌對不同人可以不一樣，見 Card.threadTo）。
-   * thread 是整張牌指定的聊天室（沒有就是 null），只留給舊的畫面用，請改看 threadOf。
    */
-  tests: { card: CardId; thread: ThreadId | null; threadOf: Record<CharacterId, ThreadId>; targets: CharacterId[]; cost: number }[];
+  tests: { card: CardId; threadOf: Record<CharacterId, ThreadId>; targets: CharacterId[]; cost: number }[];
   /**
    * 再想想：手上每個疑點（concern 為 true 的是還在「在意的地方」階段的）已經給過的句子、還有沒有下一句。
    * thinkOnly 是只能自己想、不能拿去問人的疑點。cost 是按一次耗的電。
