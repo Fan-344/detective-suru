@@ -39,6 +39,31 @@ export function Intro({ title, segments, onDone, noticeIcon }: Props) {
     else setShown(shown + 1);
   };
 
+  // 遊戲目標自己佔一頁：前面講過的都收起來，只留目標在畫面中間
+  const last = segments[shown - 1];
+  if (last?.kind === 'goal') {
+    return (
+      <button className="suru intro intro--goal" onClick={advance} aria-label={S.tapToContinue}>
+        <SuruHeader title={title} counter={two(shown) + ' / ' + two(segments.length)} />
+        <div className="goal">
+          <span className="goal__label">{S.goalLabel}</span>
+          <ol className="goal__lines">
+            {last.lines.map((line, j) => (
+              <li key={j} style={{ animationDelay: 0.25 + j * 0.45 + 's' }}>
+                <span className="goal__no">{two(j + 1)}</span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="intro__hint">
+          <SuruMark pulse />
+          <span>{shown >= segments.length ? S.goalStart : S.tapToContinue}</span>
+        </div>
+      </button>
+    );
+  }
+
   return (
     <button className="suru intro" onClick={advance} aria-label={S.tapToContinue}>
       <SuruHeader title={title} counter={two(shown) + ' / ' + two(segments.length)} />

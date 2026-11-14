@@ -6,6 +6,7 @@ import { memo, spotOf, type Engine, type GameState, type Menu } from '../../engi
 import { S } from '../strings';
 import type {
   AccuseData,
+  AccuseForm,
   AccuseStep,
   AppDef,
   CalendarData,
@@ -48,9 +49,11 @@ export interface GameUi {
   notice?: SuruNotice;
   /** 指認兇手時，每一題答對的答案（顯示用的文字） */
   accuseAnswers: string[];
+  /** 指認兇手的表上次被退回時，站不住的那幾格 */
+  accuseRejected: string[];
 }
 
-export const EMPTY_UI: GameUi = { revealed: {}, noticed: {}, openThread: null, voiceLog: [], voiceRead: 0, accuseAnswers: [] };
+export const EMPTY_UI: GameUi = { revealed: {}, noticed: {}, openThread: null, voiceLog: [], voiceRead: 0, accuseAnswers: [], accuseRejected: [] };
 
 const UTILITY_LAYOUT: Record<string, LayoutKind> = {
   calculator: 'calculator',
@@ -260,12 +263,15 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
   const feedApp = content.apps.apps.find((a) => layoutOf(a) === 'photofeed');
   if (feedApp) {
     const dated: { post: PhotoPost; key: number | null }[] = [];
+    const feedUnseen = menu.apps.find((a) => a.app === feedApp.id)?.unseen ?? [];
     for (const i of content.items) {
-      if (i.app !== feedApp.id || i.thread || !i.image || !shown(i.id)) continue;
+      // 滑到才算看過的動態牆：還沒滑到的也要畫出來，不然永遠滑不到
+      if (i.app !== feedApp.id || i.thread || !i.image || !(shown(i.id) || feedUnseen.includes(i.id))) continue;
       dated.push({
         key: feedSortKey(i.when ?? ''),
         post: {
           id: i.id,
+          itemId: i.id,
           author: i.speaker ? nameOf(i.speaker) : (i.title ?? ''),
           handle: i.social?.handle,
           avatar: i.speaker,
@@ -393,16 +399,55 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
   const steps: AccuseStep[] = [
     ...(ch.sequence ?? []).map((q): AccuseStep =>
       q === 'who'
-        ? { id: 'who', kind: 'who', prompt: ch.whoPrompt, options: ch.suspects.map(n.nameOf) }
-        : { id: q, kind: 'record', prompt: ch.fields.find((f) => f.id === q)?.prompt ?? '' },
+        ? { id: 'who', kind: 'who', prompt: ch.whoPrompt, options: ch.suspects.map(n.nameOf), optionIds: ch.suspects }
+        : { id: q, kind: 'card', prompt: ch.fields.find((f) => f.id === q)?.prompt ?? '' },
     ),
-    { id: 'give', kind: 'give', prompt: S.accuseGivePrompt, options: ch.recipients.map(n.nameOf) },
+    { id: 'give', kind: 'give', prompt: S.accuseGivePrompt, options: ch.recipients.map(n.nameOf), optionIds: ch.recipients },
   ];
+  const rawForm = menu.challenge?.form ?? null;
+  const cardOption = (id: string) => {
+    const at = content.cards.findIndex((c) => c.id === id);
+    return at >= 0 ? [{ id, name: content.cards[at].title, no: at + 1 }] : [];
+  };
+  const form: AccuseForm | undefined = rawForm
+    ? {
+        premise: (ch as { premise?: string[] }).premise ?? [],
+        slots: rawForm.slots.map((sl) => {
+          const who = sl.question === 'who';
+          const field = ch.fields.find((f) => f.id === sl.question);
+          return {
+            id: sl.question,
+            prompt: who ? ch.whoPrompt : (field?.prompt ?? ''),
+            kind: who ? ('who' as const) : ('card' as const),
+            answer: sl.answer,
+            options: who ? sl.options.map((id) => ({ id, name: n.nameOf(id) })) : sl.options.flatMap(cardOption),
+            // 被退回的格子顯示那一格的提示（是一句問句，不是答案）
+            hint: ui.accuseRejected.includes(sl.question) ? field?.hint : undefined,
+          };
+        }),
+        ready: rawForm.ready,
+        passed: rawForm.passed,
+        recipients: ch.recipients.map((id) => ({ id, name: n.nameOf(id) })),
+        retryCost: rawForm.retryCost,
+      }
+    : undefined;
   const accuse: AccuseData = {
+    form,
     intro: ch.intro ?? [],
     steps,
     answers: ui.accuseAnswers,
-    choices: ask && ask.question !== null && ask.question !== 'who' ? ask.options.flatMap((id) => (n.itemOf.get(id) ? [toMemo(n.itemOf.get(id) as Item)] : [])) : [],
+    choices: [],
+    // 問到第幾題由規則記著，中途離開、重新整理都不會跑掉
+    index: state.accusation.step,
+    // 用疑點回答的題目：列出手上已經成立、這一題還沒選錯過的疑點
+    cards:
+      ask && ask.question !== null && ask.question !== 'who'
+        ? ask.options.flatMap((id) => {
+            const at = content.cards.findIndex((c) => c.id === id);
+            return at >= 0 ? [{ id, no: at + 1, title: content.cards[at].title }] : [];
+          })
+        : [],
+    retryCost: ask?.retryCost ?? 0,
     available: !!menu.challenge,
   };
   // 「再想想」：規則給出每個疑點已經給過的句子、還有沒有下一句
@@ -410,6 +455,7 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
     const t = menu.thoughts.find((x) => x.card === cardId);
     return { hints: t?.shown ?? [], canThink: !!t?.more, thinkCost: t?.cost ?? 0 };
   };
+  const inGroup = (id: string | null) => !!id && (content.threads.find((t) => t.id === id)?.members.length ?? 0) > 1;
   const probe: SuruProbe = {
     people: content.characters.flatMap((c, mark) => {
       const sentences = menu.tests
@@ -418,14 +464,16 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
           const card = content.cards.find((x) => x.id === t.card);
           const text = card ? (card.sayTo?.[c.id] ?? card.say) : undefined;
           if (!card || !text) return [];
+          const threadId = engine.testThread(card, c.id);
           return [
             {
               card: card.id,
               text,
               title: card.title,
-              where: t.thread ? S.probeIn.replace('{thread}', n.threadTitle(t.thread)) : S.probeDm,
+              // 同一張疑點問不同的人，可能在不同的聊天室送出：多人的聊天室就寫出名字，否則是私訊
+              where: inGroup(threadId) ? S.probeIn.replace('{thread}', n.threadTitle(threadId as string)) : S.probeDm,
               cost: t.cost,
-              threadId: engine.testThread(card, c.id),
+              threadId,
             },
           ];
         });

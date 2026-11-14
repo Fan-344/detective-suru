@@ -169,7 +169,9 @@ export interface GalleryItem {
 export type IntroSegment =
   | { kind: 'text'; lines: string[] }
   | { kind: 'quote'; lines: string[]; signature?: string }
-  | { kind: 'notice'; label: string; lines: string[] };
+  | { kind: 'notice'; label: string; lines: string[] }
+  /** 遊戲目標：開場最後的說明，要比旁白醒目 */
+  | { kind: 'goal'; lines: string[] };
 
 export interface SuruVoiceLine {
   id: string;
@@ -246,13 +248,39 @@ export interface CastData {
   people: { name: string; brief: string; avatar?: string }[];
 }
 
-/** 指認兇手的一題：用一筆紀錄回答、選一個人，或選把證據交給誰 */
+/** 指認兇手的一題：用一張疑點回答（假資料示範是用一筆紀錄）、選一個人，或選把證據交給誰 */
 export interface AccuseStep {
   id: string;
   prompt: string;
-  kind: 'record' | 'who' | 'give';
+  kind: 'card' | 'record' | 'who' | 'give';
   /** kind 是 who 或 give 時可以選的人 */
   options?: string[];
+  /** 跟 options 一一對應、要回報給遊戲規則的 id。沒給就回報名字 */
+  optionIds?: string[];
+}
+
+/** 指認兇手的表：每一格放一張疑點（或選一個人），全部填好再一次交出去 */
+export interface AccuseForm {
+  /** Suru 直接講明的前提（地點、手法），放在最前面 */
+  premise: string[];
+  slots: {
+    id: string;
+    prompt: string;
+    kind: 'card' | 'who';
+    /** 現在放的那一張（或那個人）的 id，沒填是 null */
+    answer: string | null;
+    /** 這一格可以放的：疑點（name 是標題、no 是編號）或人 */
+    options: { id: string; name: string; no?: number }[];
+    /** 上次交出去被退回時，這一格站不住：顯示這句提示。改過這一格就不再顯示 */
+    hint?: string;
+  }[];
+  /** 每格都填了，可以交 */
+  ready: boolean;
+  /** 已經通過，只剩選把證據交給誰 */
+  passed: boolean;
+  recipients: { id: string; name: string }[];
+  /** 被退回一次要耗多少電 */
+  retryCost: number;
 }
 
 /** 指認兇手：開頭的說明、依序要問的題目、已經答過的答案（顯示用的文字） */
@@ -262,6 +290,14 @@ export interface AccuseData {
   answers: string[];
   /** 目前這一題可以選的紀錄（用紀錄回答的題目才有） */
   choices: SuruMemoItem[];
+  /** 現在問到第幾題（從 0 算）。沒給就看答過幾題 */
+  index?: number;
+  /** 目前這一題可以選的疑點（用疑點回答的題目才有）；選錯過的不會再出現 */
+  cards?: { id: string; no: number; title: string }[];
+  /** 選錯一張要耗多少電 */
+  retryCost?: number;
+  /** 有這個就畫成「全部填好再交」的表，不一題一題問 */
+  form?: AccuseForm;
   /** 現在能不能指認 */
   available: boolean;
 }
@@ -290,6 +326,8 @@ export interface SuruData {
 /** 照片社群動態牆上的一則貼文（一張圖加一段話） */
 export interface PhotoPost {
   id: string;
+  /** 這則動態同時是資料裡的一筆（線索）。捲進畫面時要告訴遊戲規則「看到了」 */
+  itemId?: string;
   author: string;
   handle?: string;
   avatar?: string;
@@ -324,8 +362,6 @@ export interface MusicTrack {
 export interface PhonePrefs {
   showPercent: boolean;
   reduceMotion: boolean;
-  /** 心聲提示的多寡：0 少、1 標準、2 多。外觀框架只記住選擇，規則在步驟三才接 */
-  hintLevel: number;
 }
 
 /** 行事曆：今天是哪一天、有哪些行程。日期格式是 2026-11-14 */
@@ -345,6 +381,8 @@ export interface ClockData {
 export interface SuruNotice {
   id: number;
   text: string;
+  /** 聊天 App 的新訊息通知：哪個 App、誰傳的、點了要開哪個聊天室。沒有就是 Suru 自己的通知 */
+  message?: { appId: string; appName: string; icon: IconId; title: string; threadId: string };
 }
 
 export interface PhoneData {
@@ -380,6 +418,10 @@ export interface PhoneActions {
   onOpenApp(appId: string): void;
   onDismissNotice(): void;
   onAccuseAnswer(stepId: string, value: string): void;
+  /** 指認兇手的表：在某一格放上一張疑點或一個人 */
+  onAccuseFill(slotId: string, answer: string): void;
+  /** 指認兇手的表：交出去 */
+  onAccuseSubmit(): void;
   onSpot(card: string, option: string): void;
   onProbe(card: string, target: string): void;
   /** 對某個疑點（或在意的地方）按了「再想想」 */
@@ -391,6 +433,8 @@ export interface PhoneActions {
   onCall(memberId: string): void;
   /** 聊天室裡這幾則舊訊息捲進畫面了 */
   onSeeMessages(threadId: string, itemIds: string[]): void;
+  /** 動態牆上這幾則捲進畫面了 */
+  onSeeItems(appId: string, itemIds: string[]): void;
   /** 打開了某個人的個人頁面 */
   onViewProfile(memberId: string): void;
   /** 玩家換了畫面（開了哪個 App、哪一層） */

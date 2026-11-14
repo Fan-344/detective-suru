@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { S } from '../strings';
 import { avatarUrl } from '../assets';
 import type { FeedPost, PhotoPost } from '../types';
@@ -42,14 +43,47 @@ export function Feed({ posts }: { posts: FeedPost[] }) {
 const compact = (n: number) => (n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 萬' : String(n));
 
 /** 照片社群的動態牆：頭像、帳號、一張圖、一段話、按讚和留言數。點圖片放大看 */
-export function PhotoFeed({ posts, onZoom }: { posts: PhotoPost[]; onZoom?: ZoomFn }) {
-  if (posts.length === 0) return <div className="empty">{S.emptyList}</div>;
+export function PhotoFeed({ posts, onZoom, onSeen }: { posts: PhotoPost[]; onZoom?: ZoomFn; onSeen?(itemIds: string[]): void }) {
+  const root = useRef<HTMLDivElement>(null);
+  // 哪些動態已經回報過「看到了」
+  const reported = useRef(new Set<string>());
+  const seenRef = useRef(onSeen);
+  seenRef.current = onSeen;
+
+  // 動態滑到畫面上就算看過，不用點開。找到外層真正在捲動的那一塊，捲動時檢查哪幾則的圖在畫面裡
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    let box: HTMLElement | null = el.parentElement;
+    while (box && !/auto|scroll/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+    const check = () => {
+      const view = box?.getBoundingClientRect();
+      const fresh: string[] = [];
+      el.querySelectorAll<HTMLElement>('[data-item]').forEach((node) => {
+        const id = node.dataset.item as string;
+        if (reported.current.has(id)) return;
+        const r = (node.querySelector('.pfeed__img') ?? node).getBoundingClientRect();
+        // 量不到高度時（測試環境沒有排版）當作都看得到；否則圖的中間要在畫面裡才算
+        const half = (r.top + r.bottom) / 2;
+        if (!view || view.height === 0 || (half >= view.top && half <= view.bottom)) fresh.push(id);
+      });
+      if (fresh.length === 0) return;
+      fresh.forEach((id) => reported.current.add(id));
+      seenRef.current?.(fresh);
+    };
+    check();
+    const target: HTMLElement | Window = box ?? window;
+    target.addEventListener('scroll', check, { passive: true });
+    return () => target.removeEventListener('scroll', check);
+  }, [posts.length]);
+
+  if (posts.length === 0) return <div className="empty" ref={root}>{S.emptyList}</div>;
   return (
-    <div className="pfeed">
+    <div className="pfeed" ref={root}>
       {posts.map((p) => {
         const src = avatarUrl(p.avatar);
         return (
-          <article key={p.id} className="pfeed__post">
+          <article key={p.id} className="pfeed__post" data-item={p.itemId}>
             <header className="pfeed__head">
               <span className="pfeed__avatar" style={src ? undefined : { background: 'hsl(' + ((p.author.length * 71 + p.likes) % 360) + ' 42% 60%)' }}>
                 {src ? <img src={src} alt="" draggable={false} /> : p.author.slice(0, 1)}

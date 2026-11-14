@@ -36,10 +36,12 @@ interface ShellProps {
   /** 蓋在手機畫面上的東西（沒電、結局、樣式示意頁） */
   overlay?: ReactNode;
   dev?: ReactNode;
+  /** 設定裡的「重新開始遊戲」 */
+  onRestart?(): void;
 }
 
 /** 機身、螢幕、實體 home 鍵。真的遊戲和假資料示範共用這一層。 */
-function Shell({ stage, run, battery, startBattery, data, actions, intro, afterIntro, onIntroDone, noticeIcon, overlay, dev }: ShellProps) {
+function Shell({ stage, run, battery, startBattery, data, actions, intro, afterIntro, onIntroDone, noticeIcon, overlay, dev, onRestart }: ShellProps) {
   const [homePress, setHomePress] = useState(0);
   const [assistPress, setAssistPress] = useState(0);
 
@@ -81,6 +83,7 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
               battery={battery}
               actions={actions}
               initialNav={afterIntro}
+              onRestart={onRestart}
               homePress={homePress}
               assistPress={assistPress}
               tension={tensionFromBattery(battery, startBattery)}
@@ -135,6 +138,7 @@ function GameApp() {
       afterIntro={game.afterIntro}
       onIntroDone={game.finishIntro}
       noticeIcon={game.noticeIcon}
+      onRestart={game.restart}
       overlay={game.ending ? <Ending title={game.ending.title} text={game.ending.text} onRestart={game.restart} /> : undefined}
       dev={
         devEnabled() ? (

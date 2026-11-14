@@ -215,6 +215,8 @@ interface SettingsProps {
   battery: number;
   prefs: PhonePrefs;
   onChange(prefs: PhonePrefs): void;
+  /** 清掉進度從頭開始。沒給就不顯示這一項 */
+  onRestart?(): void;
 }
 
 function Switch({ on, label, onToggle }: { on: boolean; label: string; onToggle(): void }) {
@@ -225,7 +227,9 @@ function Switch({ on, label, onToggle }: { on: boolean; label: string; onToggle(
   );
 }
 
-export function Settings({ wifiName, battery, prefs, onChange }: SettingsProps) {
+export function Settings({ wifiName, battery, prefs, onChange, onRestart }: SettingsProps) {
+  // 重新開始要按兩次：先問一次，免得手滑把進度清掉
+  const [asking, setAsking] = useState(false);
   return (
     <div className="list">
       <h2 className="list__label">{S.setConnection}</h2>
@@ -244,25 +248,20 @@ export function Settings({ wifiName, battery, prefs, onChange }: SettingsProps) 
           <dd><Switch on={prefs.reduceMotion} label={S.setReduceMotion} onToggle={() => onChange({ ...prefs, reduceMotion: !prefs.reduceMotion })} /></dd>
         </div>
       </dl>
-      <h2 className="list__label">{S.setGame}</h2>
-      <dl className="detail__fields setgroup">
-        <div className="detail__field">
-          <dt>{S.setHintLevel}</dt>
-          <dd className="segment" role="radiogroup" aria-label={S.setHintLevel}>
-            {S.setHintLevels.map((label, i) => (
-              <button
-                key={label}
-                role="radio"
-                aria-checked={prefs.hintLevel === i}
-                className={prefs.hintLevel === i ? 'on' : ''}
-                onClick={() => onChange({ ...prefs, hintLevel: i })}
-              >
-                {label}
-              </button>
-            ))}
-          </dd>
+      {onRestart && <h2 className="list__label">{S.setGame}</h2>}
+      {onRestart && (
+        <div className="restart">
+          {asking ? (
+            <>
+              <p className="restart__ask">{S.setRestartAsk}</p>
+              <button className="restart__btn restart__btn--danger" onClick={onRestart}>{S.setRestartYes}</button>
+              <button className="restart__btn" onClick={() => setAsking(false)}>{S.setRestartNo}</button>
+            </>
+          ) : (
+            <button className="restart__btn restart__btn--danger" onClick={() => setAsking(true)}>{S.setRestart}</button>
+          )}
         </div>
-      </dl>
+      )}
     </div>
   );
 }

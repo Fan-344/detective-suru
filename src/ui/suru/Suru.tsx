@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { IconId } from '../types';
 import type { ReactNode } from 'react';
 import markUrl from '../assets/suru-mark.png';
 import { AppIcon } from '../shell/icons';
@@ -56,7 +57,16 @@ export function SuruToken({ mark, name, active = false }: { mark: number; name: 
  * Suru 的心聲：像手機的系統通知一樣從畫面上方滑下來。不擋操作，點一下或過幾秒就收起。
  * 外觀是她手機那一層的通知卡片，只有圖示是 Suru 的。
  */
-export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): void }) {
+interface BannerProps {
+  text: string;
+  onDismiss(): void;
+  /** 新訊息通知才有：App 的名字和圖示、誰傳的 */
+  app?: { name: string; icon: IconId; title: string };
+  /** 點通知要做的事（例如打開那個聊天室）。沒給的話點一下只是收掉 */
+  onOpen?(): void;
+}
+
+export function SuruBanner({ text, onDismiss, app, onOpen }: BannerProps) {
   const startY = useRef<number | null>(null);
   const [lift, setLift] = useState(0);
   useEffect(() => {
@@ -79,7 +89,10 @@ export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): voi
     <button
       className="sysnote"
       style={lift ? { transform: 'translateY(' + lift + 'px)', opacity: 1 + lift / 60 } : undefined}
-      onClick={onDismiss}
+      onClick={() => {
+        if (onOpen) onOpen();
+        onDismiss();
+      }}
       onPointerDown={(e) => (startY.current = e.clientY)}
       onPointerMove={(e) => move(e.clientY)}
       onPointerUp={() => {
@@ -90,14 +103,15 @@ export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): voi
         startY.current = null;
         setLift(0);
       }}
-      aria-label={S.noticeDismiss}
+      aria-label={onOpen ? S.noticeOpen : S.noticeDismiss}
     >
-      <AppIcon icon="suru" size="sm" />
+      <AppIcon icon={app?.icon ?? 'suru'} size="sm" />
       <span className="sysnote__main">
         <span className="sysnote__head">
-          <span className="sysnote__app">Suru</span>
+          <span className="sysnote__app">{app?.name ?? 'Suru'}</span>
           <span className="sysnote__when">{S.noticeNow}</span>
         </span>
+        {app && <span className="sysnote__title">{app.title}</span>}
         <span className="sysnote__text" role="status">{text}</span>
       </span>
       <span className="sysnote__grab" aria-hidden="true" />

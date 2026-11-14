@@ -3,6 +3,7 @@ import { loadCase } from '../../content';
 import { createEngine, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
 import { S } from '../strings';
 import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
+import { clearSave, fingerprint, loadSave, writeSave } from './save';
 import { buildPhoneData, EMPTY_UI, type GameUi } from './view';
 
 // 把畫面接到遊戲規則上的控制器。
@@ -13,6 +14,8 @@ export type GameStage = 'intro' | 'phone' | 'ended' | 'error';
 
 /** 對方的訊息隔多久出現一則（毫秒）。只是呈現的節奏，跟規則無關 */
 const MESSAGE_GAP = 1100;
+/** 好幾則通知排隊時，每一則至少停多久才換下一則（毫秒） */
+const NOTICE_GAP = 1500;
 
 interface Session {
   game: GameState;
@@ -29,6 +32,20 @@ function boot(caseId: string): { engine: Engine } | { error: string } {
 
 let noticeSeq = 0;
 const notice = (text: string) => ({ id: (noticeSeq += 1), text });
+
+/** 聊天 App 的新訊息通知：App 的名字和圖示、誰傳的（群組的話帶上群組名）、內容 */
+function messageNotice(engine: Engine, threadId: string, from: string, lines: string[] | string | undefined): GameUi['notice'] {
+  // 一則訊息可能是連續好幾句，通知上只放最後一句
+  const list = (Array.isArray(lines) ? lines : [lines ?? '']).filter((x) => x.trim());
+  const text = list[list.length - 1];
+  const content = engine.content;
+  const app = content.apps.apps.find((a) => a.view === 'chat');
+  const thread = content.threads.find((t) => t.id === threadId);
+  if (!app || !thread) return undefined;
+  const name = content.characters.find((c) => c.id === from)?.name ?? from;
+  const title = thread.members.length > 1 ? `${name}・${thread.title}` : name;
+  return { ...notice(text ?? S.noticePhoto), message: { appId: app.id, appName: app.name, icon: app.icon as IconId, title, threadId } };
+}
 
 /** 每次狀態變了之後整理畫面這一側：自己送出的訊息立刻顯示、更新已讀位置 */
 function settle(engine: Engine, game: GameState, ui: GameUi): GameUi {
@@ -65,10 +82,22 @@ function reactTo(engine: Engine, ui: GameUi, outcomes: Outcome[]): GameUi {
 export function useGame(caseId = 'case01') {
   const booted = useMemo(() => boot(caseId), [caseId]);
   const engine = 'engine' in booted ? booted.engine : null;
-  const [session, setSession] = useState<Session | null>(() => (engine ? { game: engine.start(), ui: EMPTY_UI } : null));
-  const [introDone, setIntroDone] = useState(false);
+  // 存檔的版本：案件資料的指紋。資料改過，舊存檔就不讀
+  const version = useMemo(() => (engine ? fingerprint(engine.content) : ''), [engine]);
+  // 開啟時有存檔就接著玩。通知和「正開著哪個聊天室」是當下的事，不帶回來
+  const resumed = useMemo(() => (engine ? loadSave(caseId, version) : null), [engine, caseId, version]);
+  const [session, setSession] = useState<Session | null>(() => {
+    if (!engine) return null;
+    if (resumed) return { game: resumed.game, ui: { ...EMPTY_UI, ...resumed.ui, notice: undefined, openThread: null } };
+    return { game: engine.start(), ui: EMPTY_UI };
+  });
+  const [introDone, setIntroDone] = useState(() => !!resumed?.introDone);
   const [run, setRun] = useState(0);
+  // 這一輪是不是從存檔接回來、而且已經過了開局：是的話回到主畫面，不是停在群組
+  const [resumedInPlay, setResumedInPlay] = useState(() => !!resumed?.introDone && resumed.game.phase !== 'cover');
   const latest = useRef(session);
+  // 開局還沒送出那句話之前，群組裡已經捲進畫面的舊訊息。送出時一起告訴規則
+  const coverSeen = useRef(new Set<string>(resumed?.coverSeen ?? []));
   latest.current = session;
 
   const update = (fn: (s: Session) => Session) => {
@@ -77,6 +106,30 @@ export function useGame(caseId = 'case01') {
     latest.current = next;
     setSession(next);
   };
+
+  // 等著跳出來的新訊息通知，以及「上一則還要再停一下」的計時
+  const noticeQueue = useRef<NonNullable<GameUi['notice']>[]>([]);
+  const noticeTimer = useRef<number | undefined>(undefined);
+  const drainNotices = () => {
+    if (noticeTimer.current !== undefined) return;
+    let next = noticeQueue.current.shift();
+    // 輪到它的時候，人已經在那個聊天室裡了，就不用跳
+    while (next && next.message?.threadId === latest.current?.ui.openThread) next = noticeQueue.current.shift();
+    if (!next) return;
+    const shown = next;
+    update((s) => ({ game: s.game, ui: { ...s.ui, notice: shown } }));
+    noticeTimer.current = window.setTimeout(() => {
+      noticeTimer.current = undefined;
+      drainNotices();
+    }, NOTICE_GAP);
+  };
+  useEffect(
+    () => () => {
+      window.clearTimeout(noticeTimer.current);
+      noticeTimer.current = undefined;
+    },
+    [],
+  );
 
   const act = (action: Action): Outcome[] => {
     if (!engine || !latest.current) return [];
@@ -89,17 +142,37 @@ export function useGame(caseId = 'case01') {
   const pending = !!session && Object.entries(session.game.threads).some(([id, t]) => (session.ui.revealed[id] ?? 0) < t.appended.length);
   useEffect(() => {
     if (!engine || !pending) return;
+    const self = engine.content.meta.self?.id ?? '';
     const timer = window.setTimeout(() => {
+      const incoming: NonNullable<GameUi['notice']>[] = [];
       update((s) => {
         const revealed = { ...s.ui.revealed };
-        for (const [id, t] of Object.entries(s.game.threads)) if ((revealed[id] ?? 0) < t.appended.length) revealed[id] = (revealed[id] ?? 0) + 1;
+        for (const [id, t] of Object.entries(s.game.threads)) {
+          const at = revealed[id] ?? 0;
+          if (at >= t.appended.length) continue;
+          revealed[id] = at + 1;
+          // 剛出現的這一則：不是自己傳的、那個聊天室又沒開著，就像手機一樣跳一則通知
+          const m = t.appended[at];
+          const n = m.from !== self && id !== s.ui.openThread ? messageNotice(engine, id, m.from, m.text) : undefined;
+          if (n) incoming.push(n);
+        }
         return { game: s.game, ui: settle(engine, s.game, { ...s.ui, revealed }) };
       });
+      // 同時有好幾個人傳訊息時，通知一則接一則跳，不會只剩最後一則
+      noticeQueue.current.push(...incoming);
+      drainNotices();
     }, MESSAGE_GAP);
     return () => window.clearTimeout(timer);
     // session 每次變動都重新排下一則
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, pending, session]);
+
+  // 自動存檔：進度每變一次就寫一次
+  useEffect(() => {
+    if (!engine || !session) return;
+    const { notice: _notice, ...ui } = session.ui;
+    writeSave(caseId, version, { game: session.game, ui: { ...ui, openThread: null } as GameUi, introDone, coverSeen: [...coverSeen.current] });
+  }, [engine, caseId, version, session, introDone]);
 
   const data: PhoneData | null = useMemo(() => (engine && session ? buildPhoneData(engine, session.game, session.ui) : null), [engine, session]);
 
@@ -108,7 +181,9 @@ export function useGame(caseId = 'case01') {
     const mapApp = engine?.content.apps.apps.find((a) => a.view === 'map')?.id;
     return {
       onOpenApp: (appId) => {
-        if (playing()) act({ type: 'openApp', app: appId });
+        // 動態牆這種「滑到才算看過」的 App：先說一則都還沒看到，畫出來之後再由 onSeeItems 回報。
+        // 其他 App 規則不看 visible
+        if (playing()) act({ type: 'openApp', app: appId, visible: [] });
       },
       onOpenThread: (threadId) => {
         // 跟案情無關的聊天室不在規則裡，只是打開來看
@@ -122,15 +197,31 @@ export function useGame(caseId = 'case01') {
         act({ type: 'reply', event, option });
       },
       onSendPrefill: () => {
-        act({ type: 'sendCover' });
+        // 送出不等於整串舊訊息都看過：只有到目前為止真的在畫面上出現過的才算
+        act({ type: 'sendCover', visible: [...coverSeen.current] });
+        coverSeen.current.clear();
       },
       onOpenRow: () => {},
       onSeeMessages: (threadId, itemIds) => {
         const game = latest.current?.game;
-        if (!game || game.phase !== 'play' || itemIds.length === 0 || !game.readThreads.includes(threadId)) return;
+        if (!game || itemIds.length === 0) return;
+        if (game.phase !== 'play') {
+          // 開局鎖在群組的時候規則還不收，先記著
+          itemIds.forEach((id) => coverSeen.current.add(id));
+          return;
+        }
+        if (!game.readThreads.includes(threadId)) return;
         // 已經算看過的不用再送
         const fresh = itemIds.filter((id) => !game.seen.includes(id) && !game.unopened.includes(id));
         if (fresh.length) act({ type: 'seeMessages', thread: threadId, items: fresh });
+      },
+      onSeeItems: (appId, itemIds) => {
+        const game = latest.current?.game;
+        if (!engine || !game || game.phase !== 'play' || !game.openedApps.includes(appId)) return;
+        // 只送規則說還沒看到的那幾則；不是滑到才算的 App 這裡會是空的
+        const unseen = engine.menu(game).apps.find((a) => a.app === appId)?.unseen ?? [];
+        const fresh = itemIds.filter((id) => unseen.includes(id));
+        if (fresh.length) act({ type: 'seeItems', app: appId, items: fresh });
       },
       onViewProfile: (memberId) => {
         // 只有案件裡的角色有個人頁面的規則；打開就算看過他的自介
@@ -153,7 +244,32 @@ export function useGame(caseId = 'case01') {
           const noticed = openThread ? { ...s.ui.noticed, [openThread]: s.ui.revealed[openThread] ?? 0 } : s.ui.noticed;
           return { game: s.game, ui: { ...s.ui, openThread, noticed } };
         }),
-      onAccuseAnswer: () => {},
+      onAccuseFill: (slotId, answer) => {
+        if (!playing()) return;
+        act({ type: 'fillChallenge', question: slotId, answer });
+        // 這一格改過了，上次退回的提示就收起來
+        update((s) => (s.ui.accuseRejected.includes(slotId) ? { game: s.game, ui: { ...s.ui, accuseRejected: s.ui.accuseRejected.filter((x) => x !== slotId) } } : s));
+      },
+      onAccuseSubmit: () => {
+        if (!playing()) return;
+        const back = act({ type: 'submitChallenge' }).find((o) => o.kind === 'challengeRejected');
+        // 被退回：記住是哪幾格站不住；通過或進結局就清掉
+        const fields = back && back.kind === 'challengeRejected' ? back.fields : [];
+        update((s) => ({ game: s.game, ui: { ...s.ui, accuseRejected: fields } }));
+      },
+      onAccuseAnswer: (stepId, value) => {
+        if (!engine || !playing()) return;
+        // 最後一步：把證據交給誰。交出去就進結局
+        if (stepId === 'give') {
+          act({ type: 'handOver', givenTo: value });
+          return;
+        }
+        const hit = act({ type: 'answerChallenge', answer: value }).find((o) => o.kind === 'challengeAnswer');
+        if (!hit || hit.kind !== 'challengeAnswer' || !hit.right) return;
+        // 答對的留在上方：疑點記標題，人記名字
+        const label = engine.content.cards.find((c) => c.id === value)?.title ?? engine.content.characters.find((c) => c.id === value)?.name ?? value;
+        update((s) => ({ game: s.game, ui: { ...s.ui, accuseAnswers: [...s.ui.accuseAnswers, label] } }));
+      },
       onSpot: (card, option) => {
         act({ type: 'spot', card, option });
       },
@@ -182,7 +298,7 @@ export function useGame(caseId = 'case01') {
     data,
     actions,
     intro: (content?.meta.intro ?? []) as IntroSegment[],
-    afterIntro: { app: chatApp, detail: content?.meta.coverThread ?? null } as Nav,
+    afterIntro: (resumedInPlay ? { app: null, detail: null } : { app: chatApp, detail: content?.meta.coverThread ?? null }) as Nav,
     ending: ended ? { title: ended.title, text: ended.text } : undefined,
     /** 開場的通知段落要用哪個 App 的圖示：標籤開頭是 App 的名字就用它的；講到來電就用電話的 */
     noticeIcon: (label: string): IconId | undefined => {
@@ -193,6 +309,13 @@ export function useGame(caseId = 'case01') {
     finishIntro: () => setIntroDone(true),
     restart: () => {
       if (!engine) return;
+      coverSeen.current.clear();
+      noticeQueue.current = [];
+      window.clearTimeout(noticeTimer.current);
+      noticeTimer.current = undefined;
+      // 重新開始：存檔清掉，從頭來
+      clearSave(caseId);
+      setResumedInPlay(false);
       const fresh = { game: engine.start(), ui: EMPTY_UI };
       latest.current = fresh;
       setSession(fresh);

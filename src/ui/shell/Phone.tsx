@@ -29,6 +29,8 @@ interface Props {
   assistPress?: number;
   /** 緊張程度 0 到 1，只影響畫面氣氛 */
   tension?: number;
+  /** 設定裡的「重新開始遊戲」 */
+  onRestart?(): void;
 }
 
 type Motion = 'open' | 'push' | 'pop' | 'close';
@@ -39,7 +41,7 @@ const HOME: Nav = { app: null, detail: null };
  * 手機外殼：狀態列、主畫面、進出 App 的轉場。
  * 「現在開著哪個 App、哪一層」是外殼自己的畫面狀態，不屬於遊戲狀態。
  */
-export function Phone({ data, battery, actions, initialNav, homePress = 0, assistPress = 0, tension = 0 }: Props) {
+export function Phone({ data, battery, actions, initialNav, homePress = 0, assistPress = 0, tension = 0, onRestart }: Props) {
   const [nav, setNav] = useState<Nav>(initialNav ?? HOME);
   const [motion, setMotion] = useState<Motion>('open');
   const [zoom, setZoom] = useState<ZoomTarget | null>(null);
@@ -55,7 +57,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     // 只在換畫面時通知
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav.app, nav.detail]);
-  const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false, hintLevel: 1 });
+  const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false });
 
   const app = data.apps.find((a) => a.id === nav.app) ?? null;
 
@@ -220,7 +222,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   } else if (app?.layout === 'finder') {
     body = <Finder devices={data.finder} onLocate={actions.onLocate} />;
   } else if (app?.layout === 'photofeed') {
-    body = <PhotoFeed posts={data.photoFeeds[app.id] ?? []} onZoom={onZoom} />;
+    body = <PhotoFeed posts={data.photoFeeds[app.id] ?? []} onZoom={onZoom} onSeen={(ids) => actions.onSeeItems(app.id, ids)} />;
   } else if (app?.layout === 'feed') {
     body = <Feed posts={data.feed} />;
   } else if (app?.layout === 'calculator') {
@@ -230,7 +232,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   } else if (app?.layout === 'calendar') {
     body = <Calendar data={data.calendar} />;
   } else if (app?.layout === 'settings') {
-    body = <Settings wifiName={data.wifiName} battery={battery} prefs={prefs} onChange={setPrefs} />;
+    body = <Settings wifiName={data.wifiName} battery={battery} prefs={prefs} onChange={setPrefs} onRestart={onRestart} />;
   } else if (app?.layout === 'camera') {
     body = <Camera />;
   } else if (app?.layout === 'music') {
@@ -257,6 +259,8 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
               data={data.suru}
               onClose={back}
               onAccuseAnswer={actions.onAccuseAnswer}
+              onAccuseFill={actions.onAccuseFill}
+              onAccuseSubmit={actions.onAccuseSubmit}
               onSpot={actions.onSpot}
               onThink={actions.onThink}
               onZoom={onZoom}
@@ -300,7 +304,26 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           </button>
         )}
         <div className="phone__veil" aria-hidden="true" />
-        {data.notice && <SuruBanner key={data.notice.id} text={data.notice.text} onDismiss={actions.onDismissNotice} />}
+        {data.notice && (
+          <SuruBanner
+            key={data.notice.id}
+            text={data.notice.text}
+            onDismiss={actions.onDismissNotice}
+            app={data.notice.message ? { name: data.notice.message.appName, icon: data.notice.message.icon, title: data.notice.message.title } : undefined}
+            onOpen={
+              data.notice.message
+                ? () => {
+                    // 點新訊息的通知：直接進那個聊天室
+                    const m = data.notice?.message;
+                    if (!m || locked) return;
+                    setZoom(null);
+                    actions.onOpenThread(m.threadId);
+                    go({ app: m.appId, detail: m.threadId }, 'open');
+                  }
+                : undefined
+            }
+          />
+        )}
       </div>
     </div>
   );
