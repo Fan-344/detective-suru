@@ -199,15 +199,18 @@
         "members": [
           {
             "id": "a",
-            "name": "聯絡人甲"
+            "name": "聯絡人甲",
+            "avatar": "jingwen"
           },
           {
             "id": "b",
-            "name": "聯絡人乙"
+            "name": "聯絡人乙",
+            "avatar": "aze"
           },
           {
             "id": "c",
-            "name": "聯絡人丙"
+            "name": "聯絡人丙",
+            "avatar": "zonghan"
           }
         ],
         "messages": [
@@ -247,7 +250,8 @@
             "image": {
               "tone": 2,
               "description": "圖片佔位：群組裡的一張照片",
-              "label": "照片"
+              "label": "窗外的雨",
+              "src": "rain"
             }
           },
           {
@@ -281,7 +285,8 @@
         "members": [
           {
             "id": "a",
-            "name": "聯絡人甲"
+            "name": "聯絡人甲",
+            "avatar": "jingwen"
           }
         ],
         "options": [
@@ -331,7 +336,8 @@
         "members": [
           {
             "id": "b",
-            "name": "聯絡人乙"
+            "name": "聯絡人乙",
+            "avatar": "aze"
           }
         ],
         "messages": [
@@ -353,7 +359,8 @@
         "members": [
           {
             "id": "c",
-            "name": "聯絡人丙"
+            "name": "聯絡人丙",
+            "avatar": "zonghan"
           }
         ],
         "messages": [
@@ -384,10 +391,31 @@
         "members": [
           {
             "id": "d",
-            "name": "聯絡人丁"
+            "name": "聯絡人丁",
+            "avatar": "pinyu"
           }
         ],
-        "messages": []
+        "messages": [
+          {
+            "id": "d1",
+            "from": "d",
+            "day": "週六",
+            "time": "23:05",
+            "image": {
+              "tone": 4,
+              "label": "照片",
+              "description": "圖片佔位：對方傳來的一張照片",
+              "src": "snack"
+            }
+          },
+          {
+            "id": "d2",
+            "from": "d",
+            "day": "週六",
+            "time": "23:05",
+            "text": "照片訊息範例"
+          }
+        ]
       }
     ],
     "lists": {
@@ -687,7 +715,8 @@
           "image": {
             "tone": 0,
             "description": "圖片佔位：照片一的文字描述",
-            "label": "標示1"
+            "label": "紙箱",
+            "src": "boxes"
           }
         },
         {
@@ -697,7 +726,8 @@
           "image": {
             "tone": 1,
             "description": "圖片佔位：照片二的文字描述",
-            "label": "標示2"
+            "label": "舊 iPad",
+            "src": "ipad"
           }
         },
         {
@@ -706,7 +736,8 @@
           "image": {
             "tone": 2,
             "description": "圖片佔位：螢幕截圖一",
-            "label": "標示3"
+            "label": "繪圖 App 的檔案資訊",
+            "src": "fileinfo_cover"
           }
         },
         {
@@ -715,7 +746,8 @@
           "image": {
             "tone": 3,
             "description": "圖片佔位：螢幕截圖二",
-            "label": "標示4"
+            "label": "繪圖 App 的檔案資訊",
+            "src": "fileinfo_inner"
           }
         },
         {
@@ -724,7 +756,9 @@
           "caption": "照片說明五",
           "image": {
             "tone": 4,
-            "description": "圖片佔位：並排比對的截圖"
+            "description": "圖片佔位：並排比對的截圖",
+            "src": "compare",
+            "label": "兩張圖並排"
           }
         },
         {
@@ -732,7 +766,9 @@
           "when": "週五 23:02",
           "image": {
             "tone": 5,
-            "description": "圖片佔位：文件的照片"
+            "description": "圖片佔位：文件的照片",
+            "src": "deposit",
+            "label": "鞋櫃上的一張紙"
           }
         },
         {
@@ -740,7 +776,9 @@
           "when": "上個月",
           "image": {
             "tone": 1,
-            "description": "圖片佔位：較早的照片"
+            "description": "圖片佔位：較早的照片",
+            "src": "roster",
+            "label": "班表"
           }
         }
       ],
@@ -769,7 +807,9 @@
           "caption": "動態說明三",
           "image": {
             "tone": 0,
-            "description": "圖片佔位：動態三"
+            "description": "圖片佔位：動態三",
+            "src": "market",
+            "label": "夜市"
           }
         }
       ]
@@ -1004,19 +1044,23 @@
       "people": [
         {
           "name": "聯絡人甲",
-          "brief": "簡介佔位：這個人是誰、跟機主是什麼關係。"
+          "brief": "簡介佔位：這個人是誰、跟機主是什麼關係。",
+          "avatar": "jingwen"
         },
         {
           "name": "聯絡人乙",
-          "brief": "簡介佔位：第二個人的一段簡介。"
+          "brief": "簡介佔位：第二個人的一段簡介。",
+          "avatar": "aze"
         },
         {
           "name": "聯絡人丙",
-          "brief": "簡介佔位：第三個人的一段簡介。"
+          "brief": "簡介佔位：第三個人的一段簡介。",
+          "avatar": "zonghan"
         },
         {
           "name": "聯絡人丁",
-          "brief": "簡介佔位：第四個人的一段簡介。"
+          "brief": "簡介佔位：第四個人的一段簡介。",
+          "avatar": "pinyu"
         }
       ]
     }

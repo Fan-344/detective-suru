@@ -38,6 +38,8 @@ const HOME: Nav = { app: null, detail: null };
 export function Phone({ data, battery, actions, initialNav, homePress = 0, assistPress = 0, tension = 0 }: Props) {
   const [nav, setNav] = useState<Nav>(initialNav ?? HOME);
   const [motion, setMotion] = useState<Motion>('open');
+  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null);
+  const onZoom = (src: string, alt: string) => setZoom({ src, alt });
   const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false, hintLevel: 1 });
 
   const app = data.apps.find((a) => a.id === nav.app) ?? null;
@@ -60,6 +62,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     seenPress.current = homePress;
     setMotion('close');
     setNav(HOME);
+    setZoom(null);
   }, [homePress]);
 
   const seenAssist = useRef(assistPress);
@@ -88,6 +91,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           selfId={data.selfId}
           onChoose={(optionId) => actions.onChooseReply(thread.id, optionId)}
           onSendPrefill={() => actions.onSendPrefill(thread.id)}
+          onZoom={onZoom}
         />
       );
     } else {
@@ -126,7 +130,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     );
   } else if (app?.layout === 'contacts') {
     const person = data.contacts.people.find((p) => p.name === nav.detail);
-    body = person ? <ContactCard person={person} /> : <ContactList cast={data.contacts} onOpen={openDetail} />;
+    body = person ? <ContactCard person={person} onZoom={onZoom} /> : <ContactList cast={data.contacts} onOpen={openDetail} />;
   } else if (app?.layout === 'calculator') {
     body = <Calculator />;
   } else if (app?.layout === 'clock') {
@@ -174,6 +178,11 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           <div key="home" className={`homewrap homewrap--${motion}`}>
             <HomeScreen apps={data.apps} folders={data.folders} threads={data.threads} onOpen={openApp} />
           </div>
+        )}
+        {zoom && (
+          <button className="zoom" onClick={() => setZoom(null)} aria-label={S.zoomClose}>
+            <img src={zoom.src} alt={zoom.alt} draggable={false} />
+          </button>
         )}
         <div className="phone__veil" aria-hidden="true" />
         {data.notice && <SuruBanner key={data.notice.id} text={data.notice.text} onDismiss={actions.onDismissNotice} />}

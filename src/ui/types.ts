@@ -66,11 +66,15 @@ export interface ImagePlaceholder {
   description: string;
   /** 很短的標示，用在縮圖和聊天裡的佔位色塊 */
   label?: string;
+  /** 正式圖片的代號（src/ui/assets/photos/<代號>.jpg）。有圖就顯示圖，沒有就顯示色塊 */
+  src?: string;
 }
 
 export interface ChatMember {
   id: string;
   name: string;
+  /** 頭像的代號（src/ui/assets/avatars/<代號>.jpg） */
+  avatar?: string;
 }
 
 export interface ChatMessage {
@@ -164,7 +168,7 @@ export interface SuruMemoItem {
 /** 人物背景：幾行前言，加上每個人的一段簡介 */
 export interface CastData {
   intro: string[];
-  people: { name: string; brief: string }[];
+  people: { name: string; brief: string; avatar?: string }[];
 }
 
 /** 指認兇手的表單：說明、可以指認的人、要填的欄位、可以交給誰 */

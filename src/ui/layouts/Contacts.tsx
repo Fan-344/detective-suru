@@ -1,5 +1,6 @@
 import type { CastData } from '../types';
 import { Avatar } from './Chat';
+import type { ZoomFn } from './Chat';
 
 /** 聯絡人：最上面幾行背景，接著每個人一筆，點開看簡介 */
 export function ContactList({ cast, onOpen }: { cast: CastData; onOpen(name: string): void }) {
@@ -16,7 +17,7 @@ export function ContactList({ cast, onOpen }: { cast: CastData; onOpen(name: str
         {cast.people.map((p) => (
           <li key={p.name}>
             <button className="row" onClick={() => onOpen(p.name)}>
-              <Avatar name={p.name} />
+              <Avatar name={p.name} avatar={p.avatar} />
               <span className="row__main">
                 <span className="row__title">{p.name}</span>
               </span>
@@ -29,10 +30,10 @@ export function ContactList({ cast, onOpen }: { cast: CastData; onOpen(name: str
   );
 }
 
-export function ContactCard({ person }: { person: CastData['people'][number] }) {
+export function ContactCard({ person, onZoom }: { person: CastData['people'][number]; onZoom?: ZoomFn }) {
   return (
     <article className="contact">
-      <span className="contact__avatar"><Avatar name={person.name} /></span>
+      <span className="contact__avatar"><Avatar name={person.name} avatar={person.avatar} onZoom={onZoom} /></span>
       <h2 className="contact__name">{person.name}</h2>
       <p className="contact__brief">{person.brief}</p>
     </article>

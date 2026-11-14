@@ -44,6 +44,8 @@ export const S = {
   musicPause: '暫停',
   musicPrev: '上一首',
   musicNext: '下一首',
+  zoomClose: '關閉大圖',
+  zoomOpen: '看大圖',
   suruVoice: '心聲',
   suruTimeline: '時間軸',
   suruRecords: '紀錄',

@@ -228,4 +228,22 @@ describe('外觀框架', () => {
     fireEvent.click(submit);
     expect(screen.getByRole('status').textContent).toBe(fixture.accuseResult);
   });
+
+  it('頭像和聊天裡的照片點一下看大圖，再點一下關閉', () => {
+    render(<App />);
+    passIntro();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /聯絡人$/ }));
+    const person = fixture.phone.contacts.people[2];
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${person.name}`) }));
+    fireEvent.click(screen.getByRole('button', { name: `${S.zoomOpen}：${person.name}` }));
+    fireEvent.click(screen.getByRole('button', { name: S.zoomClose }));
+    expect(screen.queryByRole('button', { name: S.zoomClose })).toBeNull();
+    home();
+
+    fireEvent.click(screen.getByRole('button', { name: /Link/ }));
+    fireEvent.click(screen.getByRole('button', { name: /聯絡人丁/ }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${S.zoomOpen}：圖片`) }));
+    expect(screen.getByRole('button', { name: S.zoomClose })).toBeTruthy();
+  });
 });
