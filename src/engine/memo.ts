@@ -46,7 +46,7 @@ export function reachedConclusions(content: CaseContent, state: GameState): stri
  */
 export function voice(engine: Engine, state: GameState): VoiceLine[] {
   const { content, rules } = engine;
-  const every = rules.voiceEvery ?? content.meta.battery.ladderTickEvery;
+  const every = rules.voiceEvery ?? content.meta.battery.voiceTickEvery ?? content.meta.battery.ladderTickEvery;
   const reached = new Set(reachedConclusions(content, state));
   const lines: VoiceLine[] = [];
   for (const line of content.voice) {

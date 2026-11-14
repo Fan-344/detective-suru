@@ -269,7 +269,11 @@ export class TextGame {
   private apps = (): Choice[] => {
     const m = this.engine.menu(this.state);
     return [
-      ...m.apps.map((a) => ({ label: `${this.appName(a.app)}${this.costTag(a.cost)}`, run: () => this.openApp(a.app) })),
+      ...m.apps.map((a) => {
+        // 開局時 App 上的未讀標示，打開過就不再顯示
+        const badge = a.opened ? undefined : this.content.apps.apps.find((x) => x.id === a.app)?.badge;
+        return { label: `${this.appName(a.app)}${badge ? `［${badge}］` : ''}${this.costTag(a.cost)}`, run: () => this.openApp(a.app) };
+      }),
       this.back(),
     ];
   };

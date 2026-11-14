@@ -91,6 +91,19 @@ export interface GameState {
   wanderIndex: number;
   /** 助理 App 裡有玩家還沒看過的新東西（畫面上是圖示的紅點） */
   assistantUnread: boolean;
+  /** 玩家現在停在哪個聊天室（打開 App、定位會離開；看照片、比對這類不會）。判斷「已讀」用。 */
+  currentThread: ThreadId | null;
+  /** 玩家已經看到、還沒回的訊息（事件 id） */
+  readAwaiting: EventId[];
+  /**
+   * 已讀不回的計數：玩家看到某人等回的訊息、沒回就離開後，又做了幾個動作。
+   * count 是 -1 表示還沒離開那個聊天室；nudged 表示他已經追問過一次。
+   */
+  ignoring: Record<CharacterId, { count: number; nudged: boolean }>;
+  /** 已經因為已讀不回讓對方升過一級的訊息。同一則最多只罰一次，之後不再計數。 */
+  ignoredOut: EventId[];
+  /** 各角色下一次追問用第幾句 */
+  nudgeIndex: Record<CharacterId, number>;
   challengeTries: number;
   /**
    * 指認兇手一題一題問的進度（資料有寫 challenge.sequence 時才用）。

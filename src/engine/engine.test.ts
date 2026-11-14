@@ -7,10 +7,10 @@ const engine = createEngine(content);
 const cost = content.meta.battery.cost;
 
 /** 依序執行動作；任何一步不合法就讓測試失敗 */
-function run(state: GameState, actions: Action[]): { state: GameState; outcomes: Outcome[] } {
+function run(state: GameState, actions: Action[], by: Engine = engine): { state: GameState; outcomes: Outcome[] } {
   const outcomes: Outcome[] = [];
   for (const action of actions) {
-    const r = engine.step(state, action);
+    const r = by.step(state, action);
     const bad = r.outcomes.find((o) => o.kind === 'invalid');
     if (bad && bad.kind === 'invalid') throw new Error(`${JSON.stringify(action)}：${bad.reason}`);
     state = r.state;
@@ -20,6 +20,14 @@ function run(state: GameState, actions: Action[]): { state: GameState; outcomes:
 }
 
 const afterCover = () => run(engine.start(), [{ type: 'sendCover' }]).state;
+
+/** 舊做法的副本：電量每掉一段就自動升級、沒有已讀不回。測舊規則本身的測試用。 */
+function legacy(): typeof content {
+  const copy = structuredClone(content);
+  copy.meta.battery.ladderAuto = true;
+  delete copy.meta.readIgnore;
+  return copy;
+}
 
 /** 把目前「在意的地方」都指對（有的話），讓疑點成立。測的不是這一層的測試用它跳過這一步。 */
 function spotAll(e: Engine, state: GameState): GameState {
@@ -113,10 +121,11 @@ describe('engine', () => {
 
   it('電量每掉一段，沒被安撫的人升一級；被安撫的不升', () => {
     // 先讀品妤的私訊並回一句讓她降級的話，再把電耗過第一段
-    let s = run(afterCover(), [
+    const old = createEngine(legacy());
+    let s = run(old.step(old.start(), { type: 'sendCover' }).state, [
       { type: 'readThread', thread: 'dm_pinyu' },
       { type: 'reply', event: 'cov_py_dm', option: 'sleepy' },
-    ]).state;
+    ], old).state;
     expect(s.soothe.pinyu).toBe('calm');
     // 品妤被理過，用一般的間隔；宗翰沒人理，用較短的間隔（資料有寫的話）
     const every = content.meta.battery.ladderTickEvery;
@@ -124,12 +133,12 @@ describe('engine', () => {
     expect(s.attended).toEqual(['pinyu']);
     const apps = content.apps.apps.filter((a) => !a.background && a.view !== 'chat').map((a) => a.id);
     for (const app of apps) {
-      if (s.spent < ignoredEvery) s = run(s, [{ type: 'openApp', app }]).state;
+      if (s.spent < ignoredEvery) s = run(s, [{ type: 'openApp', app }], old).state;
     }
     expect(s.ladder.zonghan).toBe(2);
     expect(s.fired).toContain('msg_zh_refund');
     for (const app of apps) {
-      if (s.spent < every) s = run(s, [{ type: 'openApp', app }]).state;
+      if (s.spent < every) s = run(s, [{ type: 'openApp', app }], old).state;
     }
     expect(s.spent).toBeGreaterThanOrEqual(every);
     // 品妤這一段被安撫過，輪到她時不升，安撫的紀錄用掉
@@ -139,7 +148,7 @@ describe('engine', () => {
 
   it('標了 needsContact 的那一級：玩家沒傳過訊息就進不去，傳過之後照常', () => {
     // 用副本，自己標上去：不管資料檔之後怎麼調，這條規則本身都測得到
-    const copy = structuredClone(content);
+    const copy = legacy();
     const jw = copy.characters.find((c) => c.id === copy.endings.challenge.culprit)!;
     for (const l of jw.ladder) delete l.needsContact;
     const gate = jw.ladder.find((l) => l.onEnter.some((id) => copy.events.find((e) => e.id === id)?.kind === 'system'))!;
@@ -168,7 +177,7 @@ describe('engine', () => {
   });
 
   it('needsContact 是 self 時，要理過本人才進得去；理過別人不算', () => {
-    const copy = structuredClone(content);
+    const copy = legacy();
     const jw = copy.characters.find((c) => c.id === copy.endings.challenge.culprit)!;
     for (const l of jw.ladder) delete l.needsContact;
     const gate = jw.ladder.find((l) => l.onEnter.some((id) => copy.events.find((e) => e.id === id)?.kind === 'system'))!;
@@ -428,7 +437,9 @@ describe('engine', () => {
       const e = content.events.find((x) => x.id === id);
       return e?.kind === 'message' ? e.from : null;
     };
-    let s = afterCover();
+    const copy = legacy();
+    const engine = createEngine(copy);
+    let s = engine.step(engine.start(), { type: 'sendCover' }).state;
     let expired: string | null = null;
     // 一路只打開 App、不回任何人，讓大家自己繼續傳
     for (const app of content.apps.apps) {
@@ -443,6 +454,71 @@ describe('engine', () => {
     const option = (content.events.find((x) => x.id === expired) as { options?: { id: string }[] }).options![0].id;
     expect(engine.menu(s).replies.some((r) => r.event === expired)).toBe(false);
     if (s.phase !== 'ended') expect(engine.step(s, { type: 'reply', event: expired!, option }).outcomes[0].kind).toBe('invalid');
+  });
+
+  it('已讀不回：看到訊息沒回就離開，先追問一句，再不回就升一級；沒讀過的人不受影響', () => {
+    const { nudgeAfterActions, raiseAfterActions } = content.meta.readIgnore!;
+    expect(content.meta.battery.ladderAuto).toBe(false);
+    const fromOf = (id: string) => (content.events.find((x) => x.id === id) as { from: string; thread: string });
+    let s = afterCover();
+    const event = s.awaiting.find((id) => fromOf(id).thread !== content.meta.coverThread)!;
+    const { from, thread } = fromOf(event);
+    const others = content.characters.map((c) => c.id).filter((id) => id !== from);
+    const start = { ...s.ladder };
+    const said = () => s.threads[thread].appended.filter((m) => m.from === from).length;
+    // 讀了、沒回。還停在聊天室裡看照片不算離開
+    s = run(s, [{ type: 'readThread', thread }]).state;
+    const before = said();
+    const apps = content.apps.apps.filter((a) => a.view !== 'chat').map((a) => a.id);
+    let next = 0;
+    const act = () => (s = run(s, [{ type: 'openApp', app: apps[next++ % apps.length] }]).state);
+    // 離開那一步不算，再做滿 nudgeAfterActions 個動作才追問
+    act();
+    for (let i = 0; i < nudgeAfterActions - 1; i++) act();
+    expect(said()).toBe(before);
+    act();
+    expect(said()).toBe(before + 1);
+    expect(s.threads[thread].appended.at(-1)!.text).toEqual(content.characters.find((c) => c.id === from)!.nudges![0]);
+    // 追問不是新的問題：原本那一則還能回，階梯也還沒動
+    expect(engine.menu(s).replies.some((r) => r.event === event)).toBe(true);
+    expect(s.ladder[from]).toBe(start[from]);
+    for (let i = 0; i < raiseAfterActions - 1; i++) act();
+    expect(s.ladder[from]).toBe(start[from]);
+    act();
+    expect(s.ladder[from]).toBe(start[from] + 1);
+    // 同一則訊息只罰一次：他沒有傳新的一則時，再做多少事都不會再追問、再升級
+    if (engine.menu(s).replies.some((r) => r.event === event)) {
+      const level = s.ladder[from];
+      const count = said();
+      for (let i = 0; i < (nudgeAfterActions + raiseAfterActions) * 2; i++) act();
+      expect(s.ladder[from]).toBe(level);
+      expect(said()).toBe(count);
+      expect(engine.menu(s).replies.some((r) => r.event === event)).toBe(true);
+    }
+    // 沒打開過聊天室的人看不到已讀，不會被這條規則推動；電量也不再推動任何人
+    for (const id of others) expect(s.ladder[id]).toBe(start[id]);
+  });
+
+  it('已讀不回：回了就不算；點開照片、比對這類不耗電的瀏覽不算動作', () => {
+    const { nudgeAfterActions, raiseAfterActions } = content.meta.readIgnore!;
+    const fromOf = (id: string) => (content.events.find((x) => x.id === id) as { from: string; thread: string; options: { id: string }[] });
+    let s = afterCover();
+    const event = s.awaiting.find((id) => fromOf(id).thread !== content.meta.coverThread)!;
+    const { from, thread, options } = fromOf(event);
+    s = run(s, [{ type: 'readThread', thread }, { type: 'openApp', app: 'photos' }]).state;
+    const level = s.ladder[from];
+    const said = s.threads[thread].appended.length;
+    for (const item of engine.menu(s).images) s = run(s, [{ type: 'viewImage', item }]).state;
+    expect(s.threads[thread].appended.length).toBe(said);
+    expect(s.ignoring[from]).toEqual({ count: 0, nudged: false });
+    // 回了之後，再做多少事他都不會因為已讀不回而升級
+    s = run(s, [{ type: 'readThread', thread }, { type: 'reply', event, option: options[0].id }]).state;
+    const after = s.ladder[from];
+    const mine = s.awaiting.some((id) => fromOf(id).from === from);
+    const apps = content.apps.apps.filter((a) => a.view !== 'chat').map((a) => a.id);
+    for (let i = 0; i < nudgeAfterActions + raiseAfterActions + 2 && !mine; i++) s = run(s, [{ type: 'openApp', app: apps[i % apps.length] }]).state;
+    if (!mine) expect(s.ladder[from]).toBe(after);
+    expect(level).toBeDefined();
   });
 
   it('備忘錄分兩欄、時間軸照故事時間排；心聲只在結論還沒到達時出現', () => {

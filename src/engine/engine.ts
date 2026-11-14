@@ -125,6 +125,11 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       wanderStreak: 0,
       wanderIndex: 0,
       assistantUnread: false,
+      currentThread: null,
+      readAwaiting: [],
+      ignoring: {},
+      ignoredOut: [],
+      nudgeIndex: {},
       challengeTries: 0,
       accusation: { step: 0, tried: {} },
       ended: null,
@@ -239,6 +244,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
 
     /** 每個人各自計時。輪到的人如果這一段被安撫過就不升，然後重新開始算下一段。 */
     const tick = () => {
+      // 資料關掉了「電量掉一段就自動升級」：電量只當上限，階梯由玩家說的話和已讀不回推動
+      if (meta.battery.ladderAuto === false) return;
       for (let again = true; again && !s.ended; ) {
         again = false;
         for (const c of content.characters) {
@@ -307,7 +314,70 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       }
     };
 
+    /**
+     * 已讀不回（資料有寫 meta.readIgnore 時）。每個動作結束時算一次：
+     * 玩家看到某人等回的訊息、沒回就離開，之後每做一個動作就記一次；
+     * 記滿先追問一句，追問後再記滿就升一級。同一則訊息最多只升一次，
+     * 之後要等他傳了新的一則、玩家又讀了沒回，才重新開始算。
+     * 算「動作」的是打開 App、讀聊天室、定位、傳訊息（回覆、試探）；
+     * 點開照片、比對、指出哪裡有問題、指認兇手的作答、按視窗的按鈕都不算（看和想不會讓對方更急）。
+     */
+    const readIgnore = () => {
+      const config = meta.readIgnore;
+      // 玩家現在停在哪個聊天室
+      let here = s.currentThread;
+      if (action.type === 'readThread') here = action.thread;
+      else if (action.type === 'reply') here = (events.get(action.event) as { thread?: ThreadId } | undefined)?.thread ?? here;
+      else if (action.type === 'test') here = testThread(cards.get(action.card)!, action.target) ?? here;
+      else if (action.type === 'sendCover') here = meta.coverThread ?? content.threads[0]?.id ?? null;
+      else if (action.type === 'openApp' || action.type === 'locate') here = null;
+      s.currentThread = here;
+      if (!config) return;
+
+      const counts = ['openApp', 'readThread', 'locate', 'reply', 'test'].includes(action.type);
+      const pendingOf = (who: CharacterId) =>
+        s.awaiting.map((id) => events.get(id)).find((e) => e?.kind === 'message' && e.from === who && s.readAwaiting.includes(e.id) && !s.ignoredOut.includes(e.id));
+      for (const c of content.characters) {
+        if (s.ended) return;
+        const clock = s.ignoring[c.id];
+        if (!clock) continue;
+        const pending = pendingOf(c.id);
+        if (!pending || pending.kind !== 'message') {
+          delete s.ignoring[c.id];
+          continue;
+        }
+        if (!counts || here === pending.thread) continue;
+        clock.count += 1;
+        if (!clock.nudged && clock.count >= config.nudgeAfterActions) {
+          clock.nudged = true;
+          clock.count = 0;
+          const nudges = c.nudges ?? [];
+          if (nudges.length) {
+            const index = s.nudgeIndex[c.id] ?? 0;
+            // 追問只是催促，不是新的問題：不走事件，原本那一則照樣能回
+            hear(pending.thread, c.id, nudges[index % nudges.length]);
+            s.nudgeIndex[c.id] = index + 1;
+          }
+        } else if (clock.nudged && clock.count >= config.raiseAfterActions) {
+          delete s.ignoring[c.id];
+          s.ignoredOut.push(pending.id);
+          moveLadder(c.id, 1, true);
+        }
+      }
+      if (s.ended) return;
+      // 這一步結束時停在某個聊天室，裡面等回的訊息就算看到了
+      s.readAwaiting = s.readAwaiting.filter((id) => s.awaiting.includes(id));
+      for (const id of s.awaiting) {
+        const e = events.get(id);
+        if (e?.kind !== 'message' || e.thread !== here || s.ignoredOut.includes(id)) continue;
+        if (!s.readAwaiting.includes(id)) s.readAwaiting.push(id);
+        s.ignoring[e.from] ??= { count: -1, nudged: false };
+      }
+      for (const who of Object.keys(s.ignoring)) if (!pendingOf(who)) delete s.ignoring[who];
+    };
+
     const done = (): StepResult => {
+      if (!s.ended) readIgnore();
       if (!s.ended) gainCards();
       return { state: s, outcomes: out };
     };

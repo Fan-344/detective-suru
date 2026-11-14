@@ -99,6 +99,9 @@ interface Run {
   /** 沒有任何會耗電的事可做，而且手上的紀錄不夠破案 */
   softDead: boolean;
   usedReactions: Set<string>;
+  /** 送出開局那句之後，有人升級的次數；其中因為已讀不回（或舊做法的電量）自己升的次數 */
+  raises: number;
+  autoRaises: number;
 }
 
 function playOnce(engine: Engine, seed: number, profile: Profile): Run {
@@ -126,7 +129,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
   let accusing = false;
 
   let s = engine.start();
-  const run: Run = { profile, final: s, actions: [], login: null, solvableAt: null, sentMessage: false, stuck: false, softDead: false, usedReactions: new Set() };
+  const run: Run = { profile, final: s, actions: [], login: null, solvableAt: null, sentMessage: false, stuck: false, softDead: false, usedReactions: new Set(), raises: 0, autoRaises: 0 };
 
   for (let guard = 0; guard < 400 && s.phase !== 'ended'; guard++) {
     const everything = concreteActions(engine, s);
@@ -208,7 +211,15 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
     }
     if (isMessage(action)) run.sentMessage = true;
     const before = s;
-    s = engine.step(s, action).state;
+    const result = engine.step(s, action);
+    s = result.state;
+    if (action.type !== 'sendCover') {
+      for (const o of result.outcomes) {
+        if (o.kind !== 'ladder' || o.to <= o.from) continue;
+        run.raises += 1;
+        if (o.auto) run.autoRaises += 1;
+      }
+    }
     if (s === before) {
       // 動作被拒絕。照理不會發生（動作都是從選單產生的），發生就當作卡住回報。
       run.stuck = true;
@@ -331,6 +342,20 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   report.push('', `破案（指對人、答完全部題目）：${count(solvedIds)} 局（${pct(count(solvedIds), runs.length)}）。指錯人：${count(wrongIds)} 局（${pct(count(wrongIds), runs.length)}）。`);
   const tries = runs.filter((r) => r.final.ended !== null && solvedIds.includes(r.final.ended)).map((r) => r.final.challengeTries);
   if (tries.length) report.push(`　破案的那些局，途中答錯的次數：中位數 ${median(tries)}、最多 ${Math.max(...tries)}。`);
+
+  // 階梯是被什麼推動的
+  const still = runs.filter((r) => r.raises === 0);
+  const noAuto = runs.filter((r) => r.autoRaises === 0);
+  const stillEnds = [...new Set(still.map((r) => r.final.ended))].map((id) => id + ' ' + still.filter((r) => r.final.ended === id).length).join('、');
+  report.push(
+    '',
+    '開局之後沒有任何人升級的有 ' + still.length + ' 局（' + pct(still.length, runs.length) + '）' + (still.length ? '，結局分佈：' + stillEnds : '') + '。',
+    '每一局升級次數的中位數 ' + median(runs.map((r) => r.raises)) + '，其中自己升的（已讀不回）中位數 ' + median(runs.map((r) => r.autoRaises)) + '；完全沒有已讀不回升級的有 ' + noAuto.length + ' 局（' + pct(noAuto.length, runs.length) + '）。',
+  );
+  for (const p of PROFILES) {
+    const mine = runs.filter((r) => r.profile === p);
+    report.push('　' + p + '：登入視窗出現 ' + pct(mine.filter((r) => r.login).length, mine.length) + '，結束時靖雯等級中位數 ' + median(mine.map((r) => r.final.ladder[culprit] ?? 0)) + '，升級次數中位數 ' + median(mine.map((r) => r.raises)));
+  }
 
   // 不傳任何訊息能不能破案
   const silent = runs.filter((r) => r.profile === 'silent');
