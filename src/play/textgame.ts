@@ -279,7 +279,8 @@ export class TextGame {
     if (!app) return;
     this.say('', `── ${app.name} ──`);
     const outcomes = this.act({ type: 'openApp', app: id });
-    if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended' || this.state.prompt) return;
+    // 視窗不擋操作：就算這一步剛好跳出視窗，內容照樣顯示
+    if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended') return;
     if (app.view === 'chat') this.screen = this.threads;
     else if (app.view === 'assistant') this.screen = this.suru;
     else if (app.view === 'contacts') this.cast();
@@ -348,7 +349,8 @@ export class TextGame {
     for (const m of this.state.threads[id]?.appended ?? []) line(m, '');
     if ([...(thread?.history ?? []), ...(this.state.threads[id]?.appended ?? [])].some((m) => m.image)) this.say('', '（照片可以點開看。）');
     const outcomes = this.act({ type: 'readThread', thread: id });
-    if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended' || this.state.prompt) return;
+    // 視窗不擋操作：就算這一步剛好跳出視窗，內容照樣顯示
+    if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended') return;
     this.screen = () => this.threadScreen(id);
   }
 

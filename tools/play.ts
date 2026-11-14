@@ -8,6 +8,9 @@
 //   npm run play -- --save <存檔路徑> --choose 3     選第 3 項，印出結果和新的選項
 //   npm run play -- --save <存檔路徑>                只重印目前的選項
 //   存檔只記「選過哪些編號」。規則是固定的，照著重走一遍就回到同一個狀態。
+//
+// 重播：npm run play -- --replay <存檔路徑> [--legacy]
+//   把存檔從頭重走，印出每一步選了什麼、看到什麼（含階梯變化）。
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -50,8 +53,29 @@ function stepMode(args: string[], save: string, debug: boolean): number {
   return 0;
 }
 
+/** 把一份存檔從頭重走一遍，印出每一步選了什麼、看到什麼。檢討試玩紀錄用。 */
+function replay(path: string, legacy: boolean): number {
+  const content = loadCase('case01');
+  // --legacy：存檔是「指認兇手一次填完」那時候錄的，照舊流程重走
+  if (legacy) delete content.endings.challenge.sequence;
+  const game = new TextGame(content, { debug: true });
+  const moves = JSON.parse(readFileSync(path, 'utf8')) as number[];
+  for (const line of game.flush()) console.log(line);
+  moves.forEach((m, i) => {
+    const choices = game.choices();
+    console.log(`\n▶ 第 ${i + 1} 步［電量 ${game.battery}%］選「${choices[m]?.label ?? `？（沒有第 ${m + 1} 項）`}」（當時有 ${choices.length} 個選項：${choices.map((c) => c.label).join('｜')}）`);
+    if (!game.choose(m)) return;
+    for (const line of game.flush()) console.log(line);
+  });
+  console.log(`\n［結束時電量 ${game.battery}%］`);
+  game.choices().forEach((c, i) => console.log(`  ${i + 1}. ${c.label}`));
+  return 0;
+}
+
 export async function main(args: string[]): Promise<number> {
   const debug = args.includes('--debug');
+  const replayPath = valueOf(args, '--replay');
+  if (replayPath) return replay(replayPath, args.includes('--legacy'));
   const save = valueOf(args, '--save');
   if (save) return stepMode(args, save, debug);
 
