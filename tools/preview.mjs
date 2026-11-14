@@ -52,6 +52,15 @@ for (const seg of meta.intro ?? []) {
     p(seg.lines.join('  \n'));
   }
 }
+if (meta.castIntro || characters.some((c) => c.brief)) {
+  p();
+  p('### 人物背景（放在「聯絡人」App 裡，玩家自己打開才看得到）');
+  p();
+  for (const l of meta.castIntro ?? []) p(`${l}  `);
+  p();
+  for (const c of characters) if (c.brief) p(`- **${c.name}**：${c.brief}`);
+}
+
 p();
 p('### 開局固定送出的那句話');
 p();
@@ -68,8 +77,12 @@ for (const app of apps.apps) {
     p(`背景 App，沒有線索。${app.emptyText ? `打開時顯示：「${app.emptyText}」` : ''}`);
     continue;
   }
+  if (app.view === 'contacts') {
+    p('人物介紹放在這裡，內容見上方「人物背景」。');
+    continue;
+  }
   if (app.view === 'assistant') {
-    p('助理自己的 App。心聲、時間軸、紀錄、說法、牌都在這裡，內容隨遊戲進行產生。');
+    p('助理自己的 App。心聲、時間軸、紀錄、說法、疑點都在這裡，內容隨遊戲進行產生。');
     continue;
   }
   if (app.view === 'chat') {
@@ -204,7 +217,7 @@ if (links.length) {
   p();
   p('## 備忘錄的比對');
   p();
-  p('| 說法 | 紀錄 | 結果 | 拿到的牌 |');
+  p('| 說法 | 紀錄 | 結果 | 發現的疑點 |');
   p('| --- | --- | --- | --- |');
   for (const l of links) {
     const got = (l.unlocks ?? []).map((id) => cardById[id]?.title ?? id).join('、');
@@ -214,7 +227,7 @@ if (links.length) {
 
 if (cards.length) {
   p();
-  p('## 測試牌');
+  p('## 疑點（可以拿去試探人）');
   p();
   for (const c of cards) {
     const to = c.targets ? `｜只能問${c.targets.map(who).join('、')}` : '';
@@ -228,7 +241,7 @@ const reactions = read('reactions', []);
 const eventById = Object.fromEntries(events.map((e) => [e.id, e]));
 if (reactions.length) {
   p();
-  p('## 反應表（有內容的格子）');
+  p('## 試探的反應（有內容的格子）');
   p();
   p('沒列在這裡的組合，一律用該角色的通用反應。');
   for (const r of reactions) {
@@ -299,8 +312,10 @@ const endingsFile = read('endings', null);
 if (endingsFile) {
   const ch = endingsFile.challenge;
   p();
-  p('## 挑戰書');
+  p('## 指認兇手（挑戰書）');
   p();
+  for (const l of ch.intro ?? []) p(`> ${l}  `);
+  if (ch.intro) p();
   p(`0. ${ch.whoPrompt}　可選：${ch.suspects.map(who).join('、')}　〔答案：${who(ch.culprit)}〕`);
   ch.fields.forEach((f, i) => {
     p(`${i + 1}. ${f.prompt}`);

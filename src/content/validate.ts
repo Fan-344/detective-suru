@@ -206,6 +206,7 @@ export function validateCase(raw: RawCase): Issue[] {
   // ── characters ──
   for (const { entry, say } of characters) {
     need(entry, say, 'name', 'style');
+    if (entry.brief !== undefined && !isStr(entry.brief)) say('brief 應該是一段文字');
     if (!Array.isArray(entry.genericReplies) || entry.genericReplies.length === 0 || !entry.genericReplies.every(isStrArr)) {
       say('genericReplies 至少要有一組通用反應，每一組是幾則訊息的陣列');
     }
@@ -226,7 +227,7 @@ export function validateCase(raw: RawCase): Issue[] {
   }
 
   // ── apps ──
-  const VIEWS = ['chat', 'list', 'gallery', 'map', 'calendar', 'assistant', 'utility', 'none'];
+  const VIEWS = ['chat', 'list', 'gallery', 'map', 'calendar', 'contacts', 'assistant', 'utility', 'none'];
   for (const { entry, say } of apps) {
     need(entry, say, 'name', 'icon');
     if (!VIEWS.includes(entry.view as string)) say(`view 應該是 ${VIEWS.join('、')} 其中之一`);

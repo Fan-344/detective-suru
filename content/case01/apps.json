@@ -8,6 +8,12 @@
   ],
   "apps": [
     {
+      "id": "contacts",
+      "name": "聯絡人",
+      "icon": "contacts",
+      "view": "contacts"
+    },
+    {
       "id": "sms",
       "name": "簡訊",
       "icon": "sms",

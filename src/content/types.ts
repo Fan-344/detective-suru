@@ -101,6 +101,8 @@ export interface CaseMeta {
   wander?: { after: number; hints: string[] };
   /** 助理醒來那一天的日期，寫成 2026-11-16。行事曆以這一天為「今天」。 */
   today?: string;
+  /** 人物簡介前面的一小段背景，交代這幾個人是什麼關係。顯示在「聯絡人」App 的最上面。 */
+  castIntro?: string[];
   /** 開局固定送出的那句話 */
   coverStory: string;
   /** 【待確認】掩護說法送到哪個聊天室 */
@@ -143,7 +145,12 @@ export interface LadderStep {
 export interface Character {
   id: CharacterId;
   name: string;
-  /** 一行語氣摘要。完整的語氣指南在 docs/voice/ */
+  /**
+   * 給玩家看的人物簡介：助理開局就知道、而且不劇透的事（職業、跟機主的關係、傳訊息的習慣）。
+   * 每個人的篇幅和語氣要一樣，不能讓誰特別突出。
+   */
+  brief?: string;
+  /** 一行語氣摘要（給寫作的人看，玩家看不到）。完整的語氣指南在 docs/voice/ */
   style: string;
   /** 開局時的階梯等級。0 表示還沒踏上第一級。 */
   startLevel?: number;
@@ -159,7 +166,8 @@ export interface Character {
 
 /** assistant 是助理自己的 App：心聲、時間軸、紀錄、說法、牌都在裡面，內容由遊戲狀態產生。 */
 /** utility 是功能型的 App（計算機、時鐘等），畫面由外觀框架自己做，不讀案件內容。 */
-export type AppView = 'chat' | 'list' | 'gallery' | 'map' | 'calendar' | 'assistant' | 'utility' | 'none';
+/** contacts 是聯絡人：先顯示 meta.castIntro，再依 characters.json 的順序列出每個人的 brief。 */
+export type AppView = 'chat' | 'list' | 'gallery' | 'map' | 'calendar' | 'contacts' | 'assistant' | 'utility' | 'none';
 
 export interface AppDef {
   id: AppId;
@@ -423,6 +431,8 @@ export interface Ending {
 
 export interface EndingsFile {
   challenge: {
+    /** 進入挑戰書時先顯示的說明，講清楚兩種錯法的後果 */
+    intro?: string[];
     /** 第一欄「是誰」的題目 */
     whoPrompt: string;
     /** 可以指認的人 */
