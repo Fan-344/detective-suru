@@ -1,0 +1,461 @@
+// 文字冒險版的共用部分：把 engine 的狀態變成「一段文字＋幾個編號選項」。
+// 終端機（tools/play.ts）和網頁（src/play/web.ts）都用這個，兩邊只負責顯示和收輸入。
+// 這裡的字串只有介面用語；劇情文字全部來自資料檔。
+
+import type { CaseContent, Item, Message, Signal } from '../content/types';
+import { createEngine, memo, voice, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
+
+export interface Choice {
+  label: string;
+  run: () => void;
+}
+
+export interface TextGameOptions {
+  /** 顯示階梯等級的變化。給開發時看，正式試玩不開。 */
+  debug?: boolean;
+}
+
+export class TextGame {
+  readonly engine: Engine;
+  state: GameState;
+  private readonly content: CaseContent;
+  private readonly debug: boolean;
+  private pending: string[] = [];
+  private screen: () => Choice[];
+
+  constructor(content: CaseContent, options: TextGameOptions = {}) {
+    this.content = content;
+    this.engine = createEngine(content);
+    this.debug = options.debug ?? false;
+    this.state = this.engine.start();
+    this.screen = this.home;
+    this.intro();
+  }
+
+  /** 取走還沒顯示的文字 */
+  flush(): string[] {
+    const lines = this.pending;
+    this.pending = [];
+    return lines;
+  }
+
+  get battery(): number {
+    // 電量可以是小數，顯示時取整；還有電就不顯示 0
+    return Math.ceil(this.state.battery);
+  }
+
+  choices(): Choice[] {
+    const s = this.state;
+    if (s.phase === 'ended') return [{ label: '重新開始', run: () => this.restart() }];
+    if (s.phase === 'cover') return [{ label: '送出', run: () => this.act({ type: 'sendCover' }) }];
+    if (s.prompt) {
+      // 視窗不擋操作：按按鈕、關掉，或直接選後面的事（等於不理它）
+      const e = this.content.events.find((x) => x.id === s.prompt);
+      const options = e?.kind === 'system' ? (e.options ?? []) : [];
+      return [
+        ...options.map((o) => ({ label: `視窗：按「${o.label}」`, run: () => this.act({ type: 'answerPrompt', option: o.id }) })),
+        { label: '視窗：關閉', run: () => this.act({ type: 'answerPrompt', option: null }) },
+        ...this.screen(),
+      ];
+    }
+    return this.screen();
+  }
+
+  choose(index: number): boolean {
+    const choice = this.choices()[index];
+    if (!choice) return false;
+    choice.run();
+    return true;
+  }
+
+  // ───────────── 輸出 ─────────────
+
+  private say(...lines: string[]) {
+    this.pending.push(...lines);
+  }
+
+  private name(id: string): string {
+    if (id === this.content.meta.self?.id) return this.content.meta.self.name;
+    return this.content.characters.find((c) => c.id === id)?.name ?? id;
+  }
+
+  private item(id: string): Item | undefined {
+    return this.content.items.find((i) => i.id === id);
+  }
+
+  private threadTitle(id: string): string {
+    return this.content.threads.find((t) => t.id === id)?.title ?? id;
+  }
+
+  /** 一行就能認出是哪一筆的短標籤 */
+  private label(item: Item): string {
+    const when = item.when ? `${item.when}　` : '';
+    if (item.kind === 'statement') return `${when}${this.name(item.speaker ?? '')}：「${item.body.split('\n')[0]}」`;
+    return `${when}${item.title ?? item.body.split('\n')[0]}`;
+  }
+
+  private signal(signal: Signal | undefined): string[] {
+    if (!signal) return [];
+    const parts = [signal.readDelay, signal.typingStops ? '「正在輸入」出現又消失' : undefined, signal.noReply ? '已讀不回' : undefined];
+    const text = parts.filter(Boolean).join('，');
+    return text ? [`　（${text}）`] : [];
+  }
+
+  private detail(item: Item) {
+    this.say(`・${this.label(item)}${item.flavor ? '' : `　〔${item.kind === 'record' ? '紀錄' : '說法'}〕`}`);
+    if (item.kind === 'record') for (const line of item.body.split('\n')) this.say(`　${line}`);
+    for (const f of item.fields ?? []) this.say(`　${f.label}：${f.value}`);
+    if (item.image) this.say(`　〔圖：${item.image.description}〕`);
+  }
+
+  private intro() {
+    for (const seg of this.content.meta.intro ?? []) {
+      if (seg.kind === 'notice') this.say(`［${seg.label}］`, ...seg.lines);
+      else if (seg.kind === 'quote') this.say('————', ...seg.lines, ...(seg.signature ? [`　　　　　　${seg.signature}`] : []), '————');
+      else this.say(...seg.lines);
+      this.say('');
+    }
+    this.say(`${this.content.meta.self?.name ?? ''}：${this.content.meta.coverStory}`, '');
+  }
+
+  private restart() {
+    this.state = this.engine.start();
+    this.screen = this.home;
+    this.say('', '════════════════', '');
+    this.intro();
+  }
+
+  private act(action: Action): Outcome[] {
+    const { state, outcomes } = this.engine.step(this.state, action);
+    this.state = state;
+    for (const o of outcomes) this.render(o);
+    if (state.phase === 'ended') this.screen = this.home;
+    return outcomes;
+  }
+
+  private render(o: Outcome) {
+    switch (o.kind) {
+      case 'battery':
+        this.say(`　〔電量 -${o.cost}%，剩 ${Math.ceil(o.battery)}%〕`);
+        break;
+      case 'sent':
+        this.say(`［${this.threadTitle(o.thread)}］${this.name(this.content.meta.self?.id ?? '')}：${o.text}`);
+        break;
+      case 'message':
+        for (const line of o.text) this.say(`［${this.threadTitle(o.thread)}］${this.name(o.from)}：${line}`);
+        if (o.text.length === 0) this.say(`［${this.threadTitle(o.thread)}］${this.name(o.from)}`);
+        if (o.image) this.say(`　〔圖：${o.image.description}〕`);
+        this.say(...this.signal(o.signal));
+        break;
+      case 'items':
+        for (const id of o.items) {
+          const item = this.item(id);
+          if (item && !item.flavor) this.say(`　＋備忘錄：${this.label(item)}`);
+        }
+        break;
+      case 'cards':
+        for (const id of o.cards) this.say(`　＋拿到一張牌：${this.content.cards.find((c) => c.id === id)?.title ?? id}`);
+        break;
+      case 'link':
+        this.say(o.result === 'match' ? '→ 吻合。' : o.result === 'conflict' ? '→ 矛盾。' : '→ 看不出關聯。');
+        break;
+      case 'prompt': {
+        const e = this.content.events.find((x) => x.id === o.event);
+        if (e?.kind === 'system') this.say('', `┌── 系統視窗：${e.title} ──`, ...e.lines.map((l) => `│ ${l}`), '└────────', '');
+        break;
+      }
+      case 'promptHint':
+        this.say('', `（${o.text}）`);
+        break;
+      case 'promptClosed':
+        this.say(o.ignored ? '（視窗消失了。）' : '（視窗關掉了。）');
+        break;
+      case 'ladder':
+        if (this.debug) this.say(`　〔除錯：${this.name(o.character)} ${o.from} → ${o.to}${o.auto ? '（自動）' : ''}〕`);
+        break;
+      case 'challengeRejected':
+        this.say('', '挑戰書被退回來了。');
+        for (const id of o.fields) {
+          const f = this.content.endings.challenge.fields.find((x) => x.id === id);
+          if (f) this.say(`　${f.hint}`);
+        }
+        break;
+      case 'ending': {
+        const e = this.content.endings.endings.find((x) => x.id === o.ending);
+        if (e) this.say('', `════ 結局：${e.title} ════`, '', ...e.text.flatMap((p) => [p, '']));
+        break;
+      }
+      case 'wander':
+        this.say('', `（${o.text}）`);
+        break;
+      case 'invalid':
+        this.say(`（不行：${o.reason}）`);
+        break;
+      case 'app':
+      case 'thread':
+        break;
+    }
+  }
+
+  // ───────────── 畫面 ─────────────
+
+  private back(label = '回主畫面'): Choice {
+    return { label, run: () => (this.screen = this.home) };
+  }
+
+  private costTag(cost: number): string {
+    return cost > 0 ? `（-${cost}%）` : '';
+  }
+
+  private home = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    const list: Choice[] = [{ label: '打開 App', run: () => (this.screen = this.apps) }];
+    if (m.threads.length) {
+      const waiting = m.replies.length + this.state.awaiting.filter((id) => !m.replies.some((r) => r.event === id)).length;
+      list.push({ label: `看聊天室${waiting ? `（有 ${waiting} 則訊息等你回）` : ''}`, run: () => (this.screen = this.threads) });
+    }
+    for (const l of m.locate) {
+      list.push({ label: `用「${this.appName(l.app)}」定位${this.costTag(l.cost)}`, run: () => this.act({ type: 'locate', app: l.app }) });
+    }
+    if (m.tests.length) list.push({ label: '拿一張牌去問人', run: () => (this.screen = this.testCards) });
+    if (m.challenge) list.push({ label: '寫挑戰書', run: () => this.startChallenge() });
+    return list;
+  };
+
+  private appName(id: string): string {
+    return this.content.apps.apps.find((a) => a.id === id)?.name ?? id;
+  }
+
+  private apps = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    return [
+      ...m.apps.map((a) => ({ label: `${this.appName(a.app)}${this.costTag(a.cost)}`, run: () => this.openApp(a.app) })),
+      this.back(),
+    ];
+  };
+
+  private openApp(id: string) {
+    const app = this.content.apps.apps.find((a) => a.id === id);
+    if (!app) return;
+    this.say('', `── ${app.name} ──`);
+    const outcomes = this.act({ type: 'openApp', app: id });
+    if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended' || this.state.prompt) return;
+    if (app.view === 'chat') this.screen = this.threads;
+    else if (app.view === 'assistant') this.screen = this.suru;
+    else if (app.view === 'none' || app.view === 'utility') this.say(app.emptyText ?? '（這裡沒有她留下的東西。）');
+    else {
+      const visible = this.content.items.filter((i) => i.app === id && !i.thread && this.state.seen.includes(i.id));
+      for (const item of visible) this.detail(item);
+    }
+  }
+
+  private threads = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    return [
+      ...m.threads.map((t) => {
+        const waiting = this.state.awaiting.some((id) => {
+          const e = this.content.events.find((x) => x.id === id);
+          return e?.kind === 'message' && e.thread === t.thread;
+        });
+        const fresh = this.state.threads[t.thread]?.appended.length ?? 0;
+        const tag = [t.read ? '' : '未讀', fresh ? `新訊息 ${fresh}` : '', waiting ? '等你回' : ''].filter(Boolean).join('、');
+        return {
+          label: `${this.threadTitle(t.thread)}${tag ? `［${tag}］` : ''}${this.costTag(t.cost)}`,
+          run: () => this.openThread(t.thread),
+        };
+      }),
+      this.back(),
+    ];
+  };
+
+  private openThread(id: string) {
+    const first = !this.state.readThreads.includes(id);
+    this.say('', `── ${this.threadTitle(id)} ──`);
+    const thread = this.content.threads.find((t) => t.id === id);
+    const line = (m: Message | AppendedMessage, when: string) => {
+      const texts = Array.isArray(m.text) ? m.text : m.text ? [m.text] : [];
+      for (const t of texts) this.say(`${when}${this.name(m.from)}：${t}`);
+      if (m.image) this.say(`${when}${this.name(m.from)}：〔圖：${m.image.description}〕`);
+      if ('signal' in m) this.say(...this.signal(m.signal));
+    };
+    // 舊訊息只在第一次讀的時候整段印出來，之後只印開局後的新訊息
+    if (first) for (const m of thread?.history ?? []) line(m, `${m.when}　`);
+    else this.say('（舊訊息略）');
+    for (const m of this.state.threads[id]?.appended ?? []) line(m, '');
+    const outcomes = this.act({ type: 'readThread', thread: id });
+    if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended' || this.state.prompt) return;
+    this.screen = () => this.threadScreen(id);
+  }
+
+  private threadScreen(id: string): Choice[] {
+    const m = this.engine.menu(this.state);
+    const list: Choice[] = [];
+    for (const r of m.replies.filter((x) => x.thread === id)) {
+      const e = this.content.events.find((x) => x.id === r.event);
+      if (e?.kind !== 'message') continue;
+      for (const o of e.options ?? []) {
+        list.push({
+          label: `回${this.name(e.from)}「${e.text[e.text.length - 1]}」：${o.text}${this.costTag(r.cost)}`,
+          run: () => this.act({ type: 'reply', event: e.id, option: o.id }),
+        });
+      }
+    }
+    list.push({ label: '回聊天室列表', run: () => (this.screen = this.threads) }, this.back());
+    return list;
+  }
+
+  private suru = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    const list: Choice[] = [
+      { label: '心聲', run: () => this.showVoice() },
+      { label: '時間軸', run: () => this.showList('時間軸', memo(this.content, this.state).timeline) },
+      { label: '紀錄', run: () => this.showList('紀錄', memo(this.content, this.state).records) },
+      { label: '說法', run: () => this.showList('說法', memo(this.content, this.state).statements) },
+      { label: '手上的牌', run: () => this.showCards() },
+    ];
+    if (m.compare) list.push({ label: '比對一則說法和一筆紀錄', run: () => (this.screen = this.pickStatement) });
+    list.push(this.back());
+    return list;
+  };
+
+  private showVoice() {
+    this.say('', '── 心聲 ──', ...voice(this.engine, this.state).map((l) => `・${l.text}`));
+  }
+
+  private showList(title: string, items: Item[]) {
+    this.say('', `── ${title} ──`);
+    if (items.length === 0) this.say('（還沒有東西）');
+    for (const item of items) this.say(`・${this.label(item)}`);
+  }
+
+  private showCards() {
+    this.say('', '── 手上的牌 ──');
+    if (this.state.cards.length === 0) this.say('（還沒有牌。在備忘錄裡找到矛盾，或看到某些東西，就會拿到。）');
+    for (const id of this.state.cards) {
+      const card = this.content.cards.find((c) => c.id === id);
+      if (card) this.say(`・${card.title}：「${card.say}」`);
+    }
+    const done = this.state.links.filter((l) => l.result !== 'none');
+    if (done.length) this.say('', '比對過的：');
+    for (const l of done) {
+      const a = this.item(l.statement);
+      const b = this.item(l.record);
+      if (a && b) this.say(`・${this.label(a)} × ${this.label(b)}　→ ${l.result === 'match' ? '吻合' : '矛盾'}`);
+    }
+  }
+
+  private pickStatement = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    return [
+      ...(m.compare?.statements ?? []).flatMap((id) => {
+        const item = this.item(id);
+        return item ? [{ label: this.label(item), run: () => (this.screen = () => this.pickRecord(id)) }] : [];
+      }),
+      { label: '回 Suru', run: () => (this.screen = this.suru) },
+    ];
+  };
+
+  private pickRecord(statement: string): Choice[] {
+    const m = this.engine.menu(this.state);
+    return [
+      ...(m.compare?.records ?? []).flatMap((id) => {
+        const item = this.item(id);
+        if (!item) return [];
+        return [
+          {
+            label: this.label(item),
+            run: () => {
+              const a = this.item(statement);
+              if (a) this.say('', `比對：${this.label(a)} × ${this.label(item)}`);
+              this.act({ type: 'compare', statement, record: id });
+              this.screen = this.suru;
+            },
+          },
+        ];
+      }),
+      { label: '換一則說法', run: () => (this.screen = this.pickStatement) },
+    ];
+  }
+
+  private testCards = (): Choice[] => {
+    const m = this.engine.menu(this.state);
+    return [
+      ...m.tests.map((t) => {
+        const card = this.content.cards.find((c) => c.id === t.card);
+        return { label: `${card?.title ?? t.card}：「${card?.say ?? ''}」`, run: () => (this.screen = () => this.testTargets(t.card)) };
+      }),
+      this.back(),
+    ];
+  };
+
+  private testTargets(cardId: string): Choice[] {
+    const m = this.engine.menu(this.state);
+    const t = m.tests.find((x) => x.card === cardId);
+    const where = t?.thread ? `在「${this.threadTitle(t.thread)}」` : '私訊';
+    return [
+      ...(t?.targets ?? []).map((target) => ({
+        label: `${where}問${this.name(target)}${this.costTag(t?.cost ?? 0)}`,
+        run: () => {
+          this.say('');
+          this.act({ type: 'test', card: cardId, target });
+          this.screen = this.home;
+        },
+      })),
+      { label: '換一張牌', run: () => (this.screen = this.testCards) },
+    ];
+  }
+
+  // 挑戰書：是誰 → 四欄各選紀錄 → 交給誰
+  private startChallenge() {
+    const ch = this.content.endings.challenge;
+    this.say('', '── 挑戰書 ──', ch.whoPrompt);
+    this.screen = () => [
+      ...ch.suspects.map((id) => ({ label: this.name(id), run: () => this.challengeField(id, 0, {}) })),
+      this.back('先不寫'),
+    ];
+  }
+
+  private challengeField(accused: string, index: number, fields: Record<string, string[]>) {
+    const ch = this.content.endings.challenge;
+    const field = ch.fields[index];
+    if (!field) {
+      this.say('', '把這些交給誰？');
+      this.screen = () => [
+        ...ch.recipients.map((id) => ({
+          label: this.name(id),
+          run: () => {
+            this.screen = this.home;
+            this.act({ type: 'submitChallenge', accused, fields, givenTo: id });
+          },
+        })),
+        this.back('先不交'),
+      ];
+      return;
+    }
+    const max = this.engine.rules.maxPicksPerField;
+    this.say('', `${index + 1}. ${field.prompt}`, `（從看過的紀錄裡選，最多 ${max} 筆）`);
+    const picked: string[] = [];
+    this.screen = () => {
+      const records = this.engine.menu(this.state).challenge?.records ?? [];
+      const list: Choice[] = [];
+      if (picked.length > 0) {
+        list.push({ label: `選好了（已選 ${picked.length} 筆）`, run: () => this.challengeField(accused, index + 1, { ...fields, [field.id]: [...picked] }) });
+      }
+      if (picked.length < max) {
+        for (const id of records.filter((r) => !picked.includes(r))) {
+          const item = this.item(id);
+          if (!item) continue;
+          list.push({
+            label: this.label(item),
+            run: () => {
+              picked.push(id);
+              this.say(`　已選：${this.label(item)}`);
+            },
+          });
+        }
+      }
+      list.push(this.back('先不寫'));
+      return list;
+    };
+  }
+}
