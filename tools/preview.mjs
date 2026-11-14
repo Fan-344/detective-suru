@@ -64,8 +64,8 @@ for (const app of apps.apps) {
   const folder = apps.folders.find((f) => f.id === app.folder);
   p(`### ${app.name}${folder ? `（收在「${folder.name}」資料夾）` : ''}`);
   p();
-  if (app.view === 'none') {
-    p(`背景 App，沒有線索。打開時顯示：「${app.emptyText ?? ''}」`);
+  if (app.background || app.view === 'none') {
+    p(`背景 App，沒有線索。${app.emptyText ? `打開時顯示：「${app.emptyText}」` : ''}`);
     continue;
   }
   if (app.view === 'assistant') {
@@ -81,11 +81,40 @@ for (const app of apps.apps) {
   for (const it of rows) {
     const speaker = it.speaker ? `｜${who(it.speaker)}` : '';
     const locate = it.needsLocate ? '｜要先定位才看得到' : '';
-    p(`- **${it.title ?? ''}**　${it.when ?? ''}　〔${kindName[it.kind]}${speaker}${locate}〕`);
+    const tag = it.flavor ? '無關，不進推理' : `${kindName[it.kind]}${speaker}${locate}`;
+    const day = it.date ? `${it.date}${it.time ? ` ${it.time}` : ''}` : (it.when ?? '');
+    p(`- **${it.title ?? ''}**　${day}　〔${tag}〕`);
+    if (it.app === 'calendar') continue;
     for (const line of String(it.body).split('\n')) p(`  ${line}  `);
     for (const f of it.fields ?? []) p(`  ${f.label}：${f.value}  `);
     if (it.image) p(`  ${image(it.image)}`);
   }
+}
+
+const flavor = read('flavor', null);
+if (flavor) {
+  p();
+  p('## 背景 App 裡的生活內容（跟案情無關）');
+  p();
+  p('### 時鐘：鬧鐘');
+  p();
+  for (const a of flavor.alarms ?? []) p(`- ${a.time}　${a.label}　${a.repeat}　${a.on ? '開' : '關'}`);
+  p();
+  p(`世界時鐘：${(flavor.worldClocks ?? []).map((c) => c.city).join('、')}`);
+  p();
+  p('### 音樂：歌單（歌名和演出者都是虛構的）');
+  p();
+  for (const t of flavor.playlist ?? []) p(`- ${t.title}　${t.artist}`);
+  p();
+  p('### 碎念：動態牆（帳號都是虛構的）');
+  p();
+  for (const t of flavor.posts ?? []) p(`- **${t.author}**　${t.when}：${t.text}`);
+}
+if (meta.wander) {
+  p();
+  p(`### 亂逛提醒（連續打開 ${meta.wander.after} 個背景 App 後跳出）`);
+  p();
+  for (const h of meta.wander.hints) p(`- ${h}`);
 }
 
 p();

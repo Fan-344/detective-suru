@@ -75,6 +75,8 @@ export interface CaseMeta {
       locate: number;
       /** 【待確認】拿牌測試的耗電。build-spec 的動作表有列，meta 範例沒有。 */
       test?: number;
+      /** 第一次打開背景 App 的耗電。可以是小數，比 openApp 低很多。 */
+      openIdleApp?: number;
       /** 指對了人但證據沒選對、挑戰書被退回時扣的電量 */
       challengeRetry?: number;
     };
@@ -85,6 +87,13 @@ export interface CaseMeta {
    * 故事會跨過週日到下週一，所以不能照一到日排，要由資料指定。
    */
   dayOrder: string[];
+  /**
+   * 在背景 App 裡逛太久時跳出的提醒（軟牆，不擋操作）。
+   * after：連續打開幾個背景 App 之後跳出；hints：輪流使用的句子，只提問。
+   */
+  wander?: { after: number; hints: string[] };
+  /** 助理醒來那一天的日期，寫成 2026-11-16。行事曆以這一天為「今天」。 */
+  today?: string;
   /** 開局固定送出的那句話 */
   coverStory: string;
   /** 【待確認】掩護說法送到哪個聊天室 */
@@ -135,7 +144,8 @@ export interface Character {
 // ───────────────────────── apps.json ─────────────────────────
 
 /** assistant 是助理自己的 App：心聲、時間軸、紀錄、說法、牌都在裡面，內容由遊戲狀態產生。 */
-export type AppView = 'chat' | 'list' | 'gallery' | 'map' | 'assistant' | 'none';
+/** utility 是功能型的 App（計算機、時鐘等），畫面由外觀框架自己做，不讀案件內容。 */
+export type AppView = 'chat' | 'list' | 'gallery' | 'map' | 'calendar' | 'assistant' | 'utility' | 'none';
 
 export interface AppDef {
   id: AppId;
@@ -148,6 +158,8 @@ export interface AppDef {
   dock?: boolean;
   /** 收在哪個資料夾（FolderDef.id） */
   folder?: string;
+  /** true 表示跟案情無關的背景 App。打開它只耗很少的電（meta.battery.cost.openIdleApp），逛太久會跳出提醒。 */
+  background?: boolean;
   /** 【待確認】沒有內容的背景 App 打開時顯示的一句話 */
   emptyText?: string;
 }
@@ -183,6 +195,12 @@ export interface Item {
   image?: ImageRef;
   /** 詳情頁的「欄位：值」。用於簡訊、通話、發票這類清單。 */
   fields?: { label: string; value: string }[];
+  /** true 表示跟案情無關的生活內容：看得到，但不進推理備忘錄，也不會出現在比對和挑戰書裡。 */
+  flavor?: boolean;
+  /** 行事曆用的日期，寫成 2026-11-14。有寫 when 的話兩者要是同一天。 */
+  date?: string;
+  /** 行事曆用的時刻，寫成 16:30。整天的行程不寫。 */
+  time?: string;
   /** 【待確認】true 表示要先執行「定位」這個動作才看得到（找裝置用，耗電較多） */
   needsLocate?: boolean;
   /** 清單裡的分組標題（例如哪一天）。沒寫就用 when 的日期。 */
@@ -400,6 +418,20 @@ export interface EndingsFile {
   endings: Ending[];
 }
 
+// ───────────────────────── flavor.json（選填） ─────────────────────────
+// 背景 App 裡跟案情無關的內容。沒有這個檔也能玩。
+
+export interface FlavorFile {
+  /** 時鐘：鬧鐘 */
+  alarms?: { time: string; label: string; repeat: string; on: boolean }[];
+  /** 時鐘：世界時鐘。offset 是跟台北差幾小時。 */
+  worldClocks?: { city: string; offset: number }[];
+  /** 音樂：歌單。歌名和演出者都是虛構的。 */
+  playlist?: { title: string; artist: string }[];
+  /** 碎念：動態牆上的貼文。帳號都是虛構的。 */
+  posts?: { author: string; text: string; when: string }[];
+}
+
 // ───────────────────────── 全部合起來 ─────────────────────────
 
 export interface CaseContent {
@@ -415,4 +447,5 @@ export interface CaseContent {
   conclusions: Conclusion[];
   voice: VoiceLine[];
   endings: EndingsFile;
+  flavor?: FlavorFile;
 }

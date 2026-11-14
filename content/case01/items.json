@@ -694,5 +694,135 @@
     "title": "登入確認視窗",
     "body": "有人在另一台裝置上輸入了這個帳號的密碼。位置：台北市大安區附近。",
     "hidden": true
+  },
+  {
+    "id": "cal_deadline1",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-03",
+    "title": "交稿：繪本內頁",
+    "body": "交稿：繪本內頁",
+    "flavor": true
+  },
+  {
+    "id": "cal_dentist",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-06",
+    "title": "牙醫 洗牙",
+    "body": "牙醫 洗牙",
+    "time": "10:30",
+    "flavor": true
+  },
+  {
+    "id": "cal_client",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-10",
+    "title": "客戶視訊",
+    "body": "客戶視訊",
+    "time": "14:00",
+    "flavor": true
+  },
+  {
+    "id": "cal_repair",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-14",
+    "title": "送修手機",
+    "body": "送修手機",
+    "time": "16:30",
+    "when": "週六 16:30"
+  },
+  {
+    "id": "cal_aze",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-14",
+    "title": "阿澤",
+    "body": "阿澤",
+    "time": "18:30",
+    "when": "週六 18:30"
+  },
+  {
+    "id": "cal_freight",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-17",
+    "title": "貨運收箱子（舊家）",
+    "body": "貨運收箱子（舊家）",
+    "flavor": true
+  },
+  {
+    "id": "cal_deadline2",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-20",
+    "title": "交稿：雜誌插圖",
+    "body": "交稿：雜誌插圖",
+    "flavor": true
+  },
+  {
+    "id": "cal_mom",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-22",
+    "title": "媽生日",
+    "body": "媽生日",
+    "flavor": true
+  },
+  {
+    "id": "cal_rent",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-25",
+    "title": "繳房租",
+    "body": "繳房租",
+    "flavor": true
+  },
+  {
+    "id": "cal_handover",
+    "app": "calendar",
+    "kind": "record",
+    "date": "2026-11-30",
+    "title": "舊家交屋",
+    "body": "舊家交屋",
+    "flavor": true
+  },
+  {
+    "id": "note_shopping",
+    "app": "notes",
+    "kind": "record",
+    "when": "較早",
+    "title": "新家要買",
+    "body": "窗簾\n延長線\n浴室踏墊\n垃圾桶（有蓋的）",
+    "flavor": true
+  },
+  {
+    "id": "note_ideas",
+    "app": "notes",
+    "kind": "record",
+    "when": "較早",
+    "title": "想畫的",
+    "body": "下雨天的便利商店\n頂樓的水塔\n睡在紙箱裡的貓\n捷運上睡著的人",
+    "flavor": true
+  },
+  {
+    "id": "note_recipe",
+    "app": "notes",
+    "kind": "record",
+    "when": "較早",
+    "title": "番茄炒蛋",
+    "body": "蛋先炒 起鍋\n番茄炒軟 加一點糖\n蛋倒回去\n不要加番茄醬",
+    "flavor": true
+  },
+  {
+    "id": "note_dream",
+    "app": "notes",
+    "kind": "record",
+    "when": "較早",
+    "title": "夢",
+    "body": "夢到五個人還住在一起\n醒來有點難過",
+    "flavor": true
   }
 ]

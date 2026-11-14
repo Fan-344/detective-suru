@@ -17,7 +17,8 @@
       "send": 2,
       "locate": 4,
       "test": 2,
-      "challengeRetry": 4
+      "challengeRetry": 4,
+      "openIdleApp": 0.2
     },
     "ladderTickEvery": 8
   },
@@ -117,7 +118,7 @@
     },
     {
       "kind": "notice",
-      "label": "聊聊",
+      "label": "Link",
       "lines": [
         "永和四樓　未讀 31",
         "品妤　未讀 5",
@@ -126,7 +127,7 @@
     },
     {
       "kind": "notice",
-      "label": "雲端發票",
+      "label": "發票雲",
       "lines": [
         "週六新增 6 張"
       ]
@@ -160,5 +161,14 @@
       "zonghan": 1,
       "pinyu": 1
     }
-  }
+  },
+  "wander": {
+    "after": 3,
+    "hints": [
+      "這裡有她留下的東西嗎？",
+      "電只會變少。要花在這裡嗎？",
+      "她交代的事，在這個 App 裡找得到嗎？"
+    ]
+  },
+  "today": "2026-11-16"
 }

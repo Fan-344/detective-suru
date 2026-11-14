@@ -21,13 +21,13 @@
     },
     {
       "id": "receipts",
-      "name": "雲端發票",
+      "name": "發票雲",
       "icon": "receipts",
       "view": "list"
     },
     {
       "id": "moments",
-      "name": "片刻",
+      "name": "Instory",
       "icon": "moments",
       "view": "gallery"
     },
@@ -41,8 +41,43 @@
       "id": "music",
       "name": "音樂",
       "icon": "music",
-      "view": "none",
-      "emptyText": "上次播放停在週六下午。"
+      "view": "utility",
+      "emptyText": "上次播放停在週六下午。",
+      "background": true
+    },
+    {
+      "id": "social",
+      "name": "Throws",
+      "icon": "social",
+      "view": "utility",
+      "background": true
+    },
+    {
+      "id": "calendar",
+      "name": "行事曆",
+      "icon": "calendar",
+      "view": "calendar"
+    },
+    {
+      "id": "clock",
+      "name": "時鐘",
+      "icon": "clock",
+      "view": "utility",
+      "background": true
+    },
+    {
+      "id": "calculator",
+      "name": "計算機",
+      "icon": "calculator",
+      "view": "utility",
+      "background": true
+    },
+    {
+      "id": "settings",
+      "name": "設定",
+      "icon": "settings",
+      "view": "utility",
+      "background": true
     },
     {
       "id": "finder",
@@ -55,9 +90,10 @@
       "id": "camera",
       "name": "相機",
       "icon": "camera",
-      "view": "none",
+      "view": "utility",
       "folder": "f_tools",
-      "emptyText": "鏡頭是黑的。"
+      "emptyText": "鏡頭是黑的。",
+      "background": true
     },
     {
       "id": "phone",
@@ -68,7 +104,7 @@
     },
     {
       "id": "chat",
-      "name": "聊聊",
+      "name": "Link",
       "icon": "chat",
       "view": "chat",
       "dock": true

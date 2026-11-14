@@ -14,7 +14,11 @@ export interface Issue {
 }
 
 /** 每個檔名對應到解析後的 JSON。缺檔時該鍵不存在。 */
-export type RawCase = Partial<Record<CaseFileName, unknown>>;
+export type RawCase = Partial<Record<CaseFileName | OptionalFileName, unknown>>;
+
+/** 可有可無的檔案 */
+export const OPTIONAL_FILES = ['flavor'] as const;
+export type OptionalFileName = (typeof OPTIONAL_FILES)[number];
 
 export const CASE_FILES = [
   'meta',
@@ -192,6 +196,12 @@ export function validateCase(raw: RawCase): Issue[] {
 
   checkEffects(sayMeta, 'afterCoverEffects', meta.afterCoverEffects);
 
+  if (meta.wander !== undefined) {
+    const w = isObj(meta.wander) ? meta.wander : {};
+    if (!isNum(w.after) || w.after < 1) sayMeta('wander.after 應該是不小於 1 的數字');
+    if (!isStrArr(w.hints) || w.hints.length === 0) sayMeta('wander.hints 至少要有一句');
+  }
+
   // ── characters ──
   for (const { entry, say } of characters) {
     need(entry, say, 'name', 'style');
@@ -212,7 +222,7 @@ export function validateCase(raw: RawCase): Issue[] {
   }
 
   // ── apps ──
-  const VIEWS = ['chat', 'list', 'gallery', 'map', 'assistant', 'none'];
+  const VIEWS = ['chat', 'list', 'gallery', 'map', 'calendar', 'assistant', 'utility', 'none'];
   for (const { entry, say } of apps) {
     need(entry, say, 'name', 'icon');
     if (!VIEWS.includes(entry.view as string)) say(`view 應該是 ${VIEWS.join('、')} 其中之一`);
@@ -230,6 +240,8 @@ export function validateCase(raw: RawCase): Issue[] {
     refs(say, 'thread', entry.thread, threadIds, '聊天室');
     checkWhen(say, entry.when, false);
     checkImage(say, 'image', entry.image);
+    if (entry.date !== undefined && !(isStr(entry.date) && /^\d{4}-\d{2}-\d{2}$/.test(entry.date))) say('date 的寫法應該是 2026-11-14');
+    if (entry.time !== undefined && !(isStr(entry.time) && /^\d{2}:\d{2}$/.test(entry.time))) say('time 的寫法應該是 16:30');
   }
 
   // ── threads ──
@@ -344,6 +356,38 @@ export function validateCase(raw: RawCase): Issue[] {
       if (!isStr(entry.ending)) say('缺少 ending');
     } else {
       say('kind 應該是 message、system 或 ending');
+    }
+  }
+
+  // ── 無關的生活內容不能被當成線索引用 ──
+  const flavorIds = new Set(items.filter(({ entry }) => entry.flavor === true && isStr(entry.id)).map(({ entry }) => entry.id as string));
+  const banFlavor = (file: CaseFileName, where: string, ids: unknown) => {
+    if (!Array.isArray(ids)) return;
+    for (const id of ids.flat()) if (flavorIds.has(id as string)) reporter(file, where)(`「${String(id)}」標了 flavor（跟案情無關），不能當線索引用`);
+  };
+  for (const { entry } of conclusions) banFlavor('conclusions', `結論「${String(entry.id)}」`, entry.routes);
+  for (const l of Array.isArray(raw.links) ? raw.links : []) if (isObj(l)) banFlavor('links', '比對', [l.statement, l.record]);
+  if (isObj(endingsFile.challenge) && Array.isArray(endingsFile.challenge.fields)) {
+    for (const f of endingsFile.challenge.fields) if (isObj(f)) banFlavor('endings', 'challenge', f.accept);
+  }
+
+  // ── flavor.json（選填） ──
+  if (raw.flavor !== undefined) {
+    const sayFl = reporter('flavor', '最外層');
+    if (!isObj(raw.flavor)) sayFl('應該是一個物件');
+    else {
+      const need2 = (key: string, fields: string[]) => {
+        const arr = (raw.flavor as Obj)[key];
+        if (arr === undefined) return;
+        if (!Array.isArray(arr)) return void sayFl(`${key} 應該是陣列`);
+        arr.forEach((row, i) => {
+          for (const f of fields) if (!isObj(row) || !isStr(row[f])) reporter('flavor', `${key} 第 ${i + 1} 筆`)(`缺少 ${f}`);
+        });
+      };
+      need2('alarms', ['time', 'label', 'repeat']);
+      need2('worldClocks', ['city']);
+      need2('playlist', ['title', 'artist']);
+      need2('posts', ['author', 'text', 'when']);
     }
   }
 
