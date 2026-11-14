@@ -82,6 +82,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       battery: meta.battery.start,
       spent: 0,
       seen: [],
+      unopened: [],
+      viewedImages: [],
       ladder,
       flags: {},
       openedApps: [],
@@ -124,7 +126,10 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
     };
 
     const see = (ids: ItemId[]) => {
-      const fresh = ids.filter((id) => items.has(id) && !s.seen.includes(id));
+      // 照片要點開才算看過的規則下，還沒點開的先放在 unopened
+      const waiting = rules.imagesMustBeOpened ? ids.filter((id) => items.get(id)?.image && !s.viewedImages.includes(id)) : [];
+      for (const id of waiting) if (!s.unopened.includes(id) && !s.seen.includes(id)) s.unopened.push(id);
+      const fresh = ids.filter((id) => items.has(id) && !s.seen.includes(id) && !waiting.includes(id));
       if (fresh.length === 0) return;
       s.seen.push(...fresh);
       out.push({ kind: 'items', items: fresh });
@@ -373,6 +378,16 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
 
+      case 'viewImage': {
+        const item = items.get(action.item);
+        if (!item?.image || !(s.seen.includes(item.id) || s.unopened.includes(item.id))) return invalid('現在看不到這張照片');
+        if (!s.viewedImages.includes(item.id)) s.viewedImages.push(item.id);
+        s.unopened = s.unopened.filter((id) => id !== item.id);
+        out.push({ kind: 'image', item: item.id });
+        see([item.id]);
+        return done();
+      }
+
       case 'reply': {
         const e = events.get(action.event);
         if (!e || e.kind !== 'message' || !s.awaiting.includes(e.id)) return invalid('這則訊息現在不能回');
@@ -478,7 +493,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   }
 
   function menu(s: GameState): Menu {
-    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], replies: [], tests: [], compare: null, challenge: null };
+    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], images: [], replies: [], tests: [], compare: null, challenge: null };
     if (s.phase === 'ended') return empty;
     if (s.phase === 'cover') return { ...empty, cover: true };
     const chatOpen = chatApps.some((a) => s.openedApps.includes(a));
@@ -503,6 +518,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       locate: s.openedApps
         .filter((a) => !s.located.includes(a) && content.items.some((i) => i.app === a && i.needsLocate && !i.hidden))
         .map((app) => ({ app, cost: cost.locate })),
+      images: [...s.seen, ...s.unopened].filter((id) => items.get(id)?.image),
       replies: s.awaiting.flatMap((id) => {
         const e = events.get(id);
         if (!e || e.kind !== 'message' || !s.readThreads.includes(e.thread)) return [];

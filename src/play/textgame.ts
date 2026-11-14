@@ -2,7 +2,7 @@
 // 終端機（tools/play.ts）和網頁（src/play/web.ts）都用這個，兩邊只負責顯示和收輸入。
 // 這裡的字串只有介面用語；劇情文字全部來自資料檔。
 
-import type { CaseContent, Item, Message, Signal } from '../content/types';
+import type { CaseContent, ImageRef, Item, Message, Signal } from '../content/types';
 import { createEngine, memo, voice, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
 
 export interface Choice {
@@ -105,7 +105,16 @@ export class TextGame {
     this.say(`・${this.label(item)}${item.flavor ? '' : `　〔${item.kind === 'record' ? '紀錄' : '說法'}〕`}`);
     if (item.kind === 'record') for (const line of item.body.split('\n')) this.say(`　${line}`);
     for (const f of item.fields ?? []) this.say(`　${f.label}：${f.value}`);
-    if (item.image) this.say(`　〔圖：${item.image.description}〕`);
+    if (item.image) this.say(`　${this.photoTag(item.image)}`);
+  }
+
+  /** 照片還沒點開時的標示。細節要點開才看得到。 */
+  private photoTag(image: ImageRef): string {
+    return `［照片：${image.label ?? '照片'}］`;
+  }
+
+  private showPhoto(image: ImageRef) {
+    this.say('', `── 照片：${image.label ?? '照片'} ──`, image.description);
   }
 
   private intro() {
@@ -116,6 +125,14 @@ export class TextGame {
       this.say('');
     }
     this.say(`${this.content.meta.self?.name ?? ''}：${this.content.meta.coverStory}`, '');
+  }
+
+  /** 人物背景，顯示在聯絡人 App 裡。文字全部來自資料檔，沒寫就不顯示。 */
+  private cast() {
+    const briefs = this.content.characters.filter((c) => c.brief);
+    if (!this.content.meta.castIntro?.length && briefs.length === 0) return;
+    this.say(...(this.content.meta.castIntro ?? []), '');
+    for (const c of briefs) this.say(`${c.name}`, `　${c.brief}`, '');
   }
 
   private restart() {
@@ -144,7 +161,7 @@ export class TextGame {
       case 'message':
         for (const line of o.text) this.say(`［${this.threadTitle(o.thread)}］${this.name(o.from)}：${line}`);
         if (o.text.length === 0) this.say(`［${this.threadTitle(o.thread)}］${this.name(o.from)}`);
-        if (o.image) this.say(`　〔圖：${o.image.description}〕`);
+        if (o.image) this.say(`［${this.threadTitle(o.thread)}］${this.name(o.from)}：${this.photoTag(o.image)}`);
         this.say(...this.signal(o.signal));
         break;
       case 'items':
@@ -154,7 +171,7 @@ export class TextGame {
         }
         break;
       case 'cards':
-        for (const id of o.cards) this.say(`　＋拿到一張牌：${this.content.cards.find((c) => c.id === id)?.title ?? id}`);
+        for (const id of o.cards) this.say(`　＋發現疑點：${this.content.cards.find((c) => c.id === id)?.title ?? id}（可以拿去問人）`);
         break;
       case 'link':
         this.say(o.result === 'match' ? '→ 吻合。' : o.result === 'conflict' ? '→ 矛盾。' : '→ 看不出關聯。');
@@ -174,7 +191,7 @@ export class TextGame {
         if (this.debug) this.say(`　〔除錯：${this.name(o.character)} ${o.from} → ${o.to}${o.auto ? '（自動）' : ''}〕`);
         break;
       case 'challengeRejected':
-        this.say('', '挑戰書被退回來了。');
+        this.say('', '這份推理站不住，被退回來了。');
         for (const id of o.fields) {
           const f = this.content.endings.challenge.fields.find((x) => x.id === id);
           if (f) this.say(`　${f.hint}`);
@@ -191,6 +208,11 @@ export class TextGame {
       case 'invalid':
         this.say(`（不行：${o.reason}）`);
         break;
+      case 'image': {
+        const item = this.item(o.item);
+        if (item?.image) this.showPhoto(item.image);
+        break;
+      }
       case 'app':
       case 'thread':
         break;
@@ -201,6 +223,10 @@ export class TextGame {
 
   private back(label = '回主畫面'): Choice {
     return { label, run: () => (this.screen = this.home) };
+  }
+
+  private toSuru(label = '回 Suru'): Choice {
+    return { label, run: () => (this.screen = this.suru) };
   }
 
   private costTag(cost: number): string {
@@ -217,8 +243,6 @@ export class TextGame {
     for (const l of m.locate) {
       list.push({ label: `用「${this.appName(l.app)}」定位${this.costTag(l.cost)}`, run: () => this.act({ type: 'locate', app: l.app }) });
     }
-    if (m.tests.length) list.push({ label: '拿一張牌去問人', run: () => (this.screen = this.testCards) });
-    if (m.challenge) list.push({ label: '寫挑戰書', run: () => this.startChallenge() });
     return list;
   };
 
@@ -242,11 +266,35 @@ export class TextGame {
     if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended' || this.state.prompt) return;
     if (app.view === 'chat') this.screen = this.threads;
     else if (app.view === 'assistant') this.screen = this.suru;
+    else if (app.view === 'contacts') this.cast();
     else if (app.view === 'none' || app.view === 'utility') this.say(app.emptyText ?? '（這裡沒有她留下的東西。）');
     else {
-      const visible = this.content.items.filter((i) => i.app === id && !i.thread && this.state.seen.includes(i.id));
+      const visible = this.content.items.filter((i) => i.app === id && !i.thread && this.shown(i.id));
       for (const item of visible) this.detail(item);
+      // 有照片的 App 停在裡面，讓玩家可以一張一張點開
+      if (visible.some((i) => i.image)) {
+        this.say('', '（照片可以點開看。）');
+        this.screen = () => this.appScreen(id);
+      }
     }
+  }
+
+  /** 已經出現在玩家眼前的 item（含照片還沒點開的） */
+  private shown(id: string): boolean {
+    return this.state.seen.includes(id) || this.state.unopened.includes(id);
+  }
+
+  private photoChoice(item: Item): Choice {
+    const opened = this.state.viewedImages.includes(item.id);
+    return {
+      label: `看照片「${item.image?.label ?? '照片'}」${item.when ? `（${item.when}）` : ''}${opened ? '［看過］' : ''}`,
+      run: () => this.act({ type: 'viewImage', item: item.id }),
+    };
+  }
+
+  private appScreen(id: string): Choice[] {
+    const photos = this.content.items.filter((i) => i.app === id && !i.thread && i.image && this.shown(i.id));
+    return [...photos.map((i) => this.photoChoice(i)), { label: '回 App 列表', run: () => (this.screen = this.apps) }, this.back()];
   }
 
   private threads = (): Choice[] => {
@@ -275,13 +323,14 @@ export class TextGame {
     const line = (m: Message | AppendedMessage, when: string) => {
       const texts = Array.isArray(m.text) ? m.text : m.text ? [m.text] : [];
       for (const t of texts) this.say(`${when}${this.name(m.from)}：${t}`);
-      if (m.image) this.say(`${when}${this.name(m.from)}：〔圖：${m.image.description}〕`);
+      if (m.image) this.say(`${when}${this.name(m.from)}：${this.photoTag(m.image)}`);
       if ('signal' in m) this.say(...this.signal(m.signal));
     };
     // 舊訊息只在第一次讀的時候整段印出來，之後只印開局後的新訊息
     if (first) for (const m of thread?.history ?? []) line(m, `${m.when}　`);
     else this.say('（舊訊息略）');
     for (const m of this.state.threads[id]?.appended ?? []) line(m, '');
+    if ([...(thread?.history ?? []), ...(this.state.threads[id]?.appended ?? [])].some((m) => m.image)) this.say('', '（照片可以點開看。）');
     const outcomes = this.act({ type: 'readThread', thread: id });
     if (outcomes.some((o) => o.kind === 'invalid') || this.state.phase === 'ended' || this.state.prompt) return;
     this.screen = () => this.threadScreen(id);
@@ -300,6 +349,21 @@ export class TextGame {
         });
       }
     }
+    // 這個聊天室裡的照片：有對應 item 的走規則（點開才可能算看過），其餘只是看一眼
+    const thread = this.content.threads.find((t) => t.id === id);
+    for (const msg of thread?.history ?? []) {
+      if (!msg.image) continue;
+      const item = msg.item ? this.item(msg.item) : undefined;
+      if (item?.image) list.push(this.photoChoice(item));
+      else {
+        const image = msg.image;
+        list.push({ label: `看照片「${image.label ?? '照片'}」（${msg.when}）`, run: () => this.showPhoto(image) });
+      }
+    }
+    for (const msg of this.state.threads[id]?.appended ?? []) {
+      const image = msg.image;
+      if (image) list.push({ label: `看照片「${image.label ?? '照片'}」`, run: () => this.showPhoto(image) });
+    }
     list.push({ label: '回聊天室列表', run: () => (this.screen = this.threads) }, this.back());
     return list;
   }
@@ -311,9 +375,12 @@ export class TextGame {
       { label: '時間軸', run: () => this.showList('時間軸', memo(this.content, this.state).timeline) },
       { label: '紀錄', run: () => this.showList('紀錄', memo(this.content, this.state).records) },
       { label: '說法', run: () => this.showList('說法', memo(this.content, this.state).statements) },
-      { label: '手上的牌', run: () => this.showCards() },
+      { label: '疑點', run: () => this.showCards() },
     ];
     if (m.compare) list.push({ label: '比對一則說法和一筆紀錄', run: () => (this.screen = this.pickStatement) });
+    // 疑點、拿疑點去試探人、指認兇手都收在助理 App 裡，主畫面不放
+    if (m.tests.length) list.push({ label: '試探某個人（拿疑點去問）', run: () => (this.screen = this.probeWho) });
+    if (m.challenge) list.push({ label: '指認兇手', run: () => this.startChallenge() });
     list.push(this.back());
     return list;
   };
@@ -329,8 +396,8 @@ export class TextGame {
   }
 
   private showCards() {
-    this.say('', '── 手上的牌 ──');
-    if (this.state.cards.length === 0) this.say('（還沒有牌。在備忘錄裡找到矛盾，或看到某些東西，就會拿到。）');
+    this.say('', '── 疑點 ──');
+    if (this.state.cards.length === 0) this.say('（還沒有疑點。在備忘錄裡比對出矛盾，或看到某些東西，就會發現。發現的疑點可以拿去試探人。）');
     for (const id of this.state.cards) {
       const card = this.content.cards.find((c) => c.id === id);
       if (card) this.say(`・${card.title}：「${card.say}」`);
@@ -377,41 +444,45 @@ export class TextGame {
     ];
   }
 
-  private testCards = (): Choice[] => {
+  // 試探：先選人，再選要對他說哪一句（每一句背後是一個疑點）
+  private probeWho = (): Choice[] => {
     const m = this.engine.menu(this.state);
-    return [
-      ...m.tests.map((t) => {
-        const card = this.content.cards.find((c) => c.id === t.card);
-        return { label: `${card?.title ?? t.card}：「${card?.say ?? ''}」`, run: () => (this.screen = () => this.testTargets(t.card)) };
-      }),
-      this.back(),
-    ];
+    const people = this.content.characters.map((c) => c.id).filter((id) => m.tests.some((t) => t.targets.includes(id)));
+    return [...people.map((id) => ({ label: this.name(id), run: () => (this.screen = () => this.probeWhat(id)) })), this.toSuru()];
   };
 
-  private testTargets(cardId: string): Choice[] {
+  private probeWhat(target: string): Choice[] {
     const m = this.engine.menu(this.state);
-    const t = m.tests.find((x) => x.card === cardId);
-    const where = t?.thread ? `在「${this.threadTitle(t.thread)}」` : '私訊';
     return [
-      ...(t?.targets ?? []).map((target) => ({
-        label: `${where}問${this.name(target)}${this.costTag(t?.cost ?? 0)}`,
-        run: () => {
-          this.say('');
-          this.act({ type: 'test', card: cardId, target });
-          this.screen = this.home;
-        },
-      })),
-      { label: '換一張牌', run: () => (this.screen = this.testCards) },
+      ...m.tests
+        .filter((t) => t.targets.includes(target))
+        .flatMap((t) => {
+          const card = this.content.cards.find((c) => c.id === t.card);
+          if (!card) return [];
+          const where = t.thread ? `在「${this.threadTitle(t.thread)}」裡問` : '私訊';
+          return [
+            {
+              label: `「${card.sayTo?.[target] ?? card.say}」（${card.title}，${where}）${this.costTag(t.cost)}`,
+              run: () => {
+                this.say('');
+                this.screen = this.suru;
+                this.act({ type: 'test', card: t.card, target });
+              },
+            },
+          ];
+        }),
+      { label: '換一個人', run: () => (this.screen = this.probeWho) },
     ];
   }
 
-  // 挑戰書：是誰 → 四欄各選紀錄 → 交給誰
+  // 推理（資料裡叫挑戰書）：是誰 → 四欄各選紀錄 → 交給誰
   private startChallenge() {
     const ch = this.content.endings.challenge;
-    this.say('', '── 挑戰書 ──', ch.whoPrompt);
+    // 開頭的說明是劇情文字，從資料檔讀
+    this.say('', '── 指認兇手 ──', ...(ch.intro ?? []), '', ch.whoPrompt);
     this.screen = () => [
       ...ch.suspects.map((id) => ({ label: this.name(id), run: () => this.challengeField(id, 0, {}) })),
-      this.back('先不寫'),
+      this.toSuru('先不指認'),
     ];
   }
 
@@ -419,16 +490,16 @@ export class TextGame {
     const ch = this.content.endings.challenge;
     const field = ch.fields[index];
     if (!field) {
-      this.say('', '把這些交給誰？');
+      this.say('', '證據要交給誰？交出去就不能收回。');
       this.screen = () => [
         ...ch.recipients.map((id) => ({
-          label: this.name(id),
+          label: `把證據交給${this.name(id)}`,
           run: () => {
             this.screen = this.home;
             this.act({ type: 'submitChallenge', accused, fields, givenTo: id });
           },
         })),
-        this.back('先不交'),
+        this.toSuru('先不交'),
       ];
       return;
     }
@@ -454,7 +525,7 @@ export class TextGame {
           });
         }
       }
-      list.push(this.back('先不寫'));
+      list.push(this.toSuru('先不指認'));
       return list;
     };
   }

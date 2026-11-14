@@ -45,6 +45,7 @@ export function concreteActions(engine: Engine, s: GameState): Action[] {
   for (const a of m.apps) if (!a.opened) list.push({ type: 'openApp', app: a.app });
   for (const t of m.threads) if (!t.read) list.push({ type: 'readThread', thread: t.thread });
   for (const l of m.locate) list.push({ type: 'locate', app: l.app });
+  for (const item of m.images) if (!s.viewedImages.includes(item)) list.push({ type: 'viewImage', item });
   for (const r of m.replies) for (const option of r.options) list.push({ type: 'reply', event: r.event, option });
   for (const t of m.tests) for (const target of t.targets) list.push({ type: 'test', card: t.card, target });
   for (const l of engine.content.links) {
@@ -126,7 +127,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
     const options = profile === 'silent' ? everything.filter((a) => !isMessage(a)) : everything;
     const fields = correctFields(content, s);
     if (fields && run.solvableAt === null) run.solvableAt = s.spent;
-    const costly = options.filter((a) => a.type !== 'compare');
+    const costly = options.filter((a) => a.type !== 'compare' && a.type !== 'viewImage');
     const canChallenge = engine.menu(s).challenge !== null;
 
     let action: Action | null = null;
@@ -134,7 +135,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
       const ready = (accused !== ch.culprit || fields !== null) && goalFlags.every(([flag, value]) => (s.flags[flag] ?? false) === value);
       const nothingLeft = costly.length === 0;
       // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
-      if (!fields && everything.every((a) => a.type === 'compare')) run.softDead = true;
+      if (!fields && everything.every((a) => a.type === 'compare' || a.type === 'viewImage')) run.softDead = true;
       if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) {
         const records = engine.menu(s).challenge!.records;
         const anyFields = Object.fromEntries(ch.fields.map((f) => [f.id, [pick(records)]]));
@@ -149,7 +150,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
         run.stuck = true;
         break;
       }
-      const compares = options.filter((a) => a.type === 'compare');
+      const compares = options.filter((a) => a.type === 'compare' || a.type === 'viewImage');
       const reading = options.filter((a) => a.type === 'openApp' || a.type === 'readThread' || a.type === 'locate');
       const messages = options.filter(isMessage);
       const toGoal = options.filter(setsGoalFlag);
@@ -170,7 +171,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
       else if (profile === 'talker' && messages.length && rand() < 0.8) action = pick(messages);
       else if ((profile === 'calm' || profile === 'provoke') && rand() < 0.85) {
         const sign = profile === 'calm' ? 1 : -1;
-        const pool = profile === 'calm' && reading.length && rand() < 0.5 ? reading : options.filter((a) => a.type !== 'compare');
+        const pool = profile === 'calm' && reading.length && rand() < 0.5 ? reading : costly;
         const scored = pool.map((a) => ({ a, score: sign * heat(engine, s, a) + rand() * 0.5 }));
         scored.sort((x, y) => x.score - y.score);
         action = scored[0]?.a ?? pick(options);
@@ -206,6 +207,8 @@ const describe = (a: Action): string => {
       return `讀 ${a.thread}`;
     case 'locate':
       return `定位 ${a.app}`;
+    case 'viewImage':
+      return `看照片 ${a.item}`;
     case 'reply':
       return `回 ${a.event}:${a.option}`;
     case 'test':

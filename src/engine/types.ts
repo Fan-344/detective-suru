@@ -9,9 +9,14 @@ export interface Rules {
   maxPicksPerField: number;
   /** 某個結論隔多少電量沒有新進展，心聲就升一級。null 表示沿用 meta.battery.ladderTickEvery。 */
   voiceEvery: number | null;
+  /**
+   * true：有照片的 item 要點開照片才算看過（才進備忘錄、才會帶出疑點）。
+   * false：讀到那則訊息或打開那個 App 就算看過，點開照片只是看細節。
+   */
+  imagesMustBeOpened: boolean;
 }
 
-export const DEFAULT_RULES: Rules = { maxPicksPerField: 2, voiceEvery: null };
+export const DEFAULT_RULES: Rules = { maxPicksPerField: 2, voiceEvery: null, imagesMustBeOpened: true };
 
 /** 遊戲開始後才出現在聊天室裡的訊息 */
 export interface AppendedMessage {
@@ -36,6 +41,10 @@ export interface GameState {
   spent: number;
   /** 看過的 item，依看到的先後 */
   seen: ItemId[];
+  /** 已經出現在眼前、但照片還沒點開，所以還不算看過的 item（只在 imagesMustBeOpened 時會有） */
+  unopened: ItemId[];
+  /** 點開過照片的 item */
+  viewedImages: ItemId[];
   ladder: Record<CharacterId, number>;
   flags: Record<string, boolean>;
   openedApps: AppId[];
@@ -85,6 +94,8 @@ export type Action =
   | { type: 'openApp'; app: AppId }
   | { type: 'readThread'; thread: ThreadId }
   | { type: 'locate'; app: AppId }
+  /** 點開某個 item 的照片。不耗電。 */
+  | { type: 'viewImage'; item: ItemId }
   | { type: 'reply'; event: EventId; option: string }
   | { type: 'compare'; statement: ItemId; record: ItemId }
   | { type: 'test'; card: CardId; target: CharacterId }
@@ -104,6 +115,7 @@ export type Outcome =
   | { kind: 'app'; app: AppId; first: boolean }
   | { kind: 'thread'; thread: ThreadId; first: boolean }
   | { kind: 'items'; items: ItemId[] }
+  | { kind: 'image'; item: ItemId }
   | { kind: 'sent'; thread: ThreadId; text: string }
   | { kind: 'message'; thread: ThreadId; from: CharacterId; text: string[]; image?: ImageRef; signal?: Signal; event?: EventId }
   | { kind: 'link'; statement: ItemId; record: ItemId; result: 'match' | 'conflict' | 'none' }
@@ -132,6 +144,8 @@ export interface Menu {
   apps: { app: AppId; opened: boolean; cost: number }[];
   threads: { thread: ThreadId; read: boolean; cost: number }[];
   locate: { app: AppId; cost: number }[];
+  /** 現在可以點開照片的 item（含已經點開過的） */
+  images: ItemId[];
   replies: { event: EventId; thread: ThreadId; options: string[]; cost: number }[];
   tests: { card: CardId; thread: ThreadId | null; targets: CharacterId[]; cost: number }[];
   compare: { statements: ItemId[]; records: ItemId[] } | null;

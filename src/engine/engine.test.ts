@@ -228,6 +228,9 @@ describe('engine', () => {
   it('挑戰書：指錯人直接進結局；指對人但欄位沒選對就退回並扣電', () => {
     const s = run(afterCover(), [
       { type: 'openApp', app: 'photos' },
+      { type: 'viewImage', item: 'ph_compare' },
+      { type: 'viewImage', item: 'ph_ipad' },
+      { type: 'viewImage', item: 'ph_boxes' },
       { type: 'openApp', app: 'weather' },
       { type: 'openApp', app: 'sms' },
     ]).state;
@@ -268,6 +271,34 @@ describe('engine', () => {
     const m = memo(content, s);
     expect([...m.records, ...m.statements, ...m.timeline].map((i) => i.id)).not.toContain(flavor.id);
     expect(engine.menu(s).challenge?.records ?? []).not.toContain(flavor.id);
+  });
+
+  it('點開照片不耗電；照片要點開才算看過的規則打開時，沒點開就不進備忘錄、也不會帶出疑點', () => {
+    const photo = content.threads.flatMap((t) => t.history.flatMap((m) => (m.image && m.item ? [{ thread: t.id, item: m.item }] : []))).find((x) => content.cards.some((c) => c.availableWhen?.seen?.includes(x.item)));
+    if (!photo) return;
+    const card = content.cards.find((c) => c.availableWhen?.seen?.includes(photo.item))!;
+
+    // 規則關掉：讀到就算看過，點開只是看細節
+    const relaxed = createEngine(content, { ...engine.rules, imagesMustBeOpened: false });
+    let loose = relaxed.step(relaxed.start(), { type: 'sendCover' }).state;
+    loose = relaxed.step(loose, { type: 'readThread', thread: photo.thread }).state;
+    expect(loose.seen).toContain(photo.item);
+    const looked = relaxed.step(loose, { type: 'viewImage', item: photo.item });
+    expect(looked.outcomes).toContainEqual({ kind: 'image', item: photo.item });
+    expect(looked.state.battery).toBe(loose.battery);
+
+    // 規則打開（預設）：要點開才算
+    const strict = createEngine(content, { ...engine.rules, imagesMustBeOpened: true });
+    let s = strict.step(strict.start(), { type: 'sendCover' }).state;
+    s = strict.step(s, { type: 'readThread', thread: photo.thread }).state;
+    expect(s.seen).not.toContain(photo.item);
+    expect(s.unopened).toContain(photo.item);
+    expect(s.cards).not.toContain(card.id);
+    expect(strict.menu(s).images).toContain(photo.item);
+    s = strict.step(s, { type: 'viewImage', item: photo.item }).state;
+    expect(s.seen).toContain(photo.item);
+    expect(s.unopened).not.toContain(photo.item);
+    expect(s.cards).toContain(card.id);
   });
 
   it('備忘錄分兩欄、時間軸照故事時間排；心聲只在結論還沒到達時出現', () => {
