@@ -2,7 +2,7 @@
 // 能做什麼、要扣多少電，一律問 engine；這裡只決定「怎麼排給畫面看」。
 
 import type { CaseContent, ImageRef, Item } from '../../content';
-import { memo, voice, type Engine, type GameState, type Menu } from '../../engine';
+import { memo, spotOf, type Engine, type GameState, type Menu } from '../../engine';
 import { S } from '../strings';
 import type {
   AccuseData,
@@ -24,8 +24,11 @@ import type {
   MusicTrack,
   PhoneData,
   PhotoPost,
+  SuruConcern,
   SuruData,
   SuruMemoItem,
+  SuruProbe,
+  SuruThoughts,
   SuruNotice,
 } from '../types';
 import { PHOTO_OF_ITEM, PHOTO_OF_MESSAGE, photoKeyOfFile } from './assetMap';
@@ -119,7 +122,7 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     const revealed = Math.min(ui.revealed[t.id] ?? 0, appended.length);
     const messages: ChatMessage[] = t.history.map((m, i) => {
       const { day, time } = splitWhen(m.when);
-      return { id: `${t.id}-h${i}`, from: m.from, day, time, text: m.text, image: m.image ? toImage(m.image, `${t.id}-h${i}`, m.item, `${t.id}#${i}`) : undefined };
+      return { id: `${t.id}-h${i}`, itemId: m.item, from: m.from, day, time, text: m.text, image: m.image ? toImage(m.image, `${t.id}-h${i}`, m.item, `${t.id}#${i}`) : undefined };
     });
     appended.slice(0, revealed).forEach((m, i) => {
       m.text.forEach((text, j) => messages.push({ id: `${t.id}-a${i}-${j}`, from: m.from, day: S.today, time: '', text }));
@@ -172,7 +175,9 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
   for (const c of content.characters) {
     const dm = content.threads.find((t) => t.members.length === 1 && t.members[0] === c.id);
     // 自介是這個人自己寫的話，資料檔有寫（Character.bio）才顯示
-    profiles.push({ id: c.id, name: c.name, avatar: c.id, bio: c.bio, threadId: dm?.id });
+    // 自介如果同時是一筆說法（可以拿去比對），顯示那一筆的內文
+    const bio = (c.bioItem ? itemOf.get(c.bioItem)?.body : undefined) ?? c.bio;
+    profiles.push({ id: c.id, name: c.name, avatar: c.id, bio, threadId: dm?.id });
   }
   for (const t of threads) {
     for (const m of t.members) {
@@ -242,9 +247,12 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
   // ── 相簿類 ──
   const galleries: Record<string, GalleryItem[]> = {};
   for (const a of content.apps.apps.filter((x) => x.view === 'gallery')) {
+    // 像一般手機相簿一樣照拍攝時間排，新的在前面；同一個時間的維持資料檔裡的順序
     galleries[a.id] = content.items
       .filter((i): i is Item & { image: ImageRef } => i.app === a.id && !i.thread && !!i.image && shown(i.id))
-      .map((i) => ({ id: i.id, when: i.when ?? '', caption: i.kind === 'statement' ? i.body : (i.title ?? i.body), image: toImage(i.image, i.id, i.id) }));
+      .map((i, order) => ({ item: i, order, key: feedSortKey(i.when ?? '') ?? Number.NEGATIVE_INFINITY }))
+      .sort((x, y) => y.key - x.key || x.order - y.order)
+      .map(({ item: i }) => ({ id: i.id, when: i.when ?? '', caption: i.kind === 'statement' ? i.body : (i.title ?? i.body), image: toImage(i.image, i.id, i.id) }));
   }
 
   // ── 照片社群動態牆（Instory）：四個人發的動態加上無關的貼文，由新到舊 ──
@@ -350,11 +358,13 @@ interface Names {
 }
 
 /**
- * 動態牆排序用：把「週六 22:30」「上週四 15:20」換成可以比大小的數字，越新越大。
+ * 動態牆和相簿排序用：把「週六 22:30」「上週四 15:20」換成可以比大小的數字，越新越大。
  * 只用來決定貼文的上下順序，不是遊戲規則。看不懂的寫法回傳 null。
  */
 function feedSortKey(when: string): number | null {
-  const m = /^(上)?週([一二三四五六日])(?:\s+(\d{1,2}):(\d{2}))?/.exec(when);
+  // 「較早」是案發那一週之前，排在最舊
+  if (when.startsWith('較早')) return -100 * 1440;
+  const m = /^(上)?週([一二三四五六日])(?:\s+(?:約)?(\d{1,2}):(\d{2}))?/.exec(when);
   if (!m) return null;
   // 以助理醒來的週一為第 0 天：週四到週日是前幾天，「上週」再往前七天
   const offset: Record<string, number> = { 四: -4, 五: -3, 六: -2, 日: -1, 一: 0, 二: 1, 三: 2 };
@@ -378,7 +388,6 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
     when: item.when ?? '',
     body: item.kind === 'record' && item.title ? firstLine(item.body) : undefined,
   });
-  const log = ui.voiceLog;
   const ch = content.endings.challenge;
   const ask = menu.challenge?.ask;
   const steps: AccuseStep[] = [
@@ -396,8 +405,71 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
     choices: ask && ask.question !== null && ask.question !== 'who' ? ask.options.flatMap((id) => (n.itemOf.get(id) ? [toMemo(n.itemOf.get(id) as Item)] : [])) : [],
     available: !!menu.challenge,
   };
+  // 「再想想」：規則給出每個疑點已經給過的句子、還有沒有下一句
+  const thoughtsOf = (cardId: string): SuruThoughts => {
+    const t = menu.thoughts.find((x) => x.card === cardId);
+    return { hints: t?.shown ?? [], canThink: !!t?.more, thinkCost: t?.cost ?? 0 };
+  };
+  const probe: SuruProbe = {
+    people: content.characters.flatMap((c, mark) => {
+      const sentences = menu.tests
+        .filter((t) => t.targets.includes(c.id))
+        .flatMap((t) => {
+          const card = content.cards.find((x) => x.id === t.card);
+          const text = card ? (card.sayTo?.[c.id] ?? card.say) : undefined;
+          if (!card || !text) return [];
+          return [
+            {
+              card: card.id,
+              text,
+              title: card.title,
+              where: t.thread ? S.probeIn.replace('{thread}', n.threadTitle(t.thread)) : S.probeDm,
+              cost: t.cost,
+              threadId: engine.testThread(card, c.id),
+            },
+          ];
+        });
+      return sentences.length ? [{ id: c.id, name: c.name, mark, sentences }] : [];
+    }),
+  };
+  const cards = state.cards.flatMap((id) => {
+    const index = content.cards.findIndex((c) => c.id === id);
+    const card = content.cards[index];
+    if (!card) return [];
+    const asked = state.cardsUsed.filter((u) => u.startsWith(`${id}>`)).map((u) => n.nameOf(u.slice(id.length + 1)));
+    const thinkOnly = !!menu.thoughts.find((x) => x.card === id)?.thinkOnly;
+    const targets = probe.people.flatMap((p) => {
+      const sentence = p.sentences.find((x) => x.card === id);
+      return sentence ? [{ id: p.id, name: p.name, avatar: p.id, text: sentence.text, where: sentence.where, cost: sentence.cost, threadId: sentence.threadId }] : [];
+    });
+    return [{ id, no: index + 1, title: card.title, note: asked.length ? `${S.askedPrefix}${asked.join('、')}` : undefined, thinkOnly, targets, ...thoughtsOf(id) }];
+  });
+  const concerns: SuruConcern[] = menu.concerns.flatMap((c) => {
+    const card = content.cards.find((x) => x.id === c.card);
+    const spot = card ? spotOf(card) : null;
+    const item = n.itemOf.get(c.item);
+    if (!spot || !item) return [];
+    return [
+      {
+        card: c.card,
+        prompt: spot.prompt,
+        item: {
+          // 這裡只給那一筆資料的原貌，不露出疑點的標題（那會洩漏答案）
+          title: labelOf(item, n.nameOf),
+          when: item.when,
+          lines: item.kind === 'record' ? item.body.split('\n') : undefined,
+          fields: item.fields,
+          image: item.image ? toImage(item.image, item.id, item.id) : undefined,
+        },
+        options: spot.options.filter((o) => c.options.includes(o.id)),
+        missCost: c.missCost,
+        ...thoughtsOf(c.card),
+      },
+    ];
+  });
   return {
-    voice: [...log].reverse().map((v, i) => ({ id: v.id, text: v.text, isNew: log.length - 1 - i >= ui.voiceRead })),
+    // 心聲已經取消，改成每個疑點自己的「再想想」
+    voice: [],
     // 時間軸由遊戲規則算好：只放看過的、標成「發生的事」的那幾列，已照時間排好。
     // 畫面只顯示大概的時段（label）和這一列講的是誰（who），確切時刻不給玩家看
     timeline: m.timeline.map((row) => ({
@@ -408,24 +480,9 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
     })),
     records: m.records.map(toMemo),
     statements: m.statements.map(toMemo),
-    cards: state.cards.flatMap((id) => {
-      const index = content.cards.findIndex((c) => c.id === id);
-      const card = content.cards[index];
-      if (!card) return [];
-      const asked = state.cardsUsed.filter((u) => u.startsWith(`${id}>`)).map((u) => n.nameOf(u.slice(id.length + 1)));
-      return [{ no: index + 1, title: card.title, note: asked.length ? `${S.askedPrefix}${asked.join('、')}` : undefined }];
-    }),
+    cards,
+    concerns,
+    probe,
     accuse,
   };
-}
-
-/** 現在該出現的心聲裡，還沒記進紀錄的 */
-export function newVoiceLines(engine: Engine, state: GameState, ui: GameUi): { id: string; text: string }[] {
-  if (state.phase !== 'play') return [];
-  const have = new Set(ui.voiceLog.map((v) => v.id));
-  const lines = voice(engine, state);
-  // 規則會同時給出很多句（每個還沒查清楚的結論各一句）。一次全丟給玩家只會被無視，
-  // 所以綁結論的問題一次只問一個：照資料檔的順序，前一個有進展了才換下一個。
-  const current = lines.find((l) => l.conclusion);
-  return lines.filter((l) => !l.conclusion || l === current).filter((l) => !have.has(l.id)).map((l) => ({ id: l.id, text: l.text }));
 }

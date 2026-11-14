@@ -103,6 +103,8 @@ export interface ChatMessage {
   image?: ImagePlaceholder;
   /** 不是訊息，而是夾在訊息之間的一行小字（例如「已讀後過了很久才回」） */
   note?: string;
+  /** 這則舊訊息同時是資料裡的一筆（線索）。捲進畫面時要告訴遊戲規則「看到了」 */
+  itemId?: string;
 }
 
 export interface ReplyOption {
@@ -194,6 +196,49 @@ export interface SuruMemoItem {
   body?: string;
 }
 
+/** 「再想想」：已經給過的提示，以及還能不能再要一句 */
+export interface SuruThoughts {
+  hints: string[];
+  canThink: boolean;
+  thinkCost: number;
+}
+
+/** 手上的一個疑點 */
+export interface SuruDoubt extends SuruThoughts {
+  id: string;
+  no: number;
+  title: string;
+  /** 問過誰（顯示用的文字） */
+  note?: string;
+  /** 只能自己想、不能拿去問人 */
+  thinkOnly: boolean;
+  /** 現在可以拿這個疑點去問的人，以及會送出的那句話 */
+  targets: { id: string; name: string; avatar?: string; text: string; where: string; cost: number; threadId: string | null }[];
+}
+
+/** 助理在意、但還沒成為疑點的地方：要玩家指出是那筆資料的哪個細節 */
+export interface SuruConcern extends SuruThoughts {
+  card: string;
+  /** 那一筆資料的原貌 */
+  item: ListDetail;
+  /** 助理問的那句 */
+  prompt?: string;
+  /** 還可以指的細節 */
+  options: { id: string; text: string }[];
+  missCost: number;
+}
+
+/** 試探：可以問誰、可以對他說哪幾句 */
+export interface SuruProbe {
+  people: {
+    id: string;
+    name: string;
+    /** 人物記號的編號 */
+    mark: number;
+    sentences: { card: string; text: string; title: string; where: string; cost: number; threadId: string | null }[];
+  }[];
+}
+
 /** Suru 助理裡的內容：心聲（最新的排最前面）和推理備忘錄 */
 /** 人物背景：幾行前言，加上每個人的一段簡介 */
 export interface CastData {
@@ -236,7 +281,9 @@ export interface SuruData {
   timeline: SuruTimelineRow[];
   records: SuruMemoItem[];
   statements: SuruMemoItem[];
-  cards: { no: number; title: string; note?: string }[];
+  cards: SuruDoubt[];
+  concerns: SuruConcern[];
+  probe: SuruProbe;
   accuse: AccuseData;
 }
 
@@ -333,11 +380,19 @@ export interface PhoneActions {
   onOpenApp(appId: string): void;
   onDismissNotice(): void;
   onAccuseAnswer(stepId: string, value: string): void;
+  onSpot(card: string, option: string): void;
+  onProbe(card: string, target: string): void;
+  /** 對某個疑點（或在意的地方）按了「再想想」 */
+  onThink(card: string): void;
   onLocate(deviceId: string): void;
   /** 玩家點開了某一筆的照片 */
   onViewImage(itemId: string): void;
   /** 在個人頁面按了通話 */
   onCall(memberId: string): void;
+  /** 聊天室裡這幾則舊訊息捲進畫面了 */
+  onSeeMessages(threadId: string, itemIds: string[]): void;
+  /** 打開了某個人的個人頁面 */
+  onViewProfile(memberId: string): void;
   /** 玩家換了畫面（開了哪個 App、哪一層） */
   onNavigate(nav: Nav): void;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { avatarUrl, photoUrl } from '../assets';
 import { groupByDay, lastLine, unreadLabel } from '../format';
 import { S } from '../strings';
@@ -116,15 +116,51 @@ interface RoomProps {
   onZoom?: ZoomFn;
   /** 點了某個人的頭像 */
   onProfile?(memberId: string): void;
+  /** 這幾則是線索的舊訊息捲進畫面了 */
+  onSeen?(itemIds: string[]): void;
 }
 
 /** 聊天室：舊訊息、已讀時間、輸入中提示，底部是回覆選項或預先填好的輸入框 */
-export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onProfile }: RoomProps) {
+export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onProfile, onSeen }: RoomProps) {
   const scroller = useRef<HTMLDivElement>(null);
+  // 聊天室一打開停在最新的訊息。上面還有舊訊息時，頂端給一個提示，點一下往上翻一頁
+  const [older, setOlder] = useState(false);
+  // 哪些是線索的舊訊息已經回報過「看到了」
+  const reported = useRef(new Set<string>());
+  const reportSeen = () => {
+    const el = scroller.current;
+    if (!el || !onSeen) return;
+    const box = el.getBoundingClientRect();
+    const fresh: string[] = [];
+    el.querySelectorAll<HTMLElement>('[data-item]').forEach((node) => {
+      const id = node.dataset.item as string;
+      if (reported.current.has(id)) return;
+      const r = node.getBoundingClientRect();
+      // 量不到高度時（測試環境沒有排版）當作都看得到；否則要有一半以上在畫面裡才算
+      const half = (r.top + r.bottom) / 2;
+      if (box.height === 0 || (half >= box.top && half <= box.bottom)) fresh.push(id);
+    });
+    if (fresh.length === 0) return;
+    fresh.forEach((id) => reported.current.add(id));
+    onSeen(fresh);
+  };
+  const checkOlder = () => {
+    const el = scroller.current;
+    if (el) setOlder(el.scrollTop > 24);
+    reportSeen();
+  };
   useEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
+    checkOlder();
   }, [thread.id, thread.messages.length, thread.typing]);
+  const pageUp = () => {
+    const el = scroller.current;
+    if (!el) return;
+    const top = Math.max(0, el.scrollTop - el.clientHeight * 0.8);
+    if (typeof el.scrollTo === 'function') el.scrollTo({ top, behavior: 'smooth' });
+    else el.scrollTop = top;
+  };
 
   const nameOf = (id: string) => thread.members.find((m) => m.id === id)?.name ?? '';
   const avatarOf = (id: string) => thread.members.find((m) => m.id === id)?.avatar;
@@ -133,7 +169,13 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
 
   return (
     <div className="room">
-      <div className="room__scroll" ref={scroller}>
+      {older && (
+        <button className="room__older" onClick={pageUp}>
+          <span aria-hidden="true">↑ </span>
+          {S.olderMessages}
+        </button>
+      )}
+      <div className="room__scroll" ref={scroller} onScroll={checkOlder}>
         {groupByDay(thread.messages).map((group, gi) => (
           <div key={`${group.day}-${gi}`}>
             <div className="room__day"><span>{group.day}</span></div>
@@ -145,7 +187,7 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
               const first = !prev || prev.from !== m.from;
               const tail = !next || next.from !== m.from || next.time !== m.time;
               return (
-                <div key={m.id} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'} ${first ? 'msg--first' : ''}`}>
+                <div key={m.id} data-item={m.itemId} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'} ${first ? 'msg--first' : ''}`}>
                   {!mine && (first ? <Avatar name={nameOf(m.from)} avatar={avatarOf(m.from)} onOpen={onProfile ? () => onProfile(m.from) : undefined} /> : <span className="avatar avatar--gap" />)}
                   <div className="msg__body">
                     {!mine && first && thread.group && <div className="msg__name">{nameOf(m.from)}</div>}

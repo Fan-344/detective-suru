@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '../layouts/Chat';
+import type { ZoomFn } from '../layouts/Chat';
 import { S } from '../strings';
-import type { SuruData, SuruMemoItem } from '../types';
+import type { SuruData } from '../types';
 import { Accuse } from './Accuse';
-import { SuruCard, SuruHeader, SuruMark } from './Suru';
+import { SuruHeader } from './Suru';
+import { DoubtView, Spot } from './Tools';
 
-type Tab = 'cards' | 'clues' | 'timeline';
+type Tab = 'cards' | 'timeline';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'cards', label: S.suruCards },
-  { id: 'clues', label: S.suruClues },
   { id: 'timeline', label: S.suruTimeline },
 ];
 
@@ -18,6 +19,11 @@ interface Props {
   data: SuruData;
   onClose(): void;
   onAccuseAnswer(stepId: string, value: string): void;
+  onSpot(card: string, option: string): void;
+  /** 送出試探的那句話，並跳到它送出的聊天室 */
+  onProbe(card: string, target: string, threadId: string | null): void;
+  onThink(card: string): void;
+  onZoom?: ZoomFn;
 }
 
 /** 同一個時段的列排在一起 */
@@ -31,41 +37,16 @@ function groupByTime(rows: SuruData['timeline']): { time: string; rows: SuruData
   return groups;
 }
 
-function Items({ label, items }: { label: string; items: SuruMemoItem[] }) {
-  return (
-    <section className="suru-clues">
-      <h2 className="suru-label">{label}</h2>
-      {items.length === 0 ? (
-        <p className="suru-empty">{S.suruEmpty}</p>
-      ) : (
-        <ul className="suru-items">
-          {items.map((item) => (
-            <li key={item.id}>
-              <span className="suru-items__meta">
-                <span>{item.source}</span>
-                <span>{item.when}</span>
-              </span>
-              <span className="suru-items__title">{item.title}</span>
-              {item.body && <span className="suru-items__body">{item.body}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 /**
- * Suru 助理：玩家自己的那一層，只放推理要用的三樣東西：疑點、線索（紀錄與說法）、時間軸，
- * 加上「指認兇手」的入口。心聲平常是從畫面上方跳出來的通知，這裡只留一行可以展開回顧。
- * 這裡只有長相和分頁，比對、試探等規則在步驟三才接。
+ * Suru 助理：玩家自己的那一層，放推理要用的兩樣東西：疑點（含還沒成立的「在意的地方」）和時間軸，
+ * 加上「指認兇手」的入口。這裡只負責顯示和收玩家的選擇，規則都在遊戲規則那邊。
  */
-export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
+export function SuruApp({ title, data, onClose, onAccuseAnswer, onSpot, onProbe, onThink, onZoom }: Props) {
   const [tab, setTab] = useState<Tab>('cards');
-  const [card, setCard] = useState<number | null>(null);
-  const [history, setHistory] = useState(false);
   const [accusing, setAccusing] = useState(false);
-  const latest = data.voice[0];
+  const [spotting, setSpotting] = useState<string | null>(null);
+  // 點進了哪一張疑點卡
+  const [viewing, setViewing] = useState<string | null>(null);
 
   // 題目全部答完、進度歸零時，回到助理的主畫面
   const answered = useRef(data.accuse.answers.length);
@@ -74,16 +55,44 @@ export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
     answered.current = data.accuse.answers.length;
   }, [data.accuse.answers.length]);
 
-  if (accusing) {
+  // 記住哪些曾經是「在意的地方」。它們變成疑點的那一刻，那張卡要翻面
+  const wasConcern = useRef(new Set<string>());
+  const [flipped, setFlipped] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const now = data.cards.filter((c) => wasConcern.current.has(c.id) && !flipped.has(c.id)).map((c) => c.id);
+    data.concerns.forEach((c) => wasConcern.current.add(c.card));
+    if (now.length) setFlipped((prev) => new Set([...prev, ...now]));
+    // 只在清單內容變動時檢查
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.cards.length, data.concerns.length]);
+
+  const concern = data.concerns.find((c) => c.card === spotting);
+  // 指對了，那一筆就不在「在意的地方」裡了：回到助理的主畫面
+  useEffect(() => {
+    if (spotting && !concern) setSpotting(null);
+  }, [spotting, concern]);
+  if (concern) {
+    return <Spot concern={concern} onBack={() => setSpotting(null)} onSpot={(option) => onSpot(concern.card, option)} onThink={() => onThink(concern.card)} onZoom={onZoom} />;
+  }
+
+  const doubt = data.cards.find((c) => c.id === viewing);
+  if (doubt) {
     return (
-      <Accuse
-        title={title}
-        data={data.accuse}
-        onBack={() => setAccusing(false)}
-        onAnswer={onAccuseAnswer}
+      <DoubtView
+        doubt={doubt}
+        onBack={() => setViewing(null)}
+        onThink={() => onThink(doubt.id)}
+        onAsk={(target, threadId) => {
+          setViewing(null);
+          onProbe(doubt.id, target, threadId);
+        }}
       />
     );
   }
+
+  if (accusing) return <Accuse title={title} data={data.accuse} onBack={() => setAccusing(false)} onAnswer={onAccuseAnswer} />;
+
+  const nothing = data.cards.length === 0 && data.concerns.length === 0;
 
   return (
     <section className="suru suru-app" aria-label={title}>
@@ -92,30 +101,13 @@ export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
         <button className="suru-app__close" onClick={onClose}>{S.suruClose}</button>
       </div>
 
-      {latest && (
-        <div className="suru-said">
-          <button className="suru-said__latest" onClick={() => setHistory(!history)} aria-expanded={history} aria-label={S.suruSaid}>
-            <SuruMark />
-            <span className="suru-said__text">{latest.text}</span>
-            <span className="suru-said__more" aria-hidden="true">{history ? '▴' : '▾'}</span>
-          </button>
-          {history && (
-            <ul className="suru-said__list">
-              {data.voice.slice(1).map((v) => (
-                <li key={v.id}>{v.text}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       <div className="suru-tabs" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
-            className={`suru-tabs__tab ${tab === t.id ? 'suru-tabs__tab--on' : ''}`}
+            className={'suru-tabs__tab' + (tab === t.id ? ' suru-tabs__tab--on' : '')}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -124,21 +116,25 @@ export function SuruApp({ title, data, onClose, onAccuseAnswer }: Props) {
       </div>
 
       <div className="suru-app__body" role="tabpanel">
-        {tab === 'cards' &&
-          (data.cards.length === 0 ? (
-            <p className="suru-empty">{S.suruEmpty}</p>
-          ) : (
-            <div className="suru-hand suru-hand--wrap">
+        {tab === 'cards' && (
+          <>
+            {nothing && <p className="suru-empty">{S.suruEmpty}</p>}
+            {/* 兩種卡片：「在意的地方」還沒成立，要先指出哪裡有問題；「疑點」已經成立，可以拿去問人。種類直接標在卡片上 */}
+            <div className="doubts">
+              {data.concerns.map((c) => (
+                <button key={c.card} className="doubt doubt--concern" onClick={() => setSpotting(c.card)}>
+                  <span className="doubt__kind doubt__kind--concern">{S.concernsLabel}</span>
+                  <span className="doubt__title">{c.item.title}</span>
+                </button>
+              ))}
               {data.cards.map((c) => (
-                <SuruCard key={c.no} {...c} selected={card === c.no} onClick={() => setCard(card === c.no ? null : c.no)} />
+                <button key={c.id} className={'doubt doubt--card' + (flipped.has(c.id) ? ' doubt--flip' : '')} onClick={() => setViewing(c.id)}>
+                  <span className="doubt__kind doubt__kind--card">{S.doubtsLabel}</span>
+                  <span className="doubt__title">{c.title}</span>
+                  <span className="doubt__no">{String(c.no).padStart(2, '0')}</span>
+                </button>
               ))}
             </div>
-          ))}
-
-        {tab === 'clues' && (
-          <>
-            <Items label={S.suruRecords} items={data.records} />
-            <Items label={S.suruStatements} items={data.statements} />
           </>
         )}
 

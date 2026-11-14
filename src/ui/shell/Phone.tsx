@@ -75,6 +75,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   // 個人頁面記在 detail 裡，前面加 @；從哪個聊天室點進來的另外記著，返回時回到那裡
   const [profileFrom, setProfileFrom] = useState<string | null>(null);
   const openProfile = (memberId: string, from: string | null) => {
+    actions.onViewProfile(memberId);
     setProfileFrom(from);
     go({ app: nav.app, detail: '@' + memberId }, 'push');
   };
@@ -163,6 +164,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           onSendPrefill={() => actions.onSendPrefill(thread.id)}
           onZoom={onZoom}
           onProfile={(memberId) => openProfile(memberId, thread.id)}
+          onSeen={(ids) => actions.onSeeMessages(thread.id, ids)}
         />
       );
     } else {
@@ -250,7 +252,24 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
       <div className="phone__stage" onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
         {app?.layout === 'suru' ? (
           <div key="suru" className="suruwrap">
-            <SuruApp title={app.name} data={data.suru} onClose={back} onAccuseAnswer={actions.onAccuseAnswer} />
+            <SuruApp
+              title={app.name}
+              data={data.suru}
+              onClose={back}
+              onAccuseAnswer={actions.onAccuseAnswer}
+              onSpot={actions.onSpot}
+              onThink={actions.onThink}
+              onZoom={onZoom}
+              onProbe={(card, target, threadId) => {
+                actions.onProbe(card, target);
+                // 送出之後直接跳到那個聊天室，看對方怎麼回
+                const chat = data.apps.find((x) => x.layout === 'chat');
+                if (chat && threadId) {
+                  actions.onOpenThread(threadId);
+                  go({ app: chat.id, detail: threadId }, 'open');
+                }
+              }}
+            />
           </div>
         ) : app ? (
           <section key={viewKey} className={`appwin appwin--${motion}`} aria-label={title}>

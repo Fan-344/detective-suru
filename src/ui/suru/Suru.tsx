@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import markUrl from '../assets/suru-mark.png';
 import { AppIcon } from '../shell/icons';
 import { S } from '../strings';
 
-// Suru 這一層的視覺零件：深色底、琥珀色、明體標題、對稱版面。
+// Suru 這一層的視覺零件：深色底、洋紅到青色的光帶（跟 App 圖示同一套）、無襯線字、對稱版面。
 // 用在開場、沒電，以及步驟三的備忘錄、測試面板、挑戰書。
 // 這裡只有長相，沒有任何遊戲規則。
 
-/** Suru 的記號：一個轉了 45 度的小方框 */
+/** Suru 的記號：就是 App 圖示上那條光帶，去掉了黑色的底 */
 export function SuruMark({ pulse = false }: { pulse?: boolean }) {
-  return <span className={`suru-mark ${pulse ? 'suru-mark--pulse' : ''}`} aria-hidden="true" />;
+  return (
+    <span className={'suru-mark' + (pulse ? ' suru-mark--pulse' : '')} aria-hidden="true">
+      <img src={markUrl} alt="" draggable={false} />
+    </span>
+  );
 }
 
 /** 頂端的抬頭：左右細線夾著字距拉開的標題，右側可放編號 */

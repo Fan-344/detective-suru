@@ -106,21 +106,15 @@ describe('外觀框架（假資料示範）', () => {
     expect(screen.queryByText(demo.cards[0].title)).toBeNull();
   });
 
-  it('Suru 助理：從圖示打開，有疑點、線索、時間軸三個分頁，收起後回主畫面', () => {
+  it('Suru 助理：從圖示打開，有疑點和時間軸兩個分頁，收起後回主畫面', () => {
     render(<App mode="mock" />);
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /Suru/ }));
     const suru = fixture.phone.suru;
-    expect(screen.getByText(suru.voice[0].text)).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
     expect(screen.getByText(suru.timeline[0].text!)).toBeTruthy();
     expect(screen.getAllByText(S.suruGap).length).toBe(2);
-    fireEvent.click(screen.getByRole('tab', { name: S.suruClues }));
-    expect(screen.getByText(suru.records[0].title)).toBeTruthy();
-    expect(screen.getByText(suru.statements[0].title)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: S.suruSaid }));
-    expect(screen.getByText(suru.voice[1].text)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
     expect(screen.getByRole('button', { name: /發票雲/ })).toBeTruthy();
   });
@@ -268,18 +262,5 @@ describe('外觀框架（假資料示範）', () => {
     fireEvent.click(screen.getByRole('button', { name: /聯絡人丁/ }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${S.zoomOpen}：圖片`) }));
     expect(screen.getByRole('button', { name: S.zoomClose })).toBeTruthy();
-  });
-
-  it('心聲像系統通知一樣跳出來，點一下收起', () => {
-    vi.useFakeTimers();
-    render(<App mode="mock" />);
-    passIntro();
-    expect(screen.queryByRole('status')).toBeNull();
-    act(() => {
-      vi.advanceTimersByTime(4100);
-    });
-    expect(screen.getByRole('status').textContent).toBe(fixture.phone.suru.voice[0].text);
-    fireEvent.click(screen.getByRole('button', { name: S.noticeDismiss }));
-    expect(screen.queryByRole('status')).toBeNull();
   });
 });

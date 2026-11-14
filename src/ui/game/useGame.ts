@@ -3,7 +3,7 @@ import { loadCase } from '../../content';
 import { createEngine, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
 import { S } from '../strings';
 import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
-import { buildPhoneData, EMPTY_UI, newVoiceLines, type GameUi } from './view';
+import { buildPhoneData, EMPTY_UI, type GameUi } from './view';
 
 // 把畫面接到遊戲規則上的控制器。
 // 規則全部在 src/engine：這裡只做三件事——把玩家的點擊變成動作交給 engine、
@@ -30,8 +30,8 @@ function boot(caseId: string): { engine: Engine } | { error: string } {
 let noticeSeq = 0;
 const notice = (text: string) => ({ id: (noticeSeq += 1), text });
 
-/** 每次狀態變了之後整理畫面這一側：自己送出的訊息立刻顯示、記下新的心聲、更新已讀位置 */
-function settle(engine: Engine, game: GameState, ui: GameUi, announce: boolean): GameUi {
+/** 每次狀態變了之後整理畫面這一側：自己送出的訊息立刻顯示、更新已讀位置 */
+function settle(engine: Engine, game: GameState, ui: GameUi): GameUi {
   const self = engine.content.meta.self?.id ?? '';
   const revealed = { ...ui.revealed };
   for (const [id, t] of Object.entries(game.threads)) {
@@ -40,26 +40,17 @@ function settle(engine: Engine, game: GameState, ui: GameUi, announce: boolean):
     revealed[id] = r;
   }
   const noticed = ui.openThread ? { ...ui.noticed, [ui.openThread]: revealed[ui.openThread] ?? 0 } : ui.noticed;
-  let next: GameUi = { ...ui, revealed, noticed };
-  const fresh = newVoiceLines(engine, game, next);
-  if (fresh.length) {
-    next = { ...next, voiceLog: [...next.voiceLog, ...fresh] };
-    // 一次冒出好幾句時只跳一則通知，其餘在 Suru 裡看
-    if (announce && !next.notice) next = { ...next, notice: notice(fresh[0].text) };
-  }
+  const next: GameUi = { ...ui, revealed, noticed };
   return next;
 }
 
 function reactTo(engine: Engine, ui: GameUi, outcomes: Outcome[]): GameUi {
   const content = engine.content;
-  let next = { ...ui, notice: undefined as GameUi['notice'] };
+  const next = { ...ui };
   for (const o of outcomes) {
     if (o.kind === 'wander' || o.kind === 'promptHint') next.notice = notice(o.text);
     else if (o.kind === 'invalid') next.notice = notice(o.reason);
-    else if (o.kind === 'cards' && o.via === 'found') {
-      const title = content.cards.find((c) => c.id === o.cards[0])?.title;
-      if (title) next.notice = notice(`${S.foundCard}${title}${S.foundCardHint}`);
-    } else if (o.kind === 'spot' && !o.right) {
+    else if (o.kind === 'spot' && !o.right) {
       const card = content.cards.find((c) => c.id === o.card);
       const miss = card ? spotOf(card)?.miss : undefined;
       if (miss) next.notice = notice(miss);
@@ -90,7 +81,7 @@ export function useGame(caseId = 'case01') {
   const act = (action: Action): Outcome[] => {
     if (!engine || !latest.current) return [];
     const { state, outcomes } = engine.step(latest.current.game, action);
-    update((s) => ({ game: state, ui: settle(engine, state, reactTo(engine, s.ui, outcomes), true) }));
+    update((s) => ({ game: state, ui: settle(engine, state, reactTo(engine, s.ui, outcomes)) }));
     return outcomes;
   };
 
@@ -102,7 +93,7 @@ export function useGame(caseId = 'case01') {
       update((s) => {
         const revealed = { ...s.ui.revealed };
         for (const [id, t] of Object.entries(s.game.threads)) if ((revealed[id] ?? 0) < t.appended.length) revealed[id] = (revealed[id] ?? 0) + 1;
-        return { game: s.game, ui: settle(engine, s.game, { ...s.ui, revealed }, false) };
+        return { game: s.game, ui: settle(engine, s.game, { ...s.ui, revealed }) };
       });
     }, MESSAGE_GAP);
     return () => window.clearTimeout(timer);
@@ -122,7 +113,9 @@ export function useGame(caseId = 'case01') {
       onOpenThread: (threadId) => {
         // 跟案情無關的聊天室不在規則裡，只是打開來看
         if (!engine?.content.threads.some((t) => t.id === threadId)) return;
-        if (playing()) act({ type: 'readThread', thread: threadId });
+        // 打開聊天室不等於整串都看過：先告訴規則「一則都還沒看到」，
+        // 聊天室畫出來之後，再由 onSeeMessages 回報實際在畫面上的那幾則
+        if (playing()) act({ type: 'readThread', thread: threadId, visible: [] });
       },
       onChooseReply: (_threadId, optionId) => {
         const [event, option] = optionId.split('::');
@@ -132,6 +125,17 @@ export function useGame(caseId = 'case01') {
         act({ type: 'sendCover' });
       },
       onOpenRow: () => {},
+      onSeeMessages: (threadId, itemIds) => {
+        const game = latest.current?.game;
+        if (!game || game.phase !== 'play' || itemIds.length === 0 || !game.readThreads.includes(threadId)) return;
+        // 已經算看過的不用再送
+        const fresh = itemIds.filter((id) => !game.seen.includes(id) && !game.unopened.includes(id));
+        if (fresh.length) act({ type: 'seeMessages', thread: threadId, items: fresh });
+      },
+      onViewProfile: (memberId) => {
+        // 只有案件裡的角色有個人頁面的規則；打開就算看過他的自介
+        if (playing() && engine?.content.characters.some((c) => c.id === memberId)) act({ type: 'viewProfile', character: memberId });
+      },
       onCall: () => update((s) => ({ game: s.game, ui: { ...s.ui, notice: notice(S.callBlocked) } })),
       onOpenSuru: () => update((s) => ({ game: s.game, ui: { ...s.ui, voiceRead: s.ui.voiceLog.length } })),
       onDismissNotice: () => update((s) => ({ game: s.game, ui: { ...s.ui, notice: undefined } })),
@@ -150,6 +154,15 @@ export function useGame(caseId = 'case01') {
           return { game: s.game, ui: { ...s.ui, openThread, noticed } };
         }),
       onAccuseAnswer: () => {},
+      onSpot: (card, option) => {
+        act({ type: 'spot', card, option });
+      },
+      onProbe: (card, target) => {
+        act({ type: 'test', card, target });
+      },
+      onThink: (card) => {
+        act({ type: 'think', card });
+      },
     };
     // act 和 update 只讀 latest，不需要重建
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -902,18 +902,37 @@
       ],
       "cards": [
         {
+          "id": "c3",
           "no": 3,
           "title": "這是一個長度十七個字的疑點佔位問句嗎",
-          "note": "紀錄 × 說法"
+          "note": "紀錄 × 說法",
+          "thinkOnly": false,
+          "hints": [],
+          "canThink": false,
+          "thinkCost": 0,
+          "targets": []
         },
         {
+          "id": "c7",
           "no": 7,
           "title": "第二個疑點也是一句完整的問句嗎",
-          "note": "紀錄 × 說法"
+          "note": "紀錄 × 說法",
+          "thinkOnly": false,
+          "hints": [],
+          "canThink": false,
+          "thinkCost": 0,
+          "targets": []
         },
         {
+          "id": "c12",
           "no": 12,
-          "title": "疑點標題丙"
+          "title": "疑點標題丙",
+          "note": null,
+          "thinkOnly": false,
+          "hints": [],
+          "canThink": false,
+          "thinkCost": 0,
+          "targets": []
         }
       ],
       "accuse": {
@@ -989,6 +1008,10 @@
           }
         ],
         "available": true
+      },
+      "concerns": [],
+      "probe": {
+        "people": []
       }
     },
     "music": [

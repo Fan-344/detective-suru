@@ -120,17 +120,20 @@ describe('接上遊戲規則', () => {
     expect(screen.getByRole('heading', { name: appName('chat') })).toBeTruthy();
   });
 
-  it('心聲一次只跳一個問題，通知往上滑會收掉', () => {
+  it('已經沒有心聲的通知；其他通知往上滑會收掉', () => {
     render(<App mode="game" />);
     passIntro();
-    // 通知過幾秒會自己收起，所以送出後馬上看
     fireEvent.click(screen.getByRole('button', { name: S.send }));
+    // 送出後不會跳出任何通知
+    expect(screen.queryByRole('status')).toBeNull();
+    wait(6000);
+    expect(screen.queryByRole('status')).toBeNull();
+    // 用通話的提示來試往上滑
+    const who = content.characters[0];
+    fireEvent.click(screen.getAllByRole('button', { name: S.profileOpen + '：' + who.name })[0]);
+    fireEvent.click(screen.getByRole('button', { name: S.profileCall }));
     const note = screen.getByRole('button', { name: S.noticeDismiss });
-    // 綁結論的心聲很多句，但畫面上只會有一則通知
-    expect(screen.getAllByRole('status').length).toBe(1);
-    const bound = content.voice.filter((v) => v.conclusion && (v.level ?? 1) === 1);
-    expect(bound.length).toBeGreaterThan(1);
-    expect(screen.getByRole('status').textContent).toBe(bound[0].text);
+    expect(screen.getByRole('status').textContent).toBe(S.callBlocked);
     fireEvent.pointerDown(note, { clientY: 60 });
     fireEvent.pointerMove(note, { clientY: 10 });
     expect(screen.queryByRole('status')).toBeNull();
@@ -269,8 +272,8 @@ describe('接上遊戲規則', () => {
     const statementCount = () => {
       home();
       openApp('suru');
-      fireEvent.click(screen.getByRole('tab', { name: S.suruClues }));
-      const n = [...document.querySelectorAll('.suru-items__title')].filter((el) => el.textContent?.includes(market.body.split('\n')[0])).length;
+      fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
+      const n = [...document.querySelectorAll('.suru-time__text')].filter((el) => el.textContent === market.timeline![0].text).length;
       fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
       return n;
     };
@@ -279,5 +282,71 @@ describe('接上遊戲規則', () => {
     fireEvent.click(screen.getByRole('button', { name: S.zoomOpen + '：' + market.image!.description }));
     fireEvent.click(screen.getByRole('button', { name: S.zoomClose }));
     expect(statementCount()).toBe(1);
+  });
+
+  it('在意的地方：指出跟哪一筆對不上，指對就翻成疑點；疑點可以要提示、點進去選人去問', () => {
+    startGame();
+    const card = content.cards.find((c) => c.id === 'card_latte')!;
+    const spot = card.spot!;
+    const subject = content.items.find((x) => x.id === spot.item)!;
+    const answers = Array.isArray(spot.answer) ? spot.answer : [spot.answer];
+    const right = spot.options.find((o) => answers.includes(o.id))!;
+    const wrong = spot.options.find((o) => !answers.includes(o.id))!;
+    // 規則：要先打開過那個人的聊天室，才能拿疑點去問他
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    const dmAze = content.threads.find((t) => t.id === 'dm_aze')!;
+    fireEvent.click(screen.getByRole('button', { name: new RegExp('^.?' + dmAze.title) }));
+    wait(6000);
+    home();
+    openApp('receipts');
+    home();
+    openApp('suru');
+    // Suru 只有疑點和時間軸兩個分頁
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([S.suruCards, S.suruTimeline]);
+    // 在意的地方的小卡片上是那句話本身，不露出疑點的標題
+    expect(screen.queryByText(card.title)).toBeNull();
+    const concern = [...document.querySelectorAll('.doubt--concern')].find((el) => el.textContent?.includes(subject.body)) as HTMLElement;
+    fireEvent.click(concern);
+    expect(screen.getByText(spot.prompt!)).toBeTruthy();
+    // 指錯扣電、跳一句提示，那個選項不能再選
+    const before = battery();
+    fireEvent.click(screen.getByRole('button', { name: wrong.text }));
+    expect(battery()).toBe(before - (cost.spotMiss ?? 0));
+    expect(screen.queryByRole('button', { name: wrong.text })).toBeNull();
+    // 指對：回到卡片格子，那張變成疑點卡
+    fireEvent.click(screen.getByRole('button', { name: right.text }));
+    const openCard = () => fireEvent.click(screen.getByText(card.title).closest('button') as HTMLElement);
+    expect(screen.getByText(card.title).closest('.doubt--card')).toBeTruthy();
+    // 點小卡片進到疑點的內頁，在裡面要提示
+    openCard();
+    const beforeHint = battery();
+    fireEvent.click(document.querySelector('.doubt__think') as HTMLElement);
+    expect(screen.getByText(card.hints![0])).toBeTruthy();
+    expect(battery()).toBe(beforeHint - (cost.hint ?? 0));
+    // 在內頁選要拿去問誰；選了就送出，並跳到那個人的聊天室
+    const aze = content.characters.find((c) => c.id === 'aze')!;
+    const say = card.sayTo?.aze ?? card.say!;
+    expect(screen.getByText(say)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: aze.name }));
+    expect(battery()).toBe(beforeHint - (cost.hint ?? 0) - (cost.test ?? cost.send));
+    expect(screen.getAllByText(say).some((el) => el.className.includes('bubble'))).toBe(true);
+    // 回到疑點，內頁看得到問過誰
+    home();
+    openApp('suru');
+    openCard();
+    expect(screen.getByText(S.askedPrefix + aze.name)).toBeTruthy();
+  });
+
+  it('相簿照拍攝時間排，線索照片和生活照穿插，不是各自擠成一堆', () => {
+    startGame();
+    home();
+    openApp('photos');
+    const labels = [...document.querySelectorAll('.gallery__cell')].map((el) => el.getAttribute('aria-label') ?? '');
+    const photos = content.items.filter((x) => x.app === 'photos' && x.image && !x.hidden);
+    const flavorAt = labels.map((label) => !!photos.find((p) => label.includes(p.image!.description))?.flavor);
+    expect(flavorAt.length).toBe(photos.length);
+    // 兩種照片交錯出現：從頭看到尾，「是不是生活照」至少變換三次
+    const switches = flavorAt.filter((f, i) => i > 0 && f !== flavorAt[i - 1]).length;
+    expect(switches).toBeGreaterThanOrEqual(3);
   });
 });

@@ -115,9 +115,9 @@ ul, ol { list-style: none; }
 .chin__home:disabled { opacity: 0.45; }
 .chin__home { touch-action: none; -webkit-touch-callout: none; }
 /* Suru 有新的心聲：home 鍵亮起琥珀色，長按叫出 */
-.chin__home--calling { border-color: var(--amber); animation: calling 2.2s ease-in-out infinite; }
-.chin__home--calling span { border-color: var(--amber); }
-@keyframes calling { 0%, 100% { box-shadow: 0 0 0 0 rgba(240, 181, 74, 0); } 50% { box-shadow: 0 0 14px 3px rgba(240, 181, 74, 0.55); } }
+.chin__home--calling { border-color: #8b6bff; animation: calling 2.2s ease-in-out infinite; }
+.chin__home--calling span { border-color: #c9bcff; }
+@keyframes calling { 0%, 100% { box-shadow: 0 0 0 0 rgba(139, 107, 255, 0); } 50% { box-shadow: 0 0 16px 4px rgba(139, 107, 255, 0.7); } }
 
 /* 桌面或平板：置中的手機框 */
 @media (min-width: 500px) and (min-height: 500px) {
@@ -244,11 +244,11 @@ ul, ol { list-style: none; }
   opacity: 0;
 }
 .phone[data-stage="1"] .phone__veil::after {
-  box-shadow: inset 0 0 40px 2px rgba(240, 181, 74, 0.35);
+  box-shadow: inset 0 0 40px 2px rgba(139, 107, 255, 0.35);
   animation: breathe 6s ease-in-out infinite;
 }
 .phone[data-stage="2"] .phone__veil::after {
-  box-shadow: inset 0 0 60px 10px rgba(240, 150, 60, 0.55);
+  box-shadow: inset 0 0 60px 10px rgba(255, 79, 216, 0.4);
   animation: breathe 3.6s ease-in-out infinite;
 }
 .phone[data-stage="3"] .phone__veil::after {
@@ -465,6 +465,8 @@ ul, ol { list-style: none; }
 .viewer__img.img--photo .img__photo { object-fit: contain; }
 .viewer__img.img--photo { background: #000; }
 
+.room { position: relative; }
+.room__older { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 6px 14px; border-radius: 16px; background: rgba(40, 42, 50, 0.82); color: #fff; font-size: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); white-space: nowrap; }
 .room__note { text-align: center; margin: 8px 0 2px; font-size: 12px; color: var(--muted); }
 .detail__img { width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius); margin-top: 18px; }
 .detail__img.img--photo { aspect-ratio: auto; }
@@ -575,33 +577,40 @@ ul, ol { list-style: none; }
    深色底、琥珀色、明體、對稱版面。跟她的手機是兩個世界。 */
 
 .suru {
-  --s-bg: #0a0b0e;
-  --s-line: #2b2a26;
-  --s-text: #e9e4d8;
-  --s-dim: #7d786c;
-  --s-amber: #f0b54a;
-  background: var(--s-bg);
+  --s-bg: #07080d;
+  --s-line: #232838;
+  --s-text: #eef0f6;
+  --s-dim: #8a90a6;
+  /* 強調色：圖示那條光帶的顏色。單色的地方用中間的紫，要有光感的地方用整條漸層 */
+  --s-accent: #b6a3ff;
+  --s-grad: linear-gradient(100deg, #ff4fd8 0%, #8b6bff 48%, #3fd9ff 100%);
+  background:
+    radial-gradient(90% 46% at 0% 100%, rgba(255, 79, 216, 0.13) 0%, transparent 70%),
+    radial-gradient(80% 42% at 100% 0%, rgba(63, 217, 255, 0.11) 0%, transparent 70%),
+    var(--s-bg);
   color: var(--s-text);
-  font-family: "Songti TC", "Noto Serif TC", "PMingLiU", "Source Han Serif TC", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  font-weight: 300;
 }
 
-.suru-mark { display: inline-block; flex: none; width: 8px; height: 8px; border: 1.5px solid var(--s-amber); transform: rotate(45deg); }
-.suru-mark--pulse { animation: mark-pulse 2.4s ease-in-out infinite; }
-@keyframes mark-pulse { 0%, 100% { background: transparent; opacity: 0.5; } 50% { background: var(--s-amber); opacity: 1; } }
+.suru-mark { display: inline-block; flex: none; width: 22px; height: 22px; }
+.suru-mark img { display: block; width: 100%; height: 100%; -webkit-user-drag: none; pointer-events: none; }
+.suru-mark--pulse img { animation: mark-pulse 2.400s ease-in-out infinite; }
+@keyframes mark-pulse { 0%, 100% { opacity: 0.55; filter: drop-shadow(0 0 0 rgba(139, 107, 255, 0)); } 50% { opacity: 1; filter: drop-shadow(0 0 5px rgba(139, 107, 255, 0.9)); } }
 
 .suru-head { flex: none; display: flex; align-items: center; gap: 12px; padding: 18px 24px 14px; font-family: -apple-system, "PingFang TC", sans-serif; }
-.suru-head__title { font-size: 12px; letter-spacing: 0.42em; color: var(--s-amber); }
+.suru-head__title { font-size: 12px; letter-spacing: 0.42em; color: var(--s-accent); }
 .suru-head__rule { flex: 1; height: 1px; background: var(--s-line); }
 .suru-head__counter { font-size: 12px; letter-spacing: 0.12em; color: var(--s-dim); font-variant-numeric: tabular-nums; }
 
-.suru-label { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.36em; color: var(--s-amber); margin: 0 0 12px; }
+.suru-label { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.36em; color: var(--s-accent); margin: 0 0 12px; }
 
 .suru-button {
   flex: none;
   margin: 14px 24px;
   height: 48px;
-  border: 1px solid var(--s-amber);
-  color: var(--s-amber);
+  border: 1px solid var(--s-accent);
+  color: var(--s-accent);
   font-size: 16px;
   letter-spacing: 0.3em;
   text-align: center;
@@ -617,13 +626,13 @@ ul, ol { list-style: none; }
   width: 104px;
   aspect-ratio: 5 / 7;
   padding: 5px;
-  border: 1px solid #5b5446;
+  border: 1px solid #343a52;
   border-radius: 6px;
-  background: #14130f;
+  background: #10121a;
   color: var(--s-text);
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
-.suru-card--selected { transform: translateY(-10px); border-color: var(--s-amber); box-shadow: 0 10px 22px rgba(240, 181, 74, 0.18); }
+.suru-card--selected { transform: translateY(-10px); border-color: var(--s-accent); box-shadow: 0 10px 22px rgba(139, 107, 255, 0.18); }
 .suru-card__face {
   position: relative;
   height: 100%;
@@ -636,7 +645,7 @@ ul, ol { list-style: none; }
   border: 1px solid var(--s-line);
   border-radius: 3px;
 }
-.suru-card__no { position: absolute; top: 6px; left: 8px; font-family: -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.08em; color: var(--s-amber); font-variant-numeric: tabular-nums; }
+.suru-card__no { position: absolute; top: 6px; left: 8px; font-family: -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.08em; color: var(--s-accent); font-variant-numeric: tabular-nums; }
 .suru-card__no--flip { top: auto; left: auto; bottom: 6px; right: 8px; transform: rotate(180deg); }
 .suru-card__title { font-size: 15px; line-height: 1.5; text-align: center; }
 .suru-card__note { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 10px; letter-spacing: 0.1em; color: var(--s-dim); text-align: center; }
@@ -647,7 +656,7 @@ ul, ol { list-style: none; }
   justify-content: center;
   border: 1px solid var(--s-line);
   border-radius: 3px;
-  background: repeating-linear-gradient(45deg, #1a1813 0 6px, #14130f 6px 12px);
+  background: repeating-linear-gradient(45deg, #161927 0 6px, #10121a 6px 12px);
 }
 
 /* 人物記號 */
@@ -667,9 +676,9 @@ ul, ol { list-style: none; }
 /* 挑戰書 */
 .suru-form { border-top: 1px solid var(--s-line); }
 .suru-form li { display: flex; align-items: center; gap: 14px; padding: 14px 2px; border-bottom: 1px solid var(--s-line); }
-.suru-form__no { font-family: -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--s-amber); font-variant-numeric: tabular-nums; }
+.suru-form__no { font-family: -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--s-accent); font-variant-numeric: tabular-nums; }
 .suru-form__name { font-size: 16px; }
-.suru-form__slot { flex: 1; height: 26px; border: 1px dashed #4a463c; border-radius: 3px; }
+.suru-form__slot { flex: 1; height: 26px; border: 1px dashed #343a52; border-radius: 3px; }
 .suru-show .suru-button { margin-left: 0; margin-right: 0; width: 100%; }
 .suru-show > .suru-button { margin: 10px 24px 16px; width: auto; }
 
@@ -834,50 +843,111 @@ ul, ol { list-style: none; }
 .suru-said__text { flex: 1; min-width: 0; font-size: 15px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .suru-said__more { flex: none; color: var(--s-dim); font-size: 12px; }
 .suru-said__list { max-height: 30vh; overflow-y: auto; border-top: 1px solid var(--s-line); padding: 4px 14px 8px 34px; }
-.suru-said__list li { padding: 9px 0; font-size: 14px; line-height: 1.6; color: #b8b2a4; border-bottom: 1px solid var(--s-line); }
+.suru-said__list li { padding: 9px 0; font-size: 14px; line-height: 1.6; color: #a3a9bd; border-bottom: 1px solid var(--s-line); }
 .suru-said__list li:last-child { border-bottom: 0; }
-.suru-clues + .suru-clues { margin-top: 26px; }
-.suru-clues .suru-label { margin-bottom: 2px; }
 .suru-tabs { flex: none; display: flex; border-top: 1px solid var(--s-line); border-bottom: 1px solid var(--s-line); font-family: -apple-system, "PingFang TC", sans-serif; }
 .suru-tabs__tab { flex: 1; height: 44px; font-size: 13px; letter-spacing: 0.14em; color: var(--s-dim); text-align: center; border-bottom: 2px solid transparent; }
-.suru-tabs__tab--on { color: var(--s-amber); border-bottom-color: var(--s-amber); }
+.suru-tabs__tab--on { color: var(--s-accent); border-bottom-color: var(--s-accent); }
 .suru-app__body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 18px 24px 24px; }
 .suru-empty { color: var(--s-dim); text-align: center; padding-top: 20px; font-size: 15px; }
-.suru-voice li { padding: 14px 0; border-bottom: 1px solid var(--s-line); font-size: 17px; line-height: 1.8; color: #b8b2a4; }
+.suru-voice li { padding: 14px 0; border-bottom: 1px solid var(--s-line); font-size: 17px; line-height: 1.8; color: #a3a9bd; }
 .suru-time section + section { margin-top: 22px; }
-.suru-time__when { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.3em; color: var(--s-amber); margin: 0 0 6px; }
-.suru-time ol { border-left: 1px solid #5b5446; margin-left: 13px; }
+.suru-time__when { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.3em; color: var(--s-accent); margin: 0 0 6px; }
+.suru-time ol { border-left: 1px solid #343a52; margin-left: 13px; }
 .suru-time li { display: flex; align-items: center; gap: 12px; padding: 9px 0 9px 0; margin-left: -14px; font-family: -apple-system, "PingFang TC", sans-serif; }
-.suru-time li .avatar { width: 28px; height: 28px; font-size: 12px; background: #23221d; border-color: #5b5446; color: #cfc9bb; }
-.suru-time__thing { flex: none; width: 9px; height: 9px; margin: 0 9.500px; background: var(--s-amber); transform: rotate(45deg); }
+.suru-time li .avatar { width: 28px; height: 28px; font-size: 12px; background: #161927; border-color: #343a52; color: #c7cbdc; }
+.suru-time__thing { flex: none; width: 9px; height: 9px; margin: 0 9.500px; background: var(--s-accent); transform: rotate(45deg); }
 .suru-time__text { font-size: 15px; line-height: 1.55; }
 .suru-time__gap .suru-time__text { color: var(--s-dim); }
-.suru-items li { display: flex; flex-direction: column; gap: 4px; padding: 14px 0; border-bottom: 1px solid var(--s-line); }
-.suru-items__meta { display: flex; justify-content: space-between; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--s-amber); }
-.suru-items__title { font-size: 17px; }
-.suru-items__body { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 14px; color: #b8b2a4; }
 .suru-hand--wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; overflow: visible; }
 .suru-hand--wrap .suru-card { width: 100%; aspect-ratio: 5 / 6; }
 .suru-hand--wrap .suru-card__title { font-size: 16px; }
 
+/* 助理裡要動手的畫面：指出哪裡有問題、比對、試探 */
+.suru-hint { font-size: 12px; color: var(--s-dim); margin: 2px 0 4px; }
+.suru-button--inline { width: 100%; margin: 22px 0 4px; }
+.tool-subject { padding: 14px 16px; border: 1px solid var(--s-line); border-radius: 14px; margin-bottom: 18px; }
+.tool-subject__meta { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.1em; color: var(--s-accent); margin-bottom: 4px; }
+.tool-subject__title { font-size: 17px; line-height: 1.6; font-weight: 400; }
+.tool-subject__when { font-size: 12px; color: var(--s-dim); margin-top: 2px; }
+.tool-subject p { font-size: 15px; line-height: 1.7; color: #c7cbdc; margin-top: 8px; }
+.tool-subject__img { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; margin-top: 12px; }
+.tool-subject__img.img--photo { aspect-ratio: auto; max-height: 46vh; }
+.tool-subject__img.img--photo .img__photo { object-fit: contain; }
+.tool-subject__fields { margin-top: 10px; border-top: 1px solid var(--s-line); }
+.tool-subject__fields div { display: flex; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--s-line); font-size: 14px; }
+.tool-subject__fields dt { color: var(--s-dim); }
+.tool-cost { font-size: 12px; color: var(--s-dim); text-align: center; padding-top: 10px; }
+
+/* 疑點清單：小卡片兩張一行排成格子，兩種卡片用底色區分，種類標在卡片上。點進去才處理 */
+.doubts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; perspective: 900px; }
+.doubt { position: relative; aspect-ratio: 5 / 4; border-radius: 16px; padding: 12px 12px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; overflow: hidden; }
+.doubt:active { filter: brightness(1.15); }
+.doubt__kind { display: inline-block; flex: none; padding: 2px 8px; border-radius: 9px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; white-space: nowrap; }
+.doubt__title { font-size: 16px; line-height: 1.45; font-weight: 500; color: #fff; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.doubt__no { position: absolute; right: 10px; bottom: 8px; font-size: 10px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.55); font-variant-numeric: tabular-nums; }
+
+/* 在意的地方：青綠色的底、虛線框 */
+.doubt--concern { border: 1.500px dashed rgba(170, 240, 255, 0.75); background: linear-gradient(160deg, #0f5566, #0a3542); }
+.doubt__kind--concern { color: #06262e; background: #7fe6ff; }
+
+/* 疑點：洋紅紫的底 */
+.doubt--card { background: linear-gradient(160deg, #6a1d6e, #3d1350); border: 1.500px solid transparent; }
+.doubt__kind--card { color: #2a0626; background: #ff9ae8; }
+
+/* 點進卡片之後的內頁 */
+.doubt-page { border-radius: 16px; padding: 16px; margin-bottom: 22px; }
+.doubt-page--card { background: linear-gradient(160deg, #6a1d6e, #3d1350); }
+.doubt-page--concern { background: none; padding: 0; margin: 18px 0 0; }
+.doubt-page--concern .doubt__thoughts { border-top: 1px solid var(--s-line); }
+.doubt-page__title { margin: 10px 0 2px; font-size: 20px; line-height: 1.5; font-weight: 500; color: #fff; }
+.doubt__note { font-size: 12px; color: rgba(255, 255, 255, 0.65); }
+.doubt__thoughts { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.18); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.doubt__hint { font-size: 14px; line-height: 1.65; color: rgba(255, 255, 255, 0.88); padding-left: 12px; border-left: 2px solid rgba(255, 255, 255, 0.5); }
+.doubt__think { height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid rgba(255, 255, 255, 0.4); font-size: 13px; color: #fff; background: rgba(0, 0, 0, 0.18); }
+.doubt__think small { margin-left: 6px; color: rgba(255, 255, 255, 0.65); }
+
+/* 翻牌：從「在意的地方」的樣子翻過來，變成疑點 */
+.doubt--flip { animation: doubt-flip 0.900s cubic-bezier(0.3, 0.7, 0.2, 1) both; transform-style: preserve-3d; }
+@keyframes doubt-flip {
+  0% { transform: rotateY(-180deg); background: linear-gradient(160deg, #0f5566, #0a3542); }
+  49% { background: linear-gradient(160deg, #0f5566, #0a3542); }
+  50% { transform: rotateY(-90deg); background: linear-gradient(160deg, #6a1d6e, #3d1350); }
+  100% { transform: rotateY(0); }
+}
+.doubt--flip > * { animation: doubt-face 0.900s both; }
+@keyframes doubt-face { 0%, 50% { opacity: 0; } 60%, 100% { opacity: 1; } }
+
+/* 內頁：選拿去問誰 */
+.doubt__nobody { padding: 2px 0 10px; font-size: 13px; line-height: 1.6; color: var(--s-dim); }
+.doubt__targets { border-radius: 14px; background: rgba(255, 255, 255, 0.05); padding: 2px 14px; }
+.doubt__target { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.doubt__target + .doubt__target { border-top: 1px solid var(--s-line); }
+.doubt__target .avatar { width: 38px; height: 38px; font-size: 14px; background: #161927; border-color: #343a52; color: #c7cbdc; }
+.doubt__target-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.doubt__target-name { font-size: 16px; font-weight: 500; }
+.doubt__target-name small { margin-left: 8px; font-size: 11px; font-weight: 400; color: rgba(255, 255, 255, 0.6); }
+.doubt__target-say { font-size: 13px; line-height: 1.5; color: rgba(255, 255, 255, 0.85); }
+
+
 /* 指認兇手：一題一題問 */
 .suru-app__accuse { margin: 10px 24px 14px; height: 46px; }
-.accuse__intro { padding: 2px 0 22px; font-size: 16px; line-height: 1.9; color: #cfc9bb; border-bottom: 1px solid var(--s-line); margin-bottom: 22px; }
-.accuse__chain { margin-bottom: 22px; border-left: 1px solid #5b5446; padding-left: 14px; }
+.accuse__intro { padding: 2px 0 22px; font-size: 16px; line-height: 1.9; color: #c7cbdc; border-bottom: 1px solid var(--s-line); margin-bottom: 22px; }
+.accuse__chain { margin-bottom: 22px; border-left: 1px solid #343a52; padding-left: 14px; }
 .accuse__chain li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; padding: 7px 0; font-family: -apple-system, "PingFang TC", sans-serif; }
 .accuse__chain-q { font-size: 12px; line-height: 1.5; color: var(--s-dim); }
-.accuse__chain-a { grid-column: 2; font-size: 15px; color: var(--s-amber); }
+.accuse__chain-a { grid-column: 2; font-size: 15px; color: var(--s-accent); }
 .accuse__prompt { font-size: 20px; line-height: 1.75; padding-bottom: 20px; }
-.accuse__picker { border-left: 1px solid #5b5446; }
+.accuse__picker { border-left: 1px solid #343a52; }
 .accuse__picker--open { border: 1px solid var(--s-line); border-radius: 10px; margin-bottom: 8px; }
 .accuse__picker li + li { border-top: 1px solid var(--s-line); }
 .accuse__picker button { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 16px; }
 .accuse__picker button small { font-size: 11px; color: var(--s-dim); }
-.accuse__picker button.on { background: rgba(240, 181, 74, 0.1); }
-.accuse__picker button.on span { color: var(--s-amber); }
+.accuse__picker button.on { background: rgba(139, 107, 255, 0.1); }
+.accuse__picker button.on span { color: var(--s-accent); }
 .accuse__give { display: flex; gap: 10px; padding-bottom: 12px; }
-.accuse__give button { flex: 1; height: 48px; border: 1px solid var(--s-line); text-align: center; font-size: 16px; color: #cfc9bb; }
-.accuse__give button.on { border-color: var(--s-amber); color: var(--s-amber); }
+.accuse__give button { flex: 1; height: 48px; border: 1px solid var(--s-line); text-align: center; font-size: 16px; color: #c7cbdc; }
+.accuse__give button.on { border-color: var(--s-accent); color: var(--s-accent); }
 
 /* 通知卡片的其他用法：開場裡靜態的通知、往上滑的把手 */
 .sysnote--static { position: static; width: 100%; animation: none; box-shadow: none; text-align: left; }
@@ -982,9 +1052,9 @@ ul, ol { list-style: none; }
 .intro__seg { margin-bottom: 30px; font-size: 18px; line-height: 2; opacity: 0.38; transition: opacity 0.8s; }
 .intro__seg--now { opacity: 1; animation: seg-in 0.8s ease-out; }
 @keyframes seg-in { from { opacity: 0; transform: translateY(8px); } }
-.intro__seg--quote { padding: 18px 20px; border: 1px solid #5b5446; outline: 1px solid var(--s-line); outline-offset: 4px; margin-left: 5px; margin-right: 5px; color: #f4e6c6; }
+.intro__seg--quote { padding: 18px 20px; border: 1px solid #343a52; outline: 1px solid var(--s-line); outline-offset: 4px; margin-left: 5px; margin-right: 5px; color: #e6e2ff; }
 .intro__sign { text-align: right; color: var(--s-dim); }
-.intro__seg--notice { padding: 14px 16px; border-left: 2px solid var(--s-amber); background: #121318; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 15px; line-height: 1.7; }
+.intro__seg--notice { padding: 14px 16px; border-left: 2px solid var(--s-accent); background: #10121a; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 15px; line-height: 1.7; }
 .intro__seg--notice .suru-label { margin-bottom: 6px; }
 .intro__end { height: 30vh; }
 .intro__hint { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 0 22px; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 12px; letter-spacing: 0.3em; color: var(--s-dim); }
@@ -993,7 +1063,7 @@ ul, ol { list-style: none; }
 
 .ending { position: absolute; inset: 0; z-index: 55; display: flex; flex-direction: column; animation: fade 1.2s ease-out; }
 .ending__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8vh 30px 20px; }
-.ending__title { font-size: 24px; font-weight: 500; letter-spacing: 0.2em; color: var(--s-amber); margin-bottom: 28px; }
+.ending__title { font-size: 24px; font-weight: 500; letter-spacing: 0.2em; color: var(--s-accent); margin-bottom: 28px; }
 .ending__scroll p { font-size: 17px; line-height: 2; margin-bottom: 22px; }
 .load-error { max-width: 90vw; white-space: pre-wrap; color: #e8614c; font-size: 14px; line-height: 1.6; padding: 24px; }
 
@@ -1016,3 +1086,33 @@ ul, ol { list-style: none; }
 .dev__row input { width: 100%; }
 .dev__buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .dev__buttons button { padding: 6px 8px; border-radius: 6px; background: #2a2f3d; border: 1px solid #3a4052; }
+
+/* ───────── Suru 的識別：跟 App 圖示一致的光帶 ───────── */
+.suru-head__title { font-weight: 600; background: var(--s-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.suru-label { font-weight: 600; }
+.suru-button {
+  border: 0;
+  border-radius: 24px;
+  color: var(--s-text);
+  font-weight: 500;
+  background: linear-gradient(var(--s-bg), var(--s-bg)) padding-box, var(--s-grad) border-box;
+  border: 1.500px solid transparent;
+}
+.suru-button:disabled { background: none; border: 1.500px solid var(--s-line); color: var(--s-dim); }
+.suru-button--ghost { background: none; border: 1.500px solid var(--s-line); color: var(--s-dim); }
+.suru-tabs__tab { font-weight: 400; }
+.suru-tabs__tab--on { color: var(--s-text); border-image: var(--s-grad) 1; font-weight: 600; }
+.suru-card { border-radius: 14px; border-color: var(--s-line); background: #10121a; }
+.suru-card__face, .suru-card__back { border-radius: 9px; border-color: transparent; }
+.suru-card__back { background: radial-gradient(70% 60% at 50% 50%, rgba(139, 107, 255, 0.22), transparent 70%), #10121a; }
+.suru-card--selected { border-color: transparent; background: linear-gradient(#10121a, #10121a) padding-box, var(--s-grad) border-box; border: 1.500px solid transparent; box-shadow: 0 10px 26px rgba(139, 107, 255, 0.28); }
+.suru-card__title { font-weight: 400; }
+.suru-said { border-radius: 16px; background: rgba(255, 255, 255, 0.04); border-color: transparent; }
+.tool-subject, .accuse__picker--open { border-radius: 14px; }
+.tool-subject--pinned { background: linear-gradient(#0c0e16, #0c0e16) padding-box, var(--s-grad) border-box; border: 1.500px solid transparent; }
+.accuse__prompt, .intro__seg, .ending__scroll p { font-weight: 300; }
+.accuse__give button { border-radius: 24px; }
+.accuse__give button.on { border-color: transparent; background: linear-gradient(var(--s-bg), var(--s-bg)) padding-box, var(--s-grad) border-box; border: 1.500px solid transparent; color: var(--s-text); }
+.intro__seg--quote { border-radius: 16px; border: 1.500px solid transparent; outline: 0; background: linear-gradient(#0c0e16, #0c0e16) padding-box, var(--s-grad) border-box; margin-left: 0; margin-right: 0; }
+.ending__title { font-weight: 600; background: var(--s-grad); -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; }
+.dead__title { font-weight: 400; }
