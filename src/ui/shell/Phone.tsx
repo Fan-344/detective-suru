@@ -7,6 +7,8 @@ import { ChatList, ChatRoom, ImageBlock } from '../layouts/Chat';
 import type { ZoomTarget } from '../layouts/Chat';
 import { ContactCard, ContactList } from '../layouts/Contacts';
 import { GalleryGrid, GalleryViewer } from '../layouts/Gallery';
+import { Feed } from '../layouts/Feed';
+import { Profile } from '../layouts/Profile';
 import { DetailView, ListView } from '../layouts/ListDetail';
 import { SuruApp } from '../suru/SuruApp';
 import { S } from '../strings';
@@ -66,7 +68,16 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     go({ app: appId, detail: null }, 'open');
   };
   const openDetail = (id: string) => go({ app: nav.app, detail: id }, 'push');
-  const back = () => (nav.detail ? go({ app: nav.app, detail: null }, 'pop') : go(HOME, 'close'));
+  // 個人頁面記在 detail 裡，前面加 @；從哪個聊天室點進來的另外記著，返回時回到那裡
+  const [profileFrom, setProfileFrom] = useState<string | null>(null);
+  const openProfile = (memberId: string, from: string | null) => {
+    setProfileFrom(from);
+    go({ app: nav.app, detail: '@' + memberId }, 'push');
+  };
+  const back = () => {
+    if (nav.detail?.startsWith('@') && profileFrom) return go({ app: nav.app, detail: profileFrom }, 'pop');
+    return nav.detail ? go({ app: nav.app, detail: null }, 'pop') : go(HOME, 'close');
+  };
 
   const seenPress = useRef(homePress);
   useEffect(() => {
@@ -91,13 +102,53 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assistPress]);
 
+  // 往右滑返回上一層（手指從畫面左半邊開始、大致水平地往右滑一段距離）
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const swipeStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    const box = e.currentTarget.getBoundingClientRect();
+    // 量不到寬度時（例如測試環境）不限制起點
+    const inLeftHalf = !box.width || (t && t.clientX - box.left < box.width * 0.5);
+    swipe.current = app && t && inLeftHalf ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const swipeEnd = (e: React.TouchEvent) => {
+    const from = swipe.current;
+    const t = e.changedTouches[0];
+    swipe.current = null;
+    if (!from || !t) return;
+    const dx = t.clientX - from.x;
+    const dy = Math.abs(t.clientY - from.y);
+    if (dx > 70 && dy < dx * 0.6) {
+      setZoom(null);
+      back();
+    }
+  };
+
   let title = app?.name ?? '';
   let body = null;
 
+  // 私訊的標題列點一下也能開個人頁面
+  let titleAction: (() => void) | undefined;
   if (app?.layout === 'chat') {
     const thread = data.threads.find((t) => t.id === nav.detail);
-    if (thread) {
+    const profile = nav.detail?.startsWith('@') ? data.profiles.find((p) => '@' + p.id === nav.detail) : undefined;
+    if (profile) {
+      title = profile.name;
+      body = (
+        <Profile
+          profile={profile}
+          onZoom={onZoom}
+          onCall={() => actions.onCall(profile.id)}
+          onMessage={() => {
+            if (!profile.threadId) return;
+            actions.onOpenThread(profile.threadId);
+            go({ app: nav.app, detail: profile.threadId }, 'pop');
+          }}
+        />
+      );
+    } else if (thread) {
       title = thread.title;
+      if (!thread.group && thread.members[0]) titleAction = () => openProfile(thread.members[0].id, thread.id);
       body = (
         <ChatRoom
           thread={thread}
@@ -105,6 +156,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           onChoose={(optionId) => actions.onChooseReply(thread.id, optionId)}
           onSendPrefill={() => actions.onSendPrefill(thread.id)}
           onZoom={onZoom}
+          onProfile={(memberId) => openProfile(memberId, thread.id)}
         />
       );
     } else {
@@ -159,6 +211,8 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     body = person ? <ContactCard person={person} onZoom={onZoom} /> : <ContactList cast={data.contacts} onOpen={openDetail} />;
   } else if (app?.layout === 'finder') {
     body = <Finder devices={data.finder} onLocate={actions.onLocate} />;
+  } else if (app?.layout === 'feed') {
+    body = <Feed posts={data.feed} />;
   } else if (app?.layout === 'calculator') {
     body = <Calculator />;
   } else if (app?.layout === 'clock') {
@@ -185,7 +239,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
       style={{ '--tension': tensionVisual(tension).toFixed(3) } as CSSProperties}
     >
       <StatusBar wifiName={data.wifiName} battery={battery} showPercent={prefs.showPercent} />
-      <div className="phone__stage">
+      <div className="phone__stage" onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
         {app?.layout === 'suru' ? (
           <div key="suru" className="suruwrap">
             <SuruApp title={app.name} data={data.suru} onClose={back} onAccuseAnswer={actions.onAccuseAnswer} />
@@ -197,7 +251,13 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
                 <BackGlyph />
                 <span aria-hidden="true">{S.back}</span>
               </button>
-              <h1 className="appwin__title">{title}</h1>
+              {titleAction ? (
+                <h1 className="appwin__title">
+                  <button className="appwin__titlebtn" onClick={titleAction} aria-label={S.profileOpen + '：' + title}>{title}</button>
+                </h1>
+              ) : (
+                <h1 className="appwin__title">{title}</h1>
+              )}
               <span />
             </div>
             <div className="appwin__body">{body}</div>

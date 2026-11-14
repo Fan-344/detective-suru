@@ -10,9 +10,11 @@ import type {
   AppDef,
   CalendarData,
   CastData,
+  ChatProfile,
   ChatMessage,
   ChatThread,
   ClockData,
+  FeedPost,
   FinderDevice,
   GalleryItem,
   IconId,
@@ -52,7 +54,7 @@ const UTILITY_LAYOUT: Record<string, LayoutKind> = {
   settings: 'settings',
   camera: 'camera',
   music: 'music',
-  social: 'list',
+  social: 'feed',
 };
 
 function layoutOf(app: CaseContent['apps']['apps'][number]): LayoutKind {
@@ -143,6 +145,37 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     };
   });
 
+  // 跟案情無關的聊天室：排在真的聊天室下面，只能看、不能回，也不會告訴遊戲規則
+  for (const c of content.flavor?.chats ?? []) {
+    const names = [...new Set(c.messages.map((m) => m.from).filter((f) => f !== 'self'))];
+    threads.push({
+      id: c.id,
+      title: c.title,
+      group: names.length > 1,
+      members: names.map((name) => ({ id: name, name })),
+      messages: c.messages.map((m, i) => {
+        const { day, time } = splitWhen(m.when);
+        return { id: `${c.id}-m${i}`, from: m.from === 'self' ? selfId : m.from, day, time, text: m.text };
+      }),
+      unread: 0,
+      official: c.official,
+      muted: c.muted,
+    });
+  }
+
+  // ── Link 的個人頁面 ──
+  const profiles: ChatProfile[] = [];
+  for (const c of content.characters) {
+    const dm = content.threads.find((t) => t.members.length === 1 && t.members[0] === c.id);
+    // 自介是這個人自己寫的話，資料檔有寫（Character.bio）才顯示
+    profiles.push({ id: c.id, name: c.name, avatar: c.id, bio: (c as { bio?: string }).bio, threadId: dm?.id });
+  }
+  for (const t of threads) {
+    for (const m of t.members) {
+      if (!profiles.some((p) => p.id === m.id)) profiles.push({ id: m.id, name: m.name, threadId: t.group ? undefined : t.id });
+    }
+  }
+
   // ── App ──
   const assistantNew = state.assistantUnread || ui.voiceLog.length > ui.voiceRead;
   const apps: AppDef[] = content.apps.apps.map((a) => {
@@ -170,15 +203,20 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
       const label = item.group ?? day;
       let g = groups.find((x) => x.label === label);
       if (!g) groups.push((g = { label, rows: [] }));
+      const isReceipt = a.icon === 'receipts';
       g.rows.push({
         id: item.id,
         title: item.title ?? firstLine(item.body),
         subtitle: item.title ? firstLine(item.body) : undefined,
         meta: time,
+        // 天氣的小圖示：內文提到下雨就畫雨，寫明沒下雨或沒提到就畫晴
+        glyph: a.icon === 'weather' ? (/雨/.test(item.body) && !/無降雨|無雨|沒有?下雨/.test(item.body) ? 'rain' : 'clear') : undefined,
         detail: {
+          style: isReceipt ? 'receipt' : undefined,
           title: item.title ?? firstLine(item.body),
           when: item.when,
-          lines: item.body.split('\n'),
+          // 發票的品項一行一項
+          lines: isReceipt ? item.body.split(/[、\n]/) : item.body.split('\n'),
           fields: item.fields,
           image: item.image ? toImage(item.image, item.id, item.id) : undefined,
         },
@@ -186,10 +224,16 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     }
     lists[a.id] = groups;
   }
-  const posts = content.flavor?.posts ?? [];
-  if (posts.length) {
-    lists.social = [{ label: '', rows: posts.map((p, i) => ({ id: `post${i}`, title: p.author, subtitle: p.text, meta: p.when, detail: { title: p.author, when: p.when, lines: [p.text] } })) }];
-  }
+  // 動態牆。資料沒寫按讚和回覆數時，用固定算出來的假數字，每次看到的都一樣
+  const feed: FeedPost[] = (content.flavor?.posts ?? []).map((p, i) => ({
+    id: `post${i}`,
+    author: p.author,
+    text: p.text,
+    when: p.when,
+    handle: p.handle,
+    likes: p.likes ?? 3 + ((i * 37 + p.text.length * 5) % 240),
+    replies: p.replies ?? (i * 7 + p.text.length) % 19,
+  }));
 
   // ── 相簿類 ──
   const galleries: Record<string, GalleryItem[]> = {};
@@ -239,12 +283,14 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     apps,
     folders: content.apps.folders.map((f) => ({ id: f.id, name: f.name, icon: f.icon as IconId })),
     threads,
+    profiles,
     lists,
     galleries,
     suru: buildSuru(engine, state, ui, menu, { nameOf, threadTitle, appName, itemOf }),
     contacts,
     finder,
     music,
+    feed,
     calendar,
     clock,
     notice: ui.notice,
@@ -294,7 +340,8 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
   };
   return {
     voice: [...log].reverse().map((v, i) => ({ id: v.id, text: v.text, isNew: log.length - 1 - i >= ui.voiceRead })),
-    timeline: m.timeline.map((item) => ({ id: item.id, time: item.when ?? '', text: labelOf(item, n.nameOf) })),
+    // 時間軸只放紀錄（發生過的事），聊天裡說的話留在「說法」
+    timeline: m.timeline.filter((item) => item.kind === 'record').map((item) => ({ id: item.id, time: item.when ?? '', text: labelOf(item, n.nameOf) })),
     records: m.records.map(toMemo),
     statements: m.statements.map(toMemo),
     cards: state.cards.flatMap((id) => {
@@ -312,5 +359,9 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
 export function newVoiceLines(engine: Engine, state: GameState, ui: GameUi): { id: string; text: string }[] {
   if (state.phase !== 'play') return [];
   const have = new Set(ui.voiceLog.map((v) => v.id));
-  return voice(engine, state).filter((l) => !have.has(l.id)).map((l) => ({ id: l.id, text: l.text }));
+  const lines = voice(engine, state);
+  // 規則會同時給出很多句（每個還沒查清楚的結論各一句）。一次全丟給玩家只會被無視，
+  // 所以綁結論的問題一次只問一個：照資料檔的順序，前一個有進展了才換下一個。
+  const current = lines.find((l) => l.conclusion);
+  return lines.filter((l) => !l.conclusion || l === current).filter((l) => !have.has(l.id)).map((l) => ({ id: l.id, text: l.text }));
 }

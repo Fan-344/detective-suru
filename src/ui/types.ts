@@ -11,6 +11,7 @@ export type LayoutKind =
   | 'finder'
   | 'suru'
   // 以下是跟案情無關、但真的能用的背景 App
+  | 'feed'
   | 'calculator'
   | 'clock'
   | 'calendar'
@@ -80,6 +81,17 @@ export interface ChatMember {
   avatar?: string;
 }
 
+/** Link 的個人頁面 */
+export interface ChatProfile {
+  id: string;
+  name: string;
+  avatar?: string;
+  /** 這個人自己寫的自介 */
+  bio?: string;
+  /** 按「私訊」要去的聊天室 */
+  threadId?: string;
+}
+
 export interface ChatMessage {
   id: string;
   /** 發話者的 id；等於 PhoneData.selfId 時是機主這一側 */
@@ -112,6 +124,10 @@ export interface ChatThread {
   options?: ReplyOption[];
   /** 輸入框裡已經有一句話，玩家只能按送出 */
   prefill?: string;
+  /** 官方帳號 */
+  official?: boolean;
+  /** 關了通知 */
+  muted?: boolean;
 }
 
 export interface ListRow {
@@ -120,10 +136,14 @@ export interface ListRow {
   subtitle?: string;
   meta?: string;
   unread?: boolean;
+  /** 列首的小圖示（天氣用） */
+  glyph?: 'rain' | 'clear';
   detail: ListDetail;
 }
 
 export interface ListDetail {
+  /** receipt：畫成一張發票的樣子 */
+  style?: 'receipt';
   title: string;
   when?: string;
   lines?: string[];
@@ -216,6 +236,18 @@ export interface SuruData {
   accuse: AccuseData;
 }
 
+/** 社群動態牆上的一則貼文 */
+export interface FeedPost {
+  id: string;
+  author: string;
+  /** 帳號代稱 */
+  handle?: string;
+  text: string;
+  when: string;
+  likes: number;
+  replies: number;
+}
+
 export interface MusicTrack {
   title: string;
   artist: string;
@@ -256,6 +288,7 @@ export interface PhoneData {
   apps: AppDef[];
   folders: FolderDef[];
   threads: ChatThread[];
+  profiles: ChatProfile[];
   lists: Record<string, ListGroup[]>;
   galleries: Record<string, GalleryItem[]>;
   suru: SuruData;
@@ -263,6 +296,7 @@ export interface PhoneData {
   contacts: CastData;
   finder: FinderDevice[];
   music: MusicTrack[];
+  feed: FeedPost[];
   calendar: CalendarData;
   clock: ClockData;
   notice?: SuruNotice;
@@ -280,6 +314,8 @@ export interface PhoneActions {
   onLocate(deviceId: string): void;
   /** 玩家點開了某一筆的照片 */
   onViewImage(itemId: string): void;
+  /** 在個人頁面按了通話 */
+  onCall(memberId: string): void;
   /** 玩家換了畫面（開了哪個 App、哪一層） */
   onNavigate(nav: Nav): void;
 }

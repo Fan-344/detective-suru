@@ -126,7 +126,7 @@
         "id": "social",
         "name": "Throws",
         "icon": "social",
-        "layout": "list",
+        "layout": "feed",
         "background": true
       },
       {
@@ -1131,6 +1131,54 @@
         "history": [
           "現在：地點佔位三"
         ]
+      }
+    ],
+    "feed": [
+      {
+        "id": "f1",
+        "author": "帳號佔位甲",
+        "text": "貼文佔位：一則跟案情無關的日常碎念。",
+        "when": "2 小時",
+        "likes": 12,
+        "replies": 3
+      },
+      {
+        "id": "f2",
+        "author": "帳號佔位乙",
+        "text": "貼文佔位：另一則無關的貼文。",
+        "when": "5 小時",
+        "likes": 48,
+        "replies": 7
+      }
+    ],
+    "profiles": [
+      {
+        "id": "a",
+        "name": "聯絡人甲",
+        "avatar": "jingwen",
+        "bio": "自介佔位：這個人自己寫的一兩句話。",
+        "threadId": "t_a"
+      },
+      {
+        "id": "b",
+        "name": "聯絡人乙",
+        "avatar": "aze",
+        "bio": "自介佔位：這個人自己寫的一兩句話。",
+        "threadId": "t_b"
+      },
+      {
+        "id": "c",
+        "name": "聯絡人丙",
+        "avatar": "zonghan",
+        "bio": "自介佔位：這個人自己寫的一兩句話。",
+        "threadId": "t_c"
+      },
+      {
+        "id": "d",
+        "name": "聯絡人丁",
+        "avatar": "pinyu",
+        "bio": "自介佔位：這個人自己寫的一兩句話。",
+        "threadId": "t_d"
       }
     ]
   },

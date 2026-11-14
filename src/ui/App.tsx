@@ -10,7 +10,7 @@ import { Intro } from './screens/Intro';
 import { Phone } from './shell/Phone';
 import { S } from './strings';
 import { Showcase } from './suru/Showcase';
-import type { IntroSegment, Nav, PhoneActions, PhoneData } from './types';
+import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from './types';
 
 function hasParam(name: string): boolean {
   try {
@@ -32,13 +32,14 @@ interface ShellProps {
   intro: IntroSegment[];
   afterIntro: Nav;
   onIntroDone(): void;
+  noticeIcon?(label: string): IconId | undefined;
   /** 蓋在手機畫面上的東西（沒電、結局、樣式示意頁） */
   overlay?: ReactNode;
   dev?: ReactNode;
 }
 
 /** 機身、螢幕、實體 home 鍵。真的遊戲和假資料示範共用這一層。 */
-function Shell({ stage, run, battery, startBattery, data, actions, intro, afterIntro, onIntroDone, overlay, dev }: ShellProps) {
+function Shell({ stage, run, battery, startBattery, data, actions, intro, afterIntro, onIntroDone, noticeIcon, overlay, dev }: ShellProps) {
   const [homePress, setHomePress] = useState(0);
   const [assistPress, setAssistPress] = useState(0);
 
@@ -72,7 +73,7 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
         </div>
         <div className="screen">
           {stage === 'intro' || !data ? (
-            <Intro key={run} title="SURU" segments={intro} onDone={onIntroDone} />
+            <Intro key={run} title="SURU" segments={intro} onDone={onIntroDone} noticeIcon={noticeIcon} />
           ) : (
             <Phone
               key={run}
@@ -133,6 +134,7 @@ function GameApp() {
       intro={game.intro}
       afterIntro={game.afterIntro}
       onIntroDone={game.finishIntro}
+      noticeIcon={game.noticeIcon}
       overlay={game.ending ? <Ending title={game.ending.title} text={game.ending.text} onRestart={game.restart} /> : undefined}
       dev={
         devEnabled() ? (

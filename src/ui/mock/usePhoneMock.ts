@@ -115,6 +115,7 @@ export function usePhoneMock() {
       },
       // 示範用：任何答案都接受並往下一題；全部答完跳一句佔位的結果，再從頭開始
       onViewImage: () => {},
+      onCall: () => {},
       onNavigate: () => {},
       onAccuseAnswer: (_stepId, value) =>
         setData((d) => {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AppIcon } from '../shell/icons';
 import { S } from '../strings';
@@ -52,14 +52,41 @@ export function SuruToken({ mark, name, active = false }: { mark: number; name: 
  * 外觀是她手機那一層的通知卡片，只有圖示是 Suru 的。
  */
 export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): void }) {
+  const startY = useRef<number | null>(null);
+  const [lift, setLift] = useState(0);
   useEffect(() => {
     const timer = window.setTimeout(onDismiss, 6000);
     return () => window.clearTimeout(timer);
     // 只在這則通知出現時計時一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // 往上滑就收掉，跟手機的通知一樣
+  const move = (y: number) => {
+    if (startY.current === null) return;
+    const dy = Math.min(0, y - startY.current);
+    setLift(dy);
+    if (dy < -36) {
+      startY.current = null;
+      onDismiss();
+    }
+  };
   return (
-    <button className="sysnote" onClick={onDismiss} aria-label={S.noticeDismiss}>
+    <button
+      className="sysnote"
+      style={lift ? { transform: 'translateY(' + lift + 'px)', opacity: 1 + lift / 60 } : undefined}
+      onClick={onDismiss}
+      onPointerDown={(e) => (startY.current = e.clientY)}
+      onPointerMove={(e) => move(e.clientY)}
+      onPointerUp={() => {
+        startY.current = null;
+        setLift(0);
+      }}
+      onPointerCancel={() => {
+        startY.current = null;
+        setLift(0);
+      }}
+      aria-label={S.noticeDismiss}
+    >
       <AppIcon icon="suru" size="sm" />
       <span className="sysnote__main">
         <span className="sysnote__head">
@@ -68,6 +95,7 @@ export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): voi
         </span>
         <span className="sysnote__text" role="status">{text}</span>
       </span>
+      <span className="sysnote__grab" aria-hidden="true" />
     </button>
   );
 }

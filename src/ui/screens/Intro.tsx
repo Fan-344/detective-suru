@@ -1,26 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
+import { AppIcon } from '../shell/icons';
 import { S } from '../strings';
 import { SuruHeader, SuruMark } from '../suru/Suru';
-import type { IntroSegment } from '../types';
+import type { IconId, IntroSegment } from '../types';
 
 interface Props {
   title: string;
   segments: IntroSegment[];
   onDone(): void;
+  /** 通知段落要用哪個 App 的圖示。查不到就不畫圖示 */
+  noticeIcon?(label: string): IconId | undefined;
 }
 
 const two = (n: number) => String(n).padStart(2, '0');
 
 /**
  * 開場：Suru 這一層的畫面。一段一段宣告，點一下前進；
- * 目前這一段最亮，講過的退到後面。文字全部來自資料。
+ * 目前這一段最亮，講過的退到後面。手機上的通知則畫成通知卡片的樣子。文字全部來自資料。
  */
-export function Intro({ title, segments, onDone }: Props) {
+export function Intro({ title, segments, onDone, noticeIcon }: Props) {
   const [shown, setShown] = useState(1);
-  const end = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const current = useRef<HTMLDivElement>(null);
 
+  // 只捲動這個區塊本身，讓最新的一段停在畫面上方三分之一處。
+  // 不用 scrollIntoView：它會連外層的頁面一起捲，在電腦上會整個跑掉。
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: 'end', behavior: 'smooth' });
+    const box = scroller.current;
+    const el = current.current;
+    if (!box || !el) return;
+    const top = Math.max(0, el.offsetTop - box.clientHeight * 0.28);
+    if (typeof box.scrollTo === 'function') box.scrollTo({ top, behavior: 'smooth' });
+    else box.scrollTop = top;
   }, [shown]);
 
   const advance = () => {
@@ -30,18 +41,39 @@ export function Intro({ title, segments, onDone }: Props) {
 
   return (
     <button className="suru intro" onClick={advance} aria-label={S.tapToContinue}>
-      <SuruHeader title={title} counter={`${two(shown)} / ${two(segments.length)}`} />
-      <div className="intro__scroll">
-        {segments.slice(0, shown).map((seg, i) => (
-          <div key={i} className={`intro__seg intro__seg--${seg.kind} ${i === shown - 1 ? 'intro__seg--now' : ''}`}>
-            {seg.kind === 'notice' && <div className="suru-label">{seg.label}</div>}
-            {seg.lines.map((line, j) => (
-              <p key={j}>{line}</p>
-            ))}
-            {seg.kind === 'quote' && seg.signature && <p className="intro__sign">{seg.signature}</p>}
-          </div>
-        ))}
-        <div ref={end} className="intro__end" />
+      <SuruHeader title={title} counter={two(shown) + ' / ' + two(segments.length)} />
+      <div className="intro__scroll" ref={scroller}>
+        {segments.slice(0, shown).map((seg, i) => {
+          const now = i === shown - 1;
+          const cls = 'intro__seg intro__seg--' + seg.kind + (now ? ' intro__seg--now' : '');
+          if (seg.kind === 'notice') {
+            const icon = noticeIcon?.(seg.label);
+            return (
+              <div key={i} ref={now ? current : undefined} className={cls}>
+                <div className="sysnote sysnote--static">
+                  {icon && <AppIcon icon={icon} size="sm" />}
+                  <span className="sysnote__main">
+                    <span className="sysnote__head">
+                      <span className="sysnote__app">{seg.label}</span>
+                    </span>
+                    {seg.lines.map((line, j) => (
+                      <span key={j} className="sysnote__text">{line}</span>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div key={i} ref={now ? current : undefined} className={cls}>
+              {seg.lines.map((line, j) => (
+                <p key={j}>{line}</p>
+              ))}
+              {seg.kind === 'quote' && seg.signature && <p className="intro__sign">{seg.signature}</p>}
+            </div>
+          );
+        })}
+        <div className="intro__end" />
       </div>
       <div className="intro__hint">
         <SuruMark pulse />

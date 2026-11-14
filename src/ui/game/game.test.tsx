@@ -104,4 +104,105 @@ describe('接上遊戲規則', () => {
     openApp('contacts');
     for (const c of content.characters) expect(screen.getByRole('button', { name: new RegExp(c.name) })).toBeTruthy();
   });
+
+  it('往右滑會返回上一層', () => {
+    startGame();
+    const stage = document.querySelector('.phone__stage') as HTMLElement;
+    const group = content.threads.find((t) => t.id === content.meta.coverThread)!;
+    expect(screen.getByRole('heading', { name: group.title })).toBeTruthy();
+    // 垂直滑動不算
+    fireEvent.touchStart(stage, { touches: [{ clientX: 20, clientY: 300 }] });
+    fireEvent.touchEnd(stage, { changedTouches: [{ clientX: 40, clientY: 500 }] });
+    expect(screen.getByRole('heading', { name: group.title })).toBeTruthy();
+    // 往右滑：從聊天室回到聊天列表
+    fireEvent.touchStart(stage, { touches: [{ clientX: 20, clientY: 300 }] });
+    fireEvent.touchEnd(stage, { changedTouches: [{ clientX: 180, clientY: 310 }] });
+    expect(screen.getByRole('heading', { name: appName('chat') })).toBeTruthy();
+  });
+
+  it('心聲一次只跳一個問題，通知往上滑會收掉', () => {
+    render(<App mode="game" />);
+    passIntro();
+    // 通知過幾秒會自己收起，所以送出後馬上看
+    fireEvent.click(screen.getByRole('button', { name: S.send }));
+    const note = screen.getByRole('button', { name: S.noticeDismiss });
+    // 綁結論的心聲很多句，但畫面上只會有一則通知
+    expect(screen.getAllByRole('status').length).toBe(1);
+    const bound = content.voice.filter((v) => v.conclusion && (v.level ?? 1) === 1);
+    expect(bound.length).toBeGreaterThan(1);
+    expect(screen.getByRole('status').textContent).toBe(bound[0].text);
+    fireEvent.pointerDown(note, { clientY: 60 });
+    fireEvent.pointerMove(note, { clientY: 10 });
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('發票畫成單據、天氣有圖示、動態牆列出貼文', () => {
+    startGame();
+    home();
+    openApp('receipts');
+    const receipt = content.items.find((i) => i.app === 'receipts')!;
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(receipt.title!) }));
+    expect(screen.getByText(S.receiptHeader)).toBeTruthy();
+    home();
+    openApp('weather');
+    expect(document.querySelectorAll('.wx--rain').length).toBe(content.items.filter((i) => i.app === 'weather' && /起大雨/.test(i.body)).length);
+    expect(document.querySelectorAll('.wx--clear').length).toBeGreaterThan(0);
+    home();
+    openApp('social');
+    const posts = content.flavor?.posts ?? [];
+    expect(posts.length).toBeGreaterThan(0);
+    expect(screen.getByText(posts[0].text)).toBeTruthy();
+  });
+
+  it('時間軸只放紀錄，不放聊天裡說的話', () => {
+    startGame();
+    home();
+    openApp('receipts');
+    home();
+    openApp('suru');
+    fireEvent.click(screen.getByRole('tab', { name: S.suruTimeline }));
+    const rows = [...document.querySelectorAll('.suru-time__text')].map((el) => el.textContent);
+    expect(rows.length).toBeGreaterThan(0);
+    // 說法的寫法是「某人：「…」」，時間軸裡不該出現
+    expect(rows.some((t) => t?.includes('：「'))).toBe(false);
+  });
+
+  it('Link 裡有跟案情無關的聊天室：排在後面，打開不扣電，也不能回', () => {
+    startGame();
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    const chats = content.flavor?.chats ?? [];
+    expect(chats.length).toBeGreaterThan(0);
+    const rows = [...document.querySelectorAll('.rows .row__title')].map((el) => el.textContent ?? '');
+    expect(rows.length).toBe(content.threads.length + chats.length);
+    expect(rows[content.threads.length]).toContain(chats[0].title);
+    const before = battery();
+    fireEvent.click(document.querySelectorAll('.rows .row')[content.threads.length] as HTMLElement);
+    wait(3000);
+    expect(battery()).toBe(before);
+    expect(screen.getByText(chats[0].messages[0].text)).toBeTruthy();
+    expect(document.querySelector('.options')).toBeNull();
+  });
+
+  it('Link 裡點頭像或私訊的標題會開個人頁面：完整頭貼、私訊、通話', () => {
+    startGame();
+    const group = content.threads.find((t) => t.id === content.meta.coverThread)!;
+    const who = content.characters[0];
+    // 群組裡點某個人的頭像
+    fireEvent.click(screen.getAllByRole('button', { name: S.profileOpen + '：' + who.name })[0]);
+    expect(screen.getByRole('heading', { name: who.name, level: 1 })).toBeTruthy();
+    expect(screen.getByRole('button', { name: S.zoomOpen + '：' + who.name })).toBeTruthy();
+    // 通話只跳一句提醒
+    fireEvent.click(screen.getByRole('button', { name: S.profileCall }));
+    expect(screen.getByRole('status').textContent).toBe(S.callBlocked);
+    // 返回會回到原本的群組
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    expect(screen.getByRole('heading', { name: group.title })).toBeTruthy();
+    // 再進去按私訊，會到他的私訊聊天室
+    fireEvent.click(screen.getAllByRole('button', { name: S.profileOpen + '：' + who.name })[0]);
+    fireEvent.click(screen.getByRole('button', { name: S.profileMessage }));
+    const dm = content.threads.find((t) => t.members.length === 1 && t.members[0] === who.id)!;
+    // 私訊裡標題和頭像都能開個人頁面
+    expect(screen.getAllByRole('button', { name: S.profileOpen + '：' + dm.title }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: new RegExp(dm.title), level: 1 })).toBeTruthy();
+  });
 });

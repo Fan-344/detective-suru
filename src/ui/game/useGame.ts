@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadCase } from '../../content';
 import { createEngine, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
 import { S } from '../strings';
-import type { IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
+import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
 import { buildPhoneData, EMPTY_UI, newVoiceLines, type GameUi } from './view';
 
 // 把畫面接到遊戲規則上的控制器。
@@ -120,6 +120,8 @@ export function useGame(caseId = 'case01') {
         if (playing()) act({ type: 'openApp', app: appId });
       },
       onOpenThread: (threadId) => {
+        // 跟案情無關的聊天室不在規則裡，只是打開來看
+        if (!engine?.content.threads.some((t) => t.id === threadId)) return;
         if (playing()) act({ type: 'readThread', thread: threadId });
       },
       onChooseReply: (_threadId, optionId) => {
@@ -130,6 +132,7 @@ export function useGame(caseId = 'case01') {
         act({ type: 'sendCover' });
       },
       onOpenRow: () => {},
+      onCall: () => update((s) => ({ game: s.game, ui: { ...s.ui, notice: notice(S.callBlocked) } })),
       onOpenSuru: () => update((s) => ({ game: s.game, ui: { ...s.ui, voiceRead: s.ui.voiceLog.length } })),
       onDismissNotice: () => update((s) => ({ game: s.game, ui: { ...s.ui, notice: undefined } })),
       onLocate: () => {
@@ -141,7 +144,8 @@ export function useGame(caseId = 'case01') {
       onNavigate: (nav: Nav) =>
         update((s) => {
           const chat = engine?.content.apps.apps.find((a) => a.id === nav.app)?.view === 'chat';
-          const openThread = chat ? nav.detail : null;
+          const real = chat && engine?.content.threads.some((t) => t.id === nav.detail);
+          const openThread = real ? nav.detail : null;
           const noticed = openThread ? { ...s.ui.noticed, [openThread]: s.ui.revealed[openThread] ?? 0 } : s.ui.noticed;
           return { game: s.game, ui: { ...s.ui, openThread, noticed } };
         }),
@@ -167,6 +171,12 @@ export function useGame(caseId = 'case01') {
     intro: (content?.meta.intro ?? []) as IntroSegment[],
     afterIntro: { app: chatApp, detail: content?.meta.coverThread ?? null } as Nav,
     ending: ended ? { title: ended.title, text: ended.text } : undefined,
+    /** 開場的通知段落要用哪個 App 的圖示：標籤開頭是 App 的名字就用它的；講到來電就用電話的 */
+    noticeIcon: (label: string): IconId | undefined => {
+      const apps = content?.apps.apps ?? [];
+      const hit = apps.find((x) => label.startsWith(x.name)) ?? (label.includes(S.missedCall) ? apps.find((x) => x.id === 'phone') : undefined);
+      return hit?.icon as IconId | undefined;
+    },
     finishIntro: () => setIntroDone(true),
     restart: () => {
       if (!engine) return;

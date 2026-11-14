@@ -51,11 +51,20 @@ interface AvatarProps {
   name: string;
   avatar?: string;
   onZoom?: ZoomFn;
+  /** 點頭像要做別的事（例如開個人頁面）。有給這個就不放大 */
+  onOpen?(): void;
 }
 
 /** 頭像：有圖用圖，沒有就用名字最後一個字。給了 onZoom 就能點開看大圖 */
-export function Avatar({ name, avatar, onZoom }: AvatarProps) {
+export function Avatar({ name, avatar, onZoom, onOpen }: AvatarProps) {
   const src = avatarUrl(avatar);
+  if (onOpen) {
+    return (
+      <button className={'avatar' + (src ? ' avatar--img' : '')} onClick={onOpen} aria-label={S.profileOpen + '：' + name}>
+        {src ? <img src={src} alt="" draggable={false} /> : name.slice(-1)}
+      </button>
+    );
+  }
   if (!src) return <span className="avatar" aria-hidden="true">{name.slice(-1)}</span>;
   const img = <img src={src} alt="" draggable={false} />;
   return onZoom ? (
@@ -82,6 +91,8 @@ export function ChatList({ threads, onOpen }: { threads: ChatThread[]; onOpen(id
                 <span className="row__title">
                   {t.title}
                   {t.group && <span className="row__count">{t.members.length + 1}</span>}
+                  {t.official && <span className="row__tag">{S.chatOfficial}</span>}
+                  {t.muted && <span className="row__muted" aria-label={S.chatMuted} />}
                 </span>
                 <span className="row__sub">{t.typing ? `${S.typing}…` : lastLine(t)}</span>
               </span>
@@ -103,10 +114,12 @@ interface RoomProps {
   onChoose(optionId: string): void;
   onSendPrefill(): void;
   onZoom?: ZoomFn;
+  /** 點了某個人的頭像 */
+  onProfile?(memberId: string): void;
 }
 
 /** 聊天室：舊訊息、已讀時間、輸入中提示，底部是回覆選項或預先填好的輸入框 */
-export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom }: RoomProps) {
+export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onProfile }: RoomProps) {
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scroller.current;
@@ -133,7 +146,7 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom }: Ro
               const tail = !next || next.from !== m.from || next.time !== m.time;
               return (
                 <div key={m.id} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'} ${first ? 'msg--first' : ''}`}>
-                  {!mine && (first ? <Avatar name={nameOf(m.from)} avatar={avatarOf(m.from)} onZoom={onZoom} /> : <span className="avatar avatar--gap" />)}
+                  {!mine && (first ? <Avatar name={nameOf(m.from)} avatar={avatarOf(m.from)} onOpen={onProfile ? () => onProfile(m.from) : undefined} /> : <span className="avatar avatar--gap" />)}
                   <div className="msg__body">
                     {!mine && first && thread.group && <div className="msg__name">{nameOf(m.from)}</div>}
                     <div className="msg__line">
