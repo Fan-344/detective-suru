@@ -207,10 +207,10 @@ describe('engine', () => {
     expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(gate.level);
   });
 
-  it('紙袋牌引出登入視窗；可以按按鈕、關掉，或放著去做別的事（等於不理它）', () => {
-    let s = spotAll(engine, run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state);
-    expect(s.cards).toContain('card_bag');
-    s = run(s, [{ type: 'test', card: 'card_bag', target: 'zonghan' }]).state;
+  it('舊 iPad 那張牌引出登入視窗；可以按按鈕、關掉，或放著去做別的事（等於不理它）', () => {
+    let s = spotAll(engine, run(afterCover(), [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }]).state);
+    expect(s.cards).toContain('card_oldipad');
+    s = run(s, [{ type: 'test', card: 'card_oldipad', target: 'zonghan' }]).state;
     expect(s.prompt).toBe('sys_login_prompt');
     expect(s.seen).toContain('rec_login');
     const level = s.ladder.jingwen;
@@ -230,8 +230,8 @@ describe('engine', () => {
     const login = content.events.find((e) => e.id === 'sys_login_prompt');
     const wall = login?.kind === 'system' ? login.options?.find((o) => o.hints?.length) : undefined;
     if (!wall?.hints) throw new Error('登入視窗沒有軟牆按鈕');
-    let s = spotAll(engine, run(afterCover(), [{ type: 'openApp', app: 'receipts' }]).state);
-    s = run(s, [{ type: 'test', card: 'card_bag', target: 'zonghan' }]).state;
+    let s = spotAll(engine, run(afterCover(), [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }]).state);
+    s = run(s, [{ type: 'test', card: 'card_oldipad', target: 'zonghan' }]).state;
     for (let i = 0; i <= wall.hints.length; i++) {
       const r = engine.step(s, { type: 'answerPrompt', option: wall.id });
       expect(r.outcomes).toEqual([{ kind: 'promptHint', event: 'sys_login_prompt', text: wall.hints[i % wall.hints.length] }]);
@@ -365,11 +365,12 @@ describe('engine', () => {
     expect(noted(first.state)).toBeGreaterThan(0);
     expect(first.state.assistantUnread).toBe(true);
     // 還沒打開之前，再記下新的也不重複通知
-    const more = engine.step(first.state, { type: 'openApp', app: 'receipts' });
+    const more = run(first.state, [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }]);
     expect(noted(more.state)).toBeGreaterThan(noted(first.state));
     expect(more.outcomes.some((o) => o.kind === 'assistantUnread')).toBe(false);
     // 比對出來的直接告訴玩家，不動未讀記號
-    const found = engine.step(more.state, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' });
+    const withReceipts = run(more.state, [{ type: 'openApp', app: 'receipts' }]).state;
+    const found = engine.step(withReceipts, { type: 'compare', statement: 'say_aze_stoodup', record: 'rcp_1842' });
     expect(found.outcomes).toContainEqual(expect.objectContaining({ kind: 'cards', via: 'found' }));
     const assistant = content.apps.apps.find((a) => a.view === 'assistant')!;
     const opened = engine.step(found.state, { type: 'openApp', app: assistant.id });
@@ -381,9 +382,9 @@ describe('engine', () => {
     // 用副本自己寫一筆，不依賴資料檔裡怎麼寫
     const copy = structuredClone(content);
     for (const c of copy.cards) delete c.spot;
-    const card = copy.cards.find((c) => c.id === 'card_bag')!;
+    const card = copy.cards.find((c) => c.id === 'card_oldipad')!;
     card.spot = {
-      item: 'rcp_2016',
+      item: 'fd_ipad',
       prompt: '問句',
       options: [
         { id: 'a', text: '甲' },
@@ -395,29 +396,29 @@ describe('engine', () => {
     copy.meta.battery.cost.spotMiss = 1;
     const e2 = createEngine(copy);
     let s = e2.step(e2.start(), { type: 'sendCover' }).state;
-    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
-    expect(s.cards).not.toContain('card_bag');
-    expect(e2.menu(s).concerns).toEqual([{ card: 'card_bag', item: 'rcp_2016', options: ['a', 'b', 'c'], missCost: 1 }]);
-    expect(e2.menu(s).tests.some((t) => t.card === 'card_bag')).toBe(false);
+    s = run(s, [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }], e2).state;
+    expect(s.cards).not.toContain('card_oldipad');
+    expect(e2.menu(s).concerns).toEqual([{ card: 'card_oldipad', item: 'fd_ipad', options: ['a', 'b', 'c'], missCost: 1 }]);
+    expect(e2.menu(s).tests.some((t) => t.card === 'card_oldipad')).toBe(false);
 
-    const miss = e2.step(s, { type: 'spot', card: 'card_bag', option: 'a' });
-    expect(miss.outcomes).toContainEqual({ kind: 'spot', card: 'card_bag', option: 'a', right: false });
+    const miss = e2.step(s, { type: 'spot', card: 'card_oldipad', option: 'a' });
+    expect(miss.outcomes).toContainEqual({ kind: 'spot', card: 'card_oldipad', option: 'a', right: false });
     expect(s.battery - miss.state.battery).toBe(1);
     expect(e2.menu(miss.state).concerns[0].options).toEqual(['b', 'c']);
-    expect(e2.step(miss.state, { type: 'spot', card: 'card_bag', option: 'a' }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step(miss.state, { type: 'spot', card: 'card_oldipad', option: 'a' }).outcomes[0].kind).toBe('invalid');
 
-    const hit = e2.step(miss.state, { type: 'spot', card: 'card_bag', option: 'b' });
-    expect(hit.state.cards).toContain('card_bag');
+    const hit = e2.step(miss.state, { type: 'spot', card: 'card_oldipad', option: 'b' });
+    expect(hit.state.cards).toContain('card_oldipad');
     expect(hit.state.concerns).toEqual([]);
     expect(hit.state.battery).toBe(miss.state.battery);
-    expect(hit.outcomes).toContainEqual({ kind: 'cards', cards: ['card_bag'], via: 'found' });
+    expect(hit.outcomes).toContainEqual({ kind: 'cards', cards: ['card_oldipad'], via: 'found' });
   });
 
   it('答案不只一個時，指到任何一個都算對', () => {
     const copy = structuredClone(content);
     for (const c of copy.cards) delete c.spot;
-    copy.cards.find((c) => c.id === 'card_bag')!.spot = {
-      item: 'rcp_2016',
+    copy.cards.find((c) => c.id === 'card_oldipad')!.spot = {
+      item: 'fd_ipad',
       options: [
         { id: 'a', text: '甲' },
         { id: 'b', text: '乙' },
@@ -427,9 +428,9 @@ describe('engine', () => {
     };
     const e2 = createEngine(copy);
     let s = e2.step(e2.start(), { type: 'sendCover' }).state;
-    s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
-    expect(e2.step(s, { type: 'spot', card: 'card_bag', option: 'c' }).state.cards).toContain('card_bag');
-    expect(e2.step(s, { type: 'spot', card: 'card_bag', option: 'b' }).state.cards).not.toContain('card_bag');
+    s = run(s, [{ type: 'openApp', app: 'finder' }, { type: 'locate', app: 'finder' }], e2).state;
+    expect(e2.step(s, { type: 'spot', card: 'card_oldipad', option: 'c' }).state.cards).toContain('card_oldipad');
+    expect(e2.step(s, { type: 'spot', card: 'card_oldipad', option: 'b' }).state.cards).not.toContain('card_oldipad');
   });
 
   it('每個人只有最新的一則能回：他傳了新訊息，舊的就不能再回', () => {
