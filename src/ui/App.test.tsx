@@ -48,7 +48,7 @@ describe('外觀框架', () => {
     home();
 
     // 清單加詳情
-    fireEvent.click(screen.getByRole('button', { name: /雲端發票/ }));
+    fireEvent.click(screen.getByRole('button', { name: /發票雲/ }));
     const row = fixture.phone.lists.receipts[0].rows[0];
     fireEvent.click(screen.getByRole('button', { name: new RegExp(row.title) }));
     expect(screen.getByText(row.detail.when)).toBeTruthy();
@@ -65,7 +65,7 @@ describe('外觀框架', () => {
     home();
 
     // 聊天列表與聊天室
-    fireEvent.click(screen.getByRole('button', { name: /聊聊/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Link/ }));
     const dm = fixture.phone.threads[1];
     fireEvent.click(screen.getByRole('button', { name: new RegExp(dm.title) }));
     expect(screen.getByText(dm.options![0].text)).toBeTruthy();
@@ -115,7 +115,7 @@ describe('外觀框架', () => {
     fireEvent.click(screen.getByRole('tab', { name: S.suruRecords }));
     expect(screen.getByText(suru.records[0].title)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: S.suruClose }));
-    expect(screen.getByRole('button', { name: /雲端發票/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /發票雲/ })).toBeTruthy();
   });
 
   it('長按 home 鍵叫出 Suru 助理，短按回主畫面', () => {
@@ -145,6 +145,9 @@ describe('外觀框架', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /行事曆/ }));
     expect(screen.getByText('2026 年 11 月')).toBeTruthy();
+    expect(screen.getByText(S.calEmpty)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '2026-11-14' }));
+    expect(screen.getByText(fixture.phone.calendar.events[0].title)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: S.calNext }));
     expect(screen.getByText('2026 年 12 月')).toBeTruthy();
     home();
@@ -153,5 +156,38 @@ describe('外觀框架', () => {
     expect(screen.getByTestId('battery')).toBeTruthy();
     fireEvent.click(screen.getByRole('switch', { name: S.setShowPercent }));
     expect(screen.queryByTestId('battery')).toBeNull();
+  });
+
+  it('連續逛三個背景 App 會跳出 Suru 的提醒，點一下收起，不擋操作', () => {
+    render(<App />);
+    passIntro();
+    for (const name of [/計算機/, /音樂/]) {
+      home();
+      fireEvent.click(screen.getByRole('button', { name }));
+    }
+    expect(screen.queryByRole('status')).toBeNull();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /時鐘/ }));
+    expect(screen.getByRole('status').textContent).toBe(fixture.wander.hints[0]);
+    expect(screen.getByRole('tab', { name: S.clockWorld })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: S.noticeDismiss }));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('時鐘有三個分頁，世界時鐘從資料給的時刻開始走', () => {
+    vi.useFakeTimers();
+    render(<App />);
+    passIntro();
+    home();
+    fireEvent.click(screen.getByRole('button', { name: /時鐘/ }));
+    expect(screen.getByTestId('world-time').textContent).toBe('16:20:00');
+    act(() => {
+      vi.advanceTimersByTime(61000);
+    });
+    expect(screen.getByTestId('world-time').textContent).toBe('16:21:01');
+    fireEvent.click(screen.getByRole('tab', { name: S.clockAlarm }));
+    expect(screen.getByText(fixture.phone.clock.alarms[0].label)).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: S.clockWatch }));
+    expect(screen.getByTestId('watch-time').textContent).toBe('00:00.00');
   });
 });

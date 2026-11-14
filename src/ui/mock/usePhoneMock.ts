@@ -12,6 +12,7 @@ interface Fixture {
   mockReplyText: string;
   mockReplyTime: string;
   afterIntro: Nav;
+  wander: { after: number; hints: string[] };
   intro: IntroSegment[];
   introTitle: string;
   suruDemo: SuruDemo;
@@ -28,6 +29,8 @@ export function usePhoneMock() {
   const [data, setData] = useState<PhoneData>(fixture.phone);
   const [run, setRun] = useState(0);
   const timers = useRef<number[]>([]);
+  // 連續打開了幾個背景 App、已經提醒過幾次。只是示範用的計數，正式規則在 engine
+  const wander = useRef({ streak: 0, shown: 0 });
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -84,6 +87,20 @@ export function usePhoneMock() {
         const text = data.threads.find((t) => t.id === threadId)?.prefill;
         if (text) sendAsSelf(threadId, text);
       },
+      onOpenApp: (appId) => {
+        const opened = data.apps.find((a) => a.id === appId);
+        if (!opened?.background) {
+          wander.current.streak = 0;
+          return;
+        }
+        wander.current.streak += 1;
+        if (wander.current.streak < fixture.wander.after || fixture.wander.hints.length === 0) return;
+        wander.current.streak = 0;
+        const text = fixture.wander.hints[wander.current.shown % fixture.wander.hints.length];
+        wander.current.shown += 1;
+        setData((d) => ({ ...d, notice: { id: wander.current.shown, text } }));
+      },
+      onDismissNotice: () => setData((d) => ({ ...d, notice: undefined })),
       onOpenSuru: () =>
         setData((d) => ({
           ...d,
@@ -122,6 +139,7 @@ export function usePhoneMock() {
 
   const restart = () => {
     clearTimers();
+    wander.current = { streak: 0, shown: 0 };
     setData(fixture.phone);
     setBatteryRaw(fixture.startBattery);
     setStage('intro');

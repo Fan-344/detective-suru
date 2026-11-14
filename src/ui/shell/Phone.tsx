@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Calculator, Calendar, Camera, Music, Settings, Stopwatch } from '../apps/Extras';
+import { Calculator, Calendar, Camera, Clock, Music, Settings } from '../apps/Extras';
+import { SuruBanner } from '../suru/Suru';
 import { ChatList, ChatRoom } from '../layouts/Chat';
 import { GalleryGrid, GalleryViewer } from '../layouts/Gallery';
 import { DetailView, ListView } from '../layouts/ListDetail';
@@ -36,7 +37,7 @@ const HOME: Nav = { app: null, detail: null };
 export function Phone({ data, battery, actions, initialNav, homePress = 0, assistPress = 0, tension = 0 }: Props) {
   const [nav, setNav] = useState<Nav>(initialNav ?? HOME);
   const [motion, setMotion] = useState<Motion>('open');
-  const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false });
+  const [prefs, setPrefs] = useState<PhonePrefs>({ showPercent: true, reduceMotion: false, hintLevel: 1 });
 
   const app = data.apps.find((a) => a.id === nav.app) ?? null;
 
@@ -45,6 +46,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
     setNav(next);
   };
   const openApp = (appId: string) => {
+    actions.onOpenApp(appId);
     if (data.apps.find((a) => a.id === appId)?.layout === 'suru') actions.onOpenSuru();
     go({ app: appId, detail: null }, 'open');
   };
@@ -124,9 +126,9 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
   } else if (app?.layout === 'calculator') {
     body = <Calculator />;
   } else if (app?.layout === 'clock') {
-    body = <Stopwatch />;
+    body = <Clock clock={data.clock} />;
   } else if (app?.layout === 'calendar') {
-    body = <Calendar start={data.calendar} />;
+    body = <Calendar data={data.calendar} />;
   } else if (app?.layout === 'settings') {
     body = <Settings wifiName={data.wifiName} battery={battery} prefs={prefs} onChange={setPrefs} />;
   } else if (app?.layout === 'camera') {
@@ -170,6 +172,7 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           </div>
         )}
         <div className="phone__veil" aria-hidden="true" />
+        {data.notice && <SuruBanner key={data.notice.id} text={data.notice.text} onDismiss={actions.onDismissNotice} />}
       </div>
     </div>
   );

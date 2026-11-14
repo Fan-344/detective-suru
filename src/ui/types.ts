@@ -45,6 +45,8 @@ export interface AppDef {
   dock?: boolean;
   /** 收在哪個資料夾裡（資料夾的 id） */
   folder?: string;
+  /** 跟案情無關的背景 App */
+  background?: boolean;
   /** 聊天以外的 App 的未讀數；聊天 App 由聊天室未讀數加總 */
   unread?: number;
 }
@@ -173,6 +175,27 @@ export interface MusicTrack {
 export interface PhonePrefs {
   showPercent: boolean;
   reduceMotion: boolean;
+  /** 心聲提示的多寡：0 少、1 標準、2 多。外觀框架只記住選擇，規則在步驟三才接 */
+  hintLevel: number;
+}
+
+/** 行事曆：今天是哪一天、有哪些行程。日期格式是 2026-11-14 */
+export interface CalendarData {
+  today: string;
+  events: { id: string; date: string; time?: string; title: string }[];
+}
+
+export interface ClockData {
+  /** 手機醒來時的時刻（一天中的第幾分鐘），之後照真實的秒數往前走 */
+  startMinutes: number;
+  cities: { name: string; offsetMinutes: number }[];
+  alarms: { id: string; time: string; label: string; on: boolean }[];
+}
+
+/** Suru 從畫面上方滑下來的一句提醒，不擋操作 */
+export interface SuruNotice {
+  id: number;
+  text: string;
 }
 
 export interface PhoneData {
@@ -185,7 +208,9 @@ export interface PhoneData {
   galleries: Record<string, GalleryItem[]>;
   suru: SuruData;
   music: MusicTrack[];
-  calendar: { year: number; month: number };
+  calendar: CalendarData;
+  clock: ClockData;
+  notice?: SuruNotice;
 }
 
 export interface PhoneActions {
@@ -194,6 +219,8 @@ export interface PhoneActions {
   onSendPrefill(threadId: string): void;
   onOpenRow(appId: string, rowId: string): void;
   onOpenSuru(): void;
+  onOpenApp(appId: string): void;
+  onDismissNotice(): void;
 }
 
 export interface Nav {

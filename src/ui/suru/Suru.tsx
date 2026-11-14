@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { S } from '../strings';
 
 // Suru 這一層的視覺零件：深色底、琥珀色、明體標題、對稱版面。
 // 用在開場、沒電，以及步驟三的備忘錄、測試面板、挑戰書。
@@ -41,6 +43,22 @@ export function SuruToken({ mark, name, active = false }: { mark: number; name: 
       </span>
       <span className="suru-token__name">{name}</span>
     </span>
+  );
+}
+
+/** Suru 從畫面上方滑下來說一句話。不擋操作，點一下或過幾秒就收起 */
+export function SuruBanner({ text, onDismiss }: { text: string; onDismiss(): void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onDismiss, 6000);
+    return () => window.clearTimeout(timer);
+    // 只在這則提醒出現時計時一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <button className="suru suru-banner" onClick={onDismiss} aria-label={S.noticeDismiss}>
+      <SuruMark pulse />
+      <span className="suru-banner__text" role="status">{text}</span>
+    </button>
   );
 }
 

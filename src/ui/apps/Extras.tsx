@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { S } from '../strings';
-import type { MusicTrack, PhonePrefs } from '../types';
+import type { CalendarData, ClockData, MusicTrack, PhonePrefs } from '../types';
 import { CALC_START, calcPress, formatElapsed, formatTrackTime, monthCells, stepMonth } from './calc';
 
 // 跟案情無關的背景 App。它們真的能用，讓這支手機像一支有人在用的手機。
@@ -32,8 +32,7 @@ export function Calculator() {
   );
 }
 
-/** 時鐘：遊戲裡沒有時間，所以只有碼錶 */
-export function Stopwatch() {
+function Stopwatch() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [laps, setLaps] = useState<number[]>([]);
@@ -78,9 +77,98 @@ export function Stopwatch() {
   );
 }
 
-export function Calendar({ start }: { start: { year: number; month: number } }) {
-  const [ym, setYm] = useState(start);
+const two = (n: number) => String(n).padStart(2, '0');
+
+function WorldClock({ clock }: { clock: ClockData }) {
+  // 從資料給的起始時刻開始，照真實經過的秒數往前走
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const baseSeconds = clock.startMinutes * 60 + seconds;
+  return (
+    <ul className="world">
+      {clock.cities.map((city, i) => {
+        const total = baseSeconds + city.offsetMinutes * 60;
+        const day = Math.floor(total / 86400);
+        const inDay = ((total % 86400) + 86400) % 86400;
+        const label = day < 0 ? S.clockYesterday : day > 0 ? S.clockTomorrow : S.clockToday;
+        return (
+          <li key={city.name}>
+            <span className="world__city">
+              <span className="world__day">{label}</span>
+              {city.name}
+            </span>
+            <span className="world__time" data-testid={i === 0 ? 'world-time' : undefined}>
+              {two(Math.floor(inDay / 3600))}:{two(Math.floor(inDay / 60) % 60)}
+              {i === 0 && <small>:{two(inDay % 60)}</small>}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Alarms({ clock }: { clock: ClockData }) {
+  const [on, setOn] = useState<Record<string, boolean>>(() => Object.fromEntries(clock.alarms.map((a) => [a.id, a.on])));
+  return (
+    <ul className="world">
+      {clock.alarms.map((a) => (
+        <li key={a.id} className={on[a.id] ? '' : 'world__off'}>
+          <span className="world__city">
+            <span className="world__time">{a.time}</span>
+            <span className="world__day">{a.label}</span>
+          </span>
+          <Switch on={!!on[a.id]} label={`${a.time} ${a.label}`} onToggle={() => setOn({ ...on, [a.id]: !on[a.id] })} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+type ClockTab = 'world' | 'alarm' | 'watch';
+
+/** 時鐘：世界時鐘、鬧鐘、碼錶三個分頁 */
+export function Clock({ clock }: { clock: ClockData }) {
+  const [tab, setTab] = useState<ClockTab>('world');
+  const tabs: { id: ClockTab; label: string }[] = [
+    { id: 'world', label: S.clockWorld },
+    { id: 'alarm', label: S.clockAlarm },
+    { id: 'watch', label: S.clockWatch },
+  ];
+  return (
+    <div className="clock">
+      <div className="clock__body">
+        {tab === 'world' && <WorldClock clock={clock} />}
+        {tab === 'alarm' && <Alarms clock={clock} />}
+        {tab === 'watch' && <Stopwatch />}
+      </div>
+      <div className="clock__tabs" role="tablist">
+        {tabs.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const isoDate = (year: number, month: number, day: number) => `${year}-${two(month)}-${two(day)}`;
+
+/** 行事曆：翻月份、標出今天、有行程的日子有一個點，點日期看當天的行程 */
+export function Calendar({ data }: { data: CalendarData }) {
+  const [ty, tm] = data.today.split('-').map(Number);
+  const [ym, setYm] = useState({ year: ty, month: tm });
+  const [picked, setPicked] = useState(data.today);
   const cells = monthCells(ym.year, ym.month);
+  const busy = new Set(data.events.map((e) => e.date));
+  const dayEvents = data.events
+    .filter((e) => e.date === picked)
+    .sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
   return (
     <div className="cal">
       <div className="cal__head">
@@ -94,11 +182,30 @@ export function Calendar({ start }: { start: { year: number; month: number } }) 
         ))}
       </div>
       <div className="cal__grid">
-        {cells.map((d, i) => (
-          <span key={i} className={d ? 'cal__day' : ''}>{d ?? ''}</span>
-        ))}
+        {cells.map((d, i) => {
+          if (!d) return <span key={i} />;
+          const iso = isoDate(ym.year, ym.month, d);
+          const cls = ['cal__day', iso === data.today ? 'cal__day--today' : '', iso === picked ? 'cal__day--picked' : ''].join(' ');
+          return (
+            <button key={i} className={cls} onClick={() => setPicked(iso)} aria-pressed={iso === picked} aria-label={iso}>
+              <span>{d}</span>
+              {busy.has(iso) && <i />}
+            </button>
+          );
+        })}
       </div>
-      <p className="cal__empty">{S.calEmpty}</p>
+      {dayEvents.length === 0 ? (
+        <p className="cal__empty">{S.calEmpty}</p>
+      ) : (
+        <ul className="cal__events">
+          {dayEvents.map((e) => (
+            <li key={e.id}>
+              <span className="cal__when">{e.time ?? S.calAllDay}</span>
+              <span>{e.title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -135,6 +242,25 @@ export function Settings({ wifiName, battery, prefs, onChange }: SettingsProps) 
         <div className="detail__field">
           <dt>{S.setReduceMotion}</dt>
           <dd><Switch on={prefs.reduceMotion} label={S.setReduceMotion} onToggle={() => onChange({ ...prefs, reduceMotion: !prefs.reduceMotion })} /></dd>
+        </div>
+      </dl>
+      <h2 className="list__label">{S.setGame}</h2>
+      <dl className="detail__fields setgroup">
+        <div className="detail__field">
+          <dt>{S.setHintLevel}</dt>
+          <dd className="segment" role="radiogroup" aria-label={S.setHintLevel}>
+            {S.setHintLevels.map((label, i) => (
+              <button
+                key={label}
+                role="radio"
+                aria-checked={prefs.hintLevel === i}
+                className={prefs.hintLevel === i ? 'on' : ''}
+                onClick={() => onChange({ ...prefs, hintLevel: i })}
+              >
+                {label}
+              </button>
+            ))}
+          </dd>
         </div>
       </dl>
     </div>

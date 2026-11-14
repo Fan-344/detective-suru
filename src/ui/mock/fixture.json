@@ -79,14 +79,14 @@
       },
       {
         "id": "receipts",
-        "name": "雲端發票",
+        "name": "發票雲",
         "icon": "receipts",
         "layout": "list",
         "unread": 6
       },
       {
         "id": "moments",
-        "name": "片刻",
+        "name": "Instory",
         "icon": "moments",
         "layout": "gallery"
       },
@@ -100,7 +100,8 @@
         "id": "music",
         "name": "音樂",
         "icon": "music",
-        "layout": "music"
+        "layout": "music",
+        "background": true
       },
       {
         "id": "calendar",
@@ -112,25 +113,29 @@
         "id": "clock",
         "name": "時鐘",
         "icon": "clock",
-        "layout": "clock"
+        "layout": "clock",
+        "background": true
       },
       {
         "id": "social",
-        "name": "碎念",
+        "name": "Throws",
         "icon": "social",
-        "layout": "list"
+        "layout": "list",
+        "background": true
       },
       {
         "id": "calculator",
         "name": "計算機",
         "icon": "calculator",
-        "layout": "calculator"
+        "layout": "calculator",
+        "background": true
       },
       {
         "id": "settings",
         "name": "設定",
         "icon": "settings",
-        "layout": "settings"
+        "layout": "settings",
+        "background": true
       },
       {
         "id": "finder",
@@ -144,7 +149,8 @@
         "name": "相機",
         "icon": "camera",
         "layout": "camera",
-        "folder": "f_tools"
+        "folder": "f_tools",
+        "background": true
       },
       {
         "id": "phone",
@@ -156,7 +162,7 @@
       },
       {
         "id": "chat",
-        "name": "聊聊",
+        "name": "Link",
         "icon": "chat",
         "layout": "chat",
         "dock": true
@@ -625,13 +631,13 @@
             {
               "id": "so1",
               "title": "帳號佔位甲",
-              "subtitle": "貼文佔位：一則跟案情無關的日常碎念",
+              "subtitle": "貼文佔位：一則跟案情無關的日常Throws",
               "meta": "2 小時",
               "detail": {
                 "title": "帳號佔位甲",
                 "when": "2 小時前",
                 "lines": [
-                  "貼文佔位：一則跟案情無關的日常碎念。"
+                  "貼文佔位：一則跟案情無關的日常Throws。"
                 ]
               }
             },
@@ -809,7 +815,7 @@
         {
           "id": "r1",
           "title": "紀錄項目一",
-          "source": "雲端發票",
+          "source": "發票雲",
           "when": "週六 18:42",
           "body": "品項 ×1、品項 ×1"
         },
@@ -831,14 +837,14 @@
         {
           "id": "s1",
           "title": "說法項目一",
-          "source": "聊聊・測試群組",
+          "source": "Link・測試群組",
           "when": "週六 21:55",
           "body": "聯絡人甲：佔位的一句話"
         },
         {
           "id": "s2",
           "title": "說法項目二",
-          "source": "片刻",
+          "source": "Instory",
           "when": "週六 22:30",
           "body": "聯絡人乙：佔位的一句話"
         }
@@ -881,8 +887,78 @@
       }
     ],
     "calendar": {
-      "year": 2026,
-      "month": 11
+      "today": "2026-11-16",
+      "events": [
+        {
+          "id": "e1",
+          "date": "2026-11-14",
+          "time": "16:30",
+          "title": "行程佔位一"
+        },
+        {
+          "id": "e2",
+          "date": "2026-11-14",
+          "time": "18:30",
+          "title": "行程佔位二"
+        },
+        {
+          "id": "e3",
+          "date": "2026-11-18",
+          "title": "行程佔位三（整天）"
+        },
+        {
+          "id": "e4",
+          "date": "2026-11-30",
+          "title": "行程佔位四"
+        },
+        {
+          "id": "e5",
+          "date": "2026-12-05",
+          "time": "10:00",
+          "title": "行程佔位五"
+        }
+      ]
+    },
+    "clock": {
+      "startMinutes": 980,
+      "cities": [
+        {
+          "name": "城市甲",
+          "offsetMinutes": 0
+        },
+        {
+          "name": "城市乙",
+          "offsetMinutes": 60
+        },
+        {
+          "name": "城市丙",
+          "offsetMinutes": -480
+        },
+        {
+          "name": "城市丁",
+          "offsetMinutes": -780
+        }
+      ],
+      "alarms": [
+        {
+          "id": "al1",
+          "time": "07:30",
+          "label": "鬧鐘佔位一",
+          "on": true
+        },
+        {
+          "id": "al2",
+          "time": "09:00",
+          "label": "鬧鐘佔位二",
+          "on": false
+        },
+        {
+          "id": "al3",
+          "time": "23:30",
+          "label": "鬧鐘佔位三",
+          "on": true
+        }
+      ]
     }
   },
   "introTitle": "SURU",
@@ -923,5 +999,13 @@
     ],
     "submit": "封緘送出",
     "close": "關閉示意頁"
+  },
+  "wander": {
+    "after": 3,
+    "hints": [
+      "佔位提醒：這裡會有線索嗎？",
+      "佔位提醒：電量還夠這樣逛嗎？",
+      "佔位提醒：她會把重要的東西放在這裡嗎？"
+    ]
   }
 }
