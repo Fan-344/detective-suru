@@ -2,13 +2,13 @@
 // 這裡不寫任何台詞或線索，全部從傳進來的 CaseContent 讀。
 
 import type {
+  AppId,
   CaseContent,
   Card,
   Character,
   CharacterId,
   Condition,
   Effects,
-  Ending,
   EventId,
   GameEvent,
   Item,
@@ -61,13 +61,22 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   const tidy = (n: number) => Math.round(n * 10) / 10;
   const openCost = (app: { background?: boolean }) => (app.background ? (cost.openIdleApp ?? cost.openApp) : cost.openApp);
   /** 進推理備忘錄的 item（跟案情無關的生活內容不算） */
-  const isClue = (id: ItemId) => items.has(id) && !items.get(id)!.flavor;
 
   /** 指錯「哪裡有問題」時扣的電 */
   const spotMissCost = cost.spotMiss ?? 0;
 
   /** 指認兇手的提問順序；沒寫就照舊一次填完 */
-  const sequence = content.endings.challenge.sequence?.length ? content.endings.challenge.sequence : null;
+  // 指認兇手的提問順序。資料沒寫就照欄位順序問完再問是誰。
+  const sequence: string[] = content.endings.challenge.sequence?.length
+    ? content.endings.challenge.sequence
+    : [...content.endings.challenge.fields.map((f) => f.id), 'who'];
+  /** 一次交卷：所有格子填好才交出去（見 EndingsFile.challenge.submitAll）。否則是一題一題問。 */
+  const submitAll = content.endings.challenge.submitAll === true;
+  /** 「滑到就算看過」的 App（例如動態牆）：裡面的東西捲進畫面就算看過，有照片的也不用點開 */
+  const scrollApp = (id: AppId) => content.apps.apps.find((a) => a.id === id)?.seeOnScroll === true;
+  /** 某個 App 的頁面上現在有的東西（照資料檔的順序） */
+  const pageItems = (s: GameState, app: AppId) =>
+    content.items.filter((i) => i.app === app && !i.thread && !i.hidden && (!i.needsLocate || s.located.includes(app))).map((i) => i.id);
 
   const dmThread = (target: CharacterId): ThreadId | null =>
     content.threads.find((t) => t.members.length === 1 && t.members[0] === target)?.id ?? null;
@@ -76,7 +85,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
     if (isThinkOnly(card)) return null;
     if (card.targets && !card.targets.includes(target)) return null;
     if (!characters.has(target)) return null;
-    if (card.thread) return threads.get(card.thread)?.members.includes(target) ? card.thread : null;
+    // 先看這個對象有沒有指定的聊天室，再看整張牌指定的，都沒有就是私訊
+    const where = card.threadTo?.[target] ?? card.thread;
+    if (where) return threads.get(where)?.members.includes(target) ? where : null;
     return dmThread(target);
   }
 
@@ -136,7 +147,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       ignoredOut: [],
       nudgeIndex: {},
       challengeTries: 0,
-      accusation: { step: 0, tried: {} },
+      accusation: { step: 0, tried: {}, slots: {} },
       ended: null,
     };
   }
@@ -156,9 +167,11 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       out.push({ kind: 'ending', ending });
     };
 
-    const see = (ids: ItemId[]) => {
+    /** direct：不管有沒有照片，直接算看過（滑到就算看過的 App 用） */
+    const see = (ids: ItemId[], direct = false) => {
       // 照片要點開才算看過的規則下，還沒點開的先放在 unopened
-      const waiting = rules.imagesMustBeOpened ? ids.filter((id) => items.get(id)?.image && !s.viewedImages.includes(id)) : [];
+      if (direct) s.unopened = s.unopened.filter((id) => !ids.includes(id));
+      const waiting = rules.imagesMustBeOpened && !direct ? ids.filter((id) => items.get(id)?.image && !s.viewedImages.includes(id)) : [];
       for (const id of waiting) if (!s.unopened.includes(id) && !s.seen.includes(id)) s.unopened.push(id);
       const fresh = ids.filter((id) => items.has(id) && !s.seen.includes(id) && !waiting.includes(id));
       if (fresh.length === 0) return;
@@ -455,7 +468,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         if (first) s.openedApps.push(app.id);
         out.push({ kind: 'app', app: app.id, first });
         if (app.view === 'assistant') s.assistantUnread = false;
-        see(content.items.filter((i) => i.app === app.id && !i.thread && !i.hidden && (!i.needsLocate || s.located.includes(app.id))).map((i) => i.id));
+        const page = pageItems(s, app.id);
+        if (scrollApp(app.id)) see(action.visible ? page.filter((id) => action.visible?.includes(id)) : page, true);
+        else see(page);
         if (app.background) {
           s.wanderStreak += 1;
           const w = meta.wander;
@@ -466,6 +481,15 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           }
         } else s.wanderStreak = 0;
         if (first) spend(openCost(app));
+        return done();
+      }
+
+      case 'seeItems': {
+        if (!s.openedApps.includes(action.app)) return invalid('要先打開這個 App');
+        if (!scrollApp(action.app)) return invalid('這個 App 裡的東西不是滑到就算看過');
+        // 頁面上本來就有的，加上後來才冒出來、還等著被看的
+        const here = [...pageItems(s, action.app), ...s.unopened.filter((id) => items.get(id)?.app === action.app)];
+        see(here.filter((id) => action.items.includes(id)), true);
         return done();
       }
 
@@ -597,8 +621,9 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
 
       case 'answerChallenge': {
         const ch = content.endings.challenge;
-        const question = sequence?.[s.accusation.step];
-        if (!sequence || question === undefined) return invalid('現在沒有題目要回答');
+        if (submitAll) return invalid('這個案子要整份填好再交出去');
+        const question = sequence[s.accusation.step];
+        if (question === undefined) return invalid('現在沒有題目要回答');
         if (question === 'who') {
           if (!ch.suspects.includes(action.answer)) return invalid('不能指認這個人');
           const right = action.answer === ch.culprit;
@@ -618,10 +643,10 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const field = ch.fields.find((f) => f.id === question);
         if (!field) return invalid('沒有這一題');
         const tried = s.accusation.tried[question] ?? [];
-        if (!s.seen.includes(action.answer) || !isClue(action.answer) || items.get(action.answer)?.kind !== 'record') return invalid('只能選已經取得的紀錄');
-        if (tried.includes(action.answer)) return invalid('這一筆已經答過了');
-        // 一題只用一筆回答，所以只認「單獨一筆就成立」的答案
-        const right = field.accept.some((group) => group.length === 1 && group[0] === action.answer);
+        // 用手上已經成立的疑點回答；還在「在意的地方」階段的不算
+        if (!s.cards.includes(action.answer)) return invalid('只能選已經成立的疑點');
+        if (tried.includes(action.answer)) return invalid('這一張已經選過了');
+        const right = field.cards.includes(action.answer);
         const retry = right ? 0 : (cost.challengeRetry ?? 0);
         out.push({ kind: 'challengeAnswer', question, answer: action.answer, right, cost: retry });
         if (right) s.accusation.step += 1;
@@ -633,9 +658,50 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         return done();
       }
 
+      case 'fillChallenge': {
+        const ch = content.endings.challenge;
+        if (!submitAll) return invalid('這個案子是一題一題回答');
+        if (s.accusation.step >= sequence.length) return invalid('已經交出去了，只剩選交給誰');
+        if (!sequence.includes(action.question)) return invalid('沒有這一格');
+        if (action.answer === null) delete s.accusation.slots[action.question];
+        else {
+          const ok = action.question === 'who' ? ch.suspects.includes(action.answer) : s.cards.includes(action.answer);
+          if (!ok) return invalid(action.question === 'who' ? '不能指認這個人' : '只能放已經成立的疑點');
+          s.accusation.slots[action.question] = action.answer;
+        }
+        return done();
+      }
+
+      case 'submitChallenge': {
+        const ch = content.endings.challenge;
+        if (!submitAll) return invalid('這個案子是一題一題回答');
+        if (s.accusation.step >= sequence.length) return invalid('已經交出去了，只剩選交給誰');
+        const slots = s.accusation.slots;
+        if (sequence.some((q) => slots[q] === undefined)) return invalid('每一格都要填');
+        const who = sequence.includes('who') ? slots.who : ch.culprit;
+        if (who !== ch.culprit) {
+          // 人指錯了：直接進那個人的結局
+          const ending = content.endings.endings.find((e) => e.trigger.kind === 'challenge' && e.trigger.accused === who && holds(s, { flags: e.trigger.flags }));
+          if (!ending) return invalid('沒有對應的結局');
+          end(ending.id);
+          return done();
+        }
+        const wrong = ch.fields.filter((f) => sequence.includes(f.id) && !f.cards.includes(slots[f.id])).map((f) => f.id);
+        if (wrong.length) {
+          const retry = cost.challengeRetry ?? 0;
+          s.challengeTries += 1;
+          out.push({ kind: 'challengeRejected', fields: wrong, cost: retry });
+          spend(retry);
+          return done();
+        }
+        s.accusation.step = sequence.length;
+        out.push({ kind: 'challengePassed' });
+        return done();
+      }
+
       case 'handOver': {
         const ch = content.endings.challenge;
-        if (!sequence || s.accusation.step < sequence.length) return invalid('還有題目沒答完');
+        if (s.accusation.step < sequence.length) return invalid('還有題目沒答完');
         if (!ch.recipients.includes(action.givenTo)) return invalid('不能交給這個人');
         const ending = content.endings.endings.find(
           (e) =>
@@ -648,50 +714,34 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         end(ending.id);
         return done();
       }
-
-      case 'submitChallenge': {
-        const ch = content.endings.challenge;
-        if (sequence) return invalid('這個案子要一題一題回答');
-        if (!ch.suspects.includes(action.accused)) return invalid('不能指認這個人');
-        if (!ch.recipients.includes(action.givenTo)) return invalid('不能交給這個人');
-        for (const field of ch.fields) {
-          const picks = action.fields[field.id] ?? [];
-          if (picks.length === 0) return invalid('每一欄都要指向至少一筆紀錄');
-          if (picks.length > rules.maxPicksPerField) return invalid(`每一欄最多選 ${rules.maxPicksPerField} 筆`);
-          if (picks.some((id) => !s.seen.includes(id) || !isClue(id) || items.get(id)?.kind !== 'record')) return invalid('只能選已經取得的紀錄');
-        }
-        if (action.accused === ch.culprit) {
-          const wrong = ch.fields
-            .filter((f) => !f.accept.some((group) => group.every((id) => (action.fields[f.id] ?? []).includes(id))))
-            .map((f) => f.id);
-          if (wrong.length) {
-            s.challengeTries += 1;
-            out.push({ kind: 'challengeRejected', fields: wrong, cost: cost.challengeRetry ?? 0 });
-            spend(cost.challengeRetry ?? 0);
-            return done();
-          }
-        }
-        const matches = (e: Ending) =>
-          e.trigger.kind === 'challenge' &&
-          (e.trigger.accused === undefined || e.trigger.accused === action.accused) &&
-          (e.trigger.givenTo === undefined || e.trigger.givenTo === action.givenTo) &&
-          holds(s, { flags: e.trigger.flags });
-        const ending = content.endings.endings.find(matches);
-        if (!ending) return invalid('沒有對應的結局');
-        end(ending.id);
-        return done();
-      }
     }
   }
 
   /** 一題一題問的時候，現在問到哪一題、還能選什麼 */
-  function askOf(s: GameState, records: ItemId[]): NonNullable<Menu['challenge']>['ask'] {
-    if (!sequence) return null;
+  function askOf(s: GameState): NonNullable<Menu['challenge']>['ask'] {
     const ch = content.endings.challenge;
+    const retryCost = cost.challengeRetry ?? 0;
+    const optionsOf = (q: string | null, tried: string[] = []) => (q === null ? ch.recipients : q === 'who' ? ch.suspects : s.cards.filter((id) => !tried.includes(id)));
+    if (submitAll) {
+      // 一次交卷：通過之前指向第一個還沒填的格子（畫面請照 form 畫），通過之後是選交給誰
+      const passed = s.accusation.step >= sequence.length;
+      const index = passed ? sequence.length : Math.max(0, sequence.findIndex((q) => s.accusation.slots[q] === undefined));
+      const question = passed ? null : sequence[index];
+      return { index, total: sequence.length, question, options: optionsOf(question), retryCost };
+    }
     const question = sequence[s.accusation.step] ?? null;
-    const tried = question ? (s.accusation.tried[question] ?? []) : [];
-    const options = question === null ? ch.recipients : question === 'who' ? ch.suspects : records.filter((id) => !tried.includes(id));
-    return { index: s.accusation.step, total: sequence.length, question, options, retryCost: cost.challengeRetry ?? 0 };
+    return { index: s.accusation.step, total: sequence.length, question, options: optionsOf(question, question ? (s.accusation.tried[question] ?? []) : []), retryCost };
+  }
+
+  function formOf(s: GameState): NonNullable<Menu['challenge']>['form'] {
+    if (!submitAll) return null;
+    const ch = content.endings.challenge;
+    const slots = sequence.map((question) => ({
+      question,
+      answer: s.accusation.slots[question] ?? null,
+      options: question === 'who' ? ch.suspects : [...s.cards],
+    }));
+    return { slots, ready: slots.every((x) => x.answer !== null), passed: s.accusation.step >= sequence.length, retryCost: cost.challengeRetry ?? 0 };
   }
 
   function historyItems(thread: ThreadId): ItemId[] {
@@ -703,15 +753,14 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
     if (s.phase === 'ended') return empty;
     if (s.phase === 'cover') return { ...empty, cover: true };
     const chatOpen = chatApps.some((a) => s.openedApps.includes(a));
-    const records = s.seen.filter((id) => isClue(id) && items.get(id)?.kind === 'record');
-    const ch = content.endings.challenge;
     const promptEvent = s.prompt ? events.get(s.prompt) : undefined;
     return {
       cover: false,
       prompt: s.prompt ? { event: s.prompt, options: promptEvent?.kind === 'system' ? (promptEvent.options ?? []).map((o) => o.id) : [] } : null,
       apps: content.apps.apps.map((a) => {
         const opened = s.openedApps.includes(a.id);
-        return { app: a.id, opened, cost: opened ? 0 : openCost(a) };
+        const unseen = scrollApp(a.id) ? pageItems(s, a.id).filter((id) => !s.seen.includes(id)) : [];
+        return { app: a.id, opened, cost: opened ? 0 : openCost(a), unseen };
       }),
       threads: chatOpen
         ? content.threads.map((t) => {
@@ -751,7 +800,11 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
             const thread = testThread(card, t);
             return thread !== null && s.readThreads.includes(thread) && !s.cardsUsed.includes(`${id}>${t}`);
           });
-        return targets.length ? [{ card: id, thread: card.thread ?? null, targets, cost: testCost }] : [];
+        const threadOf = Object.fromEntries(targets.flatMap((t) => {
+          const thread = testThread(card, t);
+          return thread ? [[t, thread]] : [];
+        }));
+        return targets.length ? [{ card: id, thread: card.thread ?? null, threadOf, targets, cost: testCost }] : [];
       }),
       thoughts: [...s.concerns.map((x) => ({ id: x.card, concern: true })), ...s.cards.map((id) => ({ id, concern: false }))].flatMap((x) => {
         const card = cards.get(x.id);
@@ -760,9 +813,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const given = Math.min(s.hints[x.id] ?? 0, lines.length);
         return [{ card: x.id, concern: x.concern, thinkOnly: isThinkOnly(card), shown: lines.slice(0, given), more: given < lines.length, cost: cost.hint ?? 0 }];
       }),
-      challenge: records.length
-        ? { suspects: ch.suspects, fields: ch.fields.map((f) => f.id), records, recipients: ch.recipients, maxPicks: rules.maxPicksPerField, ask: askOf(s, records) }
-        : null,
+      challenge: s.cards.length ? { ask: askOf(s), form: formOf(s) } : null,
     };
   }
 

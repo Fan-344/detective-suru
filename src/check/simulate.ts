@@ -2,7 +2,7 @@
 // 這裡不另外寫一套規則：所有模擬都是對 engine 送動作，看它回什麼。
 // （格式對不對是 src/content/validate.ts 的事；這裡管的是到不到得了。）
 
-import type { CaseContent, ItemId } from '../content/types';
+import type { CaseContent } from '../content/types';
 import { createEngine, routesReached, type Action, type Engine, type GameState } from '../engine';
 
 export interface Check {
@@ -49,7 +49,11 @@ export function concreteActions(engine: Engine, s: GameState): Action[] {
   const list: Action[] = [];
   // 視窗不擋操作，所以它的按鈕和其他動作一起列出來
   if (m.prompt) list.push(...m.prompt.options.map((option): Action => ({ type: 'answerPrompt', option })), { type: 'answerPrompt', option: null });
-  for (const a of m.apps) if (!a.opened) list.push({ type: 'openApp', app: a.app });
+  // 動態牆這類 App 打開只看得到最上面幾筆，其餘的要往下滑（一次滑到底）
+  for (const a of m.apps) {
+    if (!a.opened) list.push(a.unseen.length ? { type: 'openApp', app: a.app, visible: a.unseen.slice(0, OPENING_VIEW) } : { type: 'openApp', app: a.app });
+    else if (a.unseen.length) list.push({ type: 'seeItems', app: a.app, items: a.unseen });
+  }
   // 打開聊天室只看得到最後幾則舊訊息，其餘的要往上滑（一次滑到頂）
   for (const t of m.threads) {
     if (!t.read) list.push({ type: 'readThread', thread: t.thread, visible: t.unseen.slice(-OPENING_VIEW) });
@@ -65,14 +69,13 @@ export function concreteActions(engine: Engine, s: GameState): Action[] {
 }
 
 /** 挑戰書四欄全對的選法；手上的紀錄還不夠就回傳 null */
-export function correctFields(content: CaseContent, s: GameState): Record<string, ItemId[]> | null {
-  const fields: Record<string, ItemId[]> = {};
+/** 現在手上的疑點夠不夠把指認兇手的每一題都答對。夠的話回傳每一題要選哪一張。 */
+export function correctFields(content: CaseContent, s: GameState): Record<string, string> | null {
+  const fields: Record<string, string> = {};
   for (const f of content.endings.challenge.fields) {
-    // 一題一題問的時候一題只能用一筆回答
-    const single = Boolean(content.endings.challenge.sequence?.length);
-    const group = f.accept.find((g) => (!single || g.length === 1) && g.every((id) => s.seen.includes(id)));
-    if (!group) return null;
-    fields[f.id] = group;
+    const card = f.cards.find((id) => s.cards.includes(id));
+    if (!card) return null;
+    fields[f.id] = card;
   }
   return fields;
 }
@@ -134,6 +137,8 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
 
   /** 一題一題問的時候：已經開始指認了，之後每一步都接著答 */
   let accusing = false;
+  /** 一次交卷時，這一輪還沒填的格子；null 表示還沒開始填（或剛交出去） */
+  let toFill: string[] | null = null;
 
   let s = engine.start();
   const run: Run = { profile, final: s, actions: [], login: null, solvableAt: null, sentMessage: false, stuck: false, softDead: false, usedReactions: new Set(), raises: 0, autoRaises: 0 };
@@ -153,9 +158,30 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
       // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
       if (!fields && everything.every((a) => a.type === 'viewImage')) run.softDead = true;
       const ask = engine.menu(s).challenge!.ask;
-      if (ask) {
+      const form = engine.menu(s).challenge!.form;
+      {
         if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) accusing = true;
-        if (accusing) {
+        if (accusing && form && !form.passed) {
+          // 一次交卷：一格一格填（偶爾故意放錯，不知道答案就用猜的），填滿就交；被退回就整份重填
+          if (toFill === null) toFill = form.slots.map((x) => x.question);
+          const question = toFill.shift();
+          if (question === undefined) {
+            action = { type: 'submitChallenge' };
+            toFill = null;
+          } else if (question === 'who') {
+            const giveUp = nothingLeft && !fields;
+            action = { type: 'fillChallenge', question, answer: accused === ch.culprit && giveUp ? pick(ch.suspects.filter((x) => x !== ch.culprit)) : accused };
+          } else {
+            const options = form.slots.find((x) => x.question === question)?.options ?? [];
+            const known = (ch.fields.find((f) => f.id === question)?.cards ?? []).find((id) => options.includes(id));
+            const sloppy = rand() < 0.15;
+            if (options.length) action = { type: 'fillChallenge', question, answer: known && !sloppy ? known : pick(options) };
+            else {
+              accusing = false;
+              toFill = null;
+            }
+          }
+        } else if (accusing) {
           if (ask.question === null) action = { type: 'handOver', givenTo };
           else if (ask.question === 'who') {
             // 沒事可做、紀錄又不夠的時候，只剩指錯人這條路
@@ -163,20 +189,13 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
             action = { type: 'answerChallenge', answer: accused === ch.culprit && giveUp ? pick(ch.suspects.filter((x) => x !== ch.culprit)) : accused };
           } else {
             const field = ch.fields.find((f) => f.id === ask.question);
-            const known = field?.accept.find((g) => g.length === 1 && ask.options.includes(g[0]))?.[0];
+            const known = (field?.cards ?? []).find((id) => ask.options.includes(id));
             // 偶爾故意答錯，確認答錯再答走得通；不知道答案就用猜的
             const sloppy = rand() < 0.15;
             if (ask.options.length) action = { type: 'answerChallenge', answer: known && !sloppy ? known : pick(ask.options) };
             else accusing = false;
           }
         }
-      } else if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) {
-        const records = engine.menu(s).challenge!.records;
-        const anyFields = Object.fromEntries(ch.fields.map((f) => [f.id, [pick(records)]]));
-        // 偶爾故意交一份選錯欄位的，確認退回重填走得通
-        const sloppy = accused === ch.culprit && rand() < 0.15;
-        action = { type: 'submitChallenge', accused: nothingLeft && !fields ? pick(ch.suspects.filter((x) => x !== ch.culprit)) : accused, fields: sloppy || !fields ? anyFields : fields, givenTo };
-        if (action.accused === ch.culprit && !fields && nothingLeft) action = { ...action, accused: pick(ch.suspects.filter((x) => x !== ch.culprit)) };
       }
     }
     if (!action) {
@@ -185,7 +204,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
         break;
       }
       const looks = options.filter((a) => a.type === 'viewImage');
-      const reading = options.filter((a) => a.type === 'openApp' || a.type === 'readThread' || a.type === 'seeMessages' || a.type === 'locate');
+      const reading = options.filter((a) => a.type === 'openApp' || a.type === 'readThread' || a.type === 'seeMessages' || a.type === 'seeItems' || a.type === 'locate');
       const messages = options.filter(isMessage);
       const toGoal = options.filter(setsGoalFlag);
       if (toGoal.length) action = pick(toGoal);
@@ -267,10 +286,14 @@ const describe = (a: Action): string => {
       return `視窗 ${a.option ?? '不理'}`;
     case 'answerChallenge':
       return `回答 ${a.answer}`;
+    case 'fillChallenge':
+      return `填 ${a.question}=${a.answer ?? '清空'}`;
+    case 'submitChallenge':
+      return '交卷';
     case 'handOver':
       return `交給${a.givenTo}`;
-    case 'submitChallenge':
-      return `交卷 指${a.accused} 給${a.givenTo}`;
+    case 'seeItems':
+      return `往下滑 ${a.app}`;
     case 'sendCover':
       return '送出掩護說法';
   }
@@ -332,7 +355,7 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   // 5. 挑戰書答得出來
   add(
     '挑戰書每一欄的答案都湊得齊',
-    content.endings.challenge.fields.filter((f) => !f.accept.some((g) => g.every((id) => seen.has(id)))).map((f) => f.id),
+    content.endings.challenge.fields.filter((f) => !f.cards.some((id) => cards.has(id))).map((f) => f.id),
   );
 
   // ── 數值觀察 ──

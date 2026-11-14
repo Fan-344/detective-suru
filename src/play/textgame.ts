@@ -216,7 +216,7 @@ export class TextGame {
         this.say('', '這份推理站不住，被退回來了。');
         for (const id of o.fields) {
           const f = this.content.endings.challenge.fields.find((x) => x.id === id);
-          if (f) this.say(`　${f.hint}`);
+          if (f) this.say('　' + f.hint);
         }
         break;
       case 'ending': {
@@ -513,7 +513,8 @@ export class TextGame {
         .flatMap((t) => {
           const card = this.content.cards.find((c) => c.id === t.card);
           if (!card) return [];
-          const where = t.thread ? `在「${this.threadTitle(t.thread)}」裡問` : '私訊';
+          const room = this.content.threads.find((x) => x.id === t.threadOf[target]);
+          const where = room && room.members.length > 1 ? `在「${this.threadTitle(room.id)}」裡問` : '私訊';
           return [
             {
               label: `「${card.sayTo?.[target] ?? card.say}」（${card.title}，${where}）${this.costTag(t.cost)}`,
@@ -529,16 +530,53 @@ export class TextGame {
     ];
   }
 
-  // 推理（資料裡叫挑戰書）：是誰 → 四欄各選紀錄 → 交給誰
   private startChallenge() {
+    if (this.engine.menu(this.state).challenge?.form) this.formChallenge(true);
+    else this.askChallenge(true);
+  }
+
+  // 一次交卷：每一格放一張疑點，全部填好才交出去；填的時候不說對錯，可以隨意換
+  private formChallenge(entering: boolean) {
     const ch = this.content.endings.challenge;
-    if (this.engine.menu(this.state).challenge?.ask) return this.askChallenge(true);
-    // 開頭的說明是劇情文字，從資料檔讀
-    this.say('', '── 指認兇手 ──', ...(ch.intro ?? []), '', ch.whoPrompt);
-    this.screen = () => [
-      ...ch.suspects.map((id) => ({ label: this.name(id), run: () => this.challengeField(id, 0, {}) })),
-      this.toSuru('先不指認'),
-    ];
+    const cardTitle = (id: string) => this.content.cards.find((c) => c.id === id)?.title ?? id;
+    const promptOf = (q: string) => (q === 'who' ? ch.whoPrompt : (ch.fields.find((f) => f.id === q)?.prompt ?? q));
+    const shown = (q: string, answer: string | null) => (answer === null ? '（還沒填）' : q === 'who' ? this.name(answer) : cardTitle(answer));
+    if (entering) this.say('', '── 指認兇手 ──', ...(ch.premise ?? []), ...(ch.intro ?? []));
+    this.screen = () => {
+      const form = this.engine.menu(this.state).challenge?.form;
+      if (!form) return this.suru();
+      if (form.passed) {
+        this.askChallenge(false);
+        return this.screen();
+      }
+      const list: Choice[] = form.slots.map((slot) => ({
+        label: promptOf(slot.question) + ' → ' + shown(slot.question, slot.answer),
+        run: () => {
+          this.say('', promptOf(slot.question));
+          this.screen = () => [
+            ...slot.options.map((id) => ({
+              label: slot.question === 'who' ? this.name(id) : cardTitle(id),
+              run: () => {
+                this.act({ type: 'fillChallenge', question: slot.question, answer: id });
+                this.formChallenge(false);
+              },
+            })),
+            { label: '先不填這一格', run: () => this.formChallenge(false) },
+          ];
+        },
+      }));
+      if (form.ready) {
+        list.push({
+          label: '交出去' + (form.retryCost ? '（被退回 -' + form.retryCost + '%）' : ''),
+          run: () => {
+            this.act({ type: 'submitChallenge' });
+            if (this.state.phase !== 'ended' && this.state.prompt) this.screen = this.home;
+          },
+        });
+      }
+      list.push(this.toSuru('先不指認'));
+      return list;
+    };
   }
 
   // 一題一題問：題目照資料檔原文印出來，答對才問下一題；離開後再進來從同一題繼續
@@ -566,58 +604,11 @@ export class TextGame {
     } else {
       const field = ch.fields.find((f) => f.id === ask.question);
       this.say('', field?.prompt ?? '');
-      this.say(ask.options.length ? `（從看過的紀錄裡選一筆${ask.retryCost ? `，答錯 -${ask.retryCost}%` : ''}）` : '（看過的紀錄都試過了。先去找找別的。）');
+      this.say(ask.options.length ? `（從手上的疑點裡選一張${ask.retryCost ? `，選錯 -${ask.retryCost}%` : ''}）` : '（手上的疑點都試過了。先去找找別的。）');
       this.screen = () => [
-        ...ask.options.flatMap((id) => {
-          const item = this.item(id);
-          return item ? [{ label: this.label(item), run: () => answer(id) }] : [];
-        }),
+        ...ask.options.map((id) => ({ label: this.content.cards.find((c) => c.id === id)?.title ?? id, run: () => answer(id) })),
         leave,
       ];
     }
-  }
-
-  private challengeField(accused: string, index: number, fields: Record<string, string[]>) {
-    const ch = this.content.endings.challenge;
-    const field = ch.fields[index];
-    if (!field) {
-      this.say('', '證據要交給誰？交出去就不能收回。');
-      this.screen = () => [
-        ...ch.recipients.map((id) => ({
-          label: `把證據交給${this.name(id)}`,
-          run: () => {
-            this.screen = this.home;
-            this.act({ type: 'submitChallenge', accused, fields, givenTo: id });
-          },
-        })),
-        this.toSuru('先不交'),
-      ];
-      return;
-    }
-    const max = this.engine.rules.maxPicksPerField;
-    this.say('', `${index + 1}. ${field.prompt}`, `（從看過的紀錄裡選，最多 ${max} 筆）`);
-    const picked: string[] = [];
-    this.screen = () => {
-      const records = this.engine.menu(this.state).challenge?.records ?? [];
-      const list: Choice[] = [];
-      if (picked.length > 0) {
-        list.push({ label: `選好了（已選 ${picked.length} 筆）`, run: () => this.challengeField(accused, index + 1, { ...fields, [field.id]: [...picked] }) });
-      }
-      if (picked.length < max) {
-        for (const id of records.filter((r) => !picked.includes(r))) {
-          const item = this.item(id);
-          if (!item) continue;
-          list.push({
-            label: this.label(item),
-            run: () => {
-              picked.push(id);
-              this.say(`　已選：${this.label(item)}`);
-            },
-          });
-        }
-      }
-      list.push(this.toSuru('先不指認'));
-      return list;
-    };
   }
 }

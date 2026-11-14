@@ -5,8 +5,6 @@ import type { AppId, CardId, CharacterId, EventId, ImageRef, ItemId, Signal, Thr
 
 /** 資料檔沒有定義、由規則決定的數字。集中在這裡，方便試玩後調整。 */
 export interface Rules {
-  /** 挑戰書每一欄最多能選幾筆紀錄 */
-  maxPicksPerField: number;
   /**
    * true：有照片的 item 要點開照片才算看過（才進備忘錄、才會帶出疑點）。
    * false：讀到那則訊息或打開那個 App 就算看過，點開照片只是看細節。
@@ -14,7 +12,7 @@ export interface Rules {
   imagesMustBeOpened: boolean;
 }
 
-export const DEFAULT_RULES: Rules = { maxPicksPerField: 2, imagesMustBeOpened: true };
+export const DEFAULT_RULES: Rules = { imagesMustBeOpened: true };
 
 /** 遊戲開始後才出現在聊天室裡的訊息 */
 export interface AppendedMessage {
@@ -97,11 +95,19 @@ export interface GameState {
   nudgeIndex: Record<CharacterId, number>;
   challengeTries: number;
   /**
-   * 指認兇手一題一題問的進度（資料有寫 challenge.sequence 時才用）。
+   * 指認兇手一題一題問的進度。
    * step 是下一題在 sequence 裡的位置（等於長度表示都答完了，只剩選交給誰）；
-   * tried 是每一題已經答錯過的紀錄。中途離開不會清掉。
+   * tried 是每一題已經選錯過的疑點。中途離開不會清掉。
    */
-  accusation: { step: number; tried: Record<string, ItemId[]> };
+  accusation: {
+    step: number;
+    tried: Record<string, ItemId[]>;
+    /**
+     * 一次交卷（資料有寫 challenge.submitAll）時，每一格現在放的東西：
+     * 欄位 id → 疑點 id，"who" → 人的 id。沒填的格子不在裡面。交卷被退回後內容保留。
+     */
+    slots: Record<string, string>;
+  };
   /** 結局 id */
   ended: string | null;
 }
@@ -112,7 +118,14 @@ export type Action =
    * 只有它們算看過，其餘的要往上滑（seeMessages）。沒給表示整串都看到了（文字試玩）。
    */
   | { type: 'sendCover'; visible?: ItemId[] }
-  | { type: 'openApp'; app: AppId }
+  /**
+   * 打開 App。visible 只對「滑到就算看過」的 App（AppDef.seeOnScroll，例如動態牆）有意義：
+   * 一打開就在畫面上的那幾筆，只有它們算看過，其餘的要往下滑（seeItems）。沒給表示整頁都看到了（文字試玩）。
+   * 這種 App 裡的東西滑到就算看過，有照片的也不用點開。
+   */
+  | { type: 'openApp'; app: AppId; visible?: ItemId[] }
+  /** 在「滑到就算看過」的 App 裡，這幾筆捲進畫面了。不耗電。不屬於這個 App 的會被忽略。 */
+  | { type: 'seeItems'; app: AppId; items: ItemId[] }
   /**
    * 打開聊天室。visible 是一打開就在畫面上的那幾則舊訊息（訊息上的 item id），只有它們算看過；
    * 其餘的要玩家往上滑到（seeMessages）才算。沒給 visible 表示整串都看到了（文字試玩是整串印出來的）。
@@ -134,16 +147,16 @@ export type Action =
   | { type: 'think'; card: CardId }
   /** option 為 null 表示把視窗關掉（不理它） */
   | { type: 'answerPrompt'; option: string | null }
-  | {
-      type: 'submitChallenge';
-      accused: CharacterId;
-      /** 每一欄選的紀錄 */
-      fields: Record<string, ItemId[]>;
-      givenTo: CharacterId;
-    }
-  /** 一題一題問的時候，回答目前這一題。紀錄題給紀錄的 id，「是誰」那一題給人的 id。 */
+  /** 指認兇手：回答目前這一題。一般的題目給一張已經成立的疑點的 id，「是誰」那一題給人的 id。 */
   | { type: 'answerChallenge'; answer: string }
-  /** 一題一題問、全部答完之後，選交給誰 */
+  /**
+   * 一次交卷時，在某一格放一張疑點（"who" 那格放人），answer 給 null 是清空。
+   * 不判對錯、不耗電，可以隨意換；同一張疑點可以放不只一格。
+   */
+  | { type: 'fillChallenge'; question: string; answer: string | null }
+  /** 一次交卷時，把填好的整份交出去。每一格都填了才能交。 */
+  | { type: 'submitChallenge' }
+  /** 指認兇手全部答完（或整份交卷通過）之後，選交給誰 */
   | { type: 'handOver'; givenTo: CharacterId };
 
 /** 一個動作造成的結果，依發生順序。文字版和畫面版各自決定怎麼呈現。 */
@@ -170,9 +183,12 @@ export type Outcome =
   /** 視窗關掉了。ignored 表示玩家沒有按任何按鈕（關掉或放著）。 */
   | { kind: 'promptClosed'; event: EventId; ignored: boolean }
   | { kind: 'ladder'; character: CharacterId; from: number; to: number; auto: boolean }
-  | { kind: 'challengeRejected'; fields: string[]; cost: number }
-  /** 一題一題問時，這一題答得對不對。question 是欄位 id 或 "who"；答錯的紀錄題會扣 cost。 */
+  /** 指認兇手這一題答得對不對。question 是欄位 id 或 "who"；answer 是疑點或人的 id；選錯疑點會扣 cost。 */
   | { kind: 'challengeAnswer'; question: string; answer: string; right: boolean; cost: number }
+  /** 一次交卷被退回：人指對了，但 fields 這幾格放的疑點不對。扣 cost，格子內容保留。 */
+  | { kind: 'challengeRejected'; fields: string[]; cost: number }
+  /** 一次交卷通過了：人和每一格都對，接下來選交給誰（handOver）。 */
+  | { kind: 'challengePassed' }
   /** 在背景 App 裡逛太久的提醒。不擋操作、不扣電。 */
   | { kind: 'wander'; text: string }
   | { kind: 'ending'; ending: string }
@@ -187,7 +203,8 @@ export interface StepResult {
 export interface Menu {
   cover: boolean;
   prompt: { event: EventId; options: string[] } | null;
-  apps: { app: AppId; opened: boolean; cost: number }[];
+  /** unseen：「滑到就算看過」的 App 裡還沒滑到的那幾筆（照頁面上的順序）；其他 App 是空的 */
+  apps: { app: AppId; opened: boolean; cost: number; unseen: ItemId[] }[];
   /** unseen：這個聊天室的舊訊息裡，玩家還沒滑到的那幾則（訊息上的 item id）。還沒打開過的聊天室是整串 */
   threads: { thread: ThreadId; read: boolean; cost: number; unseen: ItemId[] }[];
   locate: { app: AppId; cost: number }[];
@@ -199,23 +216,30 @@ export interface Menu {
   /** 在意的地方，以及還能指的選項 */
   concerns: { card: CardId; item: ItemId; options: string[]; missCost: number }[];
   replies: { event: EventId; thread: ThreadId; options: string[]; cost: number }[];
-  tests: { card: CardId; thread: ThreadId | null; targets: CharacterId[]; cost: number }[];
+  /**
+   * 可以拿去問人的疑點。threadOf 是問每個對象時會在哪個聊天室送出（同一張牌對不同人可以不一樣，見 Card.threadTo）。
+   * thread 是整張牌指定的聊天室（沒有就是 null），只留給舊的畫面用，請改看 threadOf。
+   */
+  tests: { card: CardId; thread: ThreadId | null; threadOf: Record<CharacterId, ThreadId>; targets: CharacterId[]; cost: number }[];
   /**
    * 再想想：手上每個疑點（concern 為 true 的是還在「在意的地方」階段的）已經給過的句子、還有沒有下一句。
    * thinkOnly 是只能自己想、不能拿去問人的疑點。cost 是按一次耗的電。
    */
   thoughts: { card: CardId; concern: boolean; thinkOnly: boolean; shown: string[]; more: boolean; cost: number }[];
+  /**
+   * 指認兇手。手上至少有一張成立的疑點才能開始（沒有就是 null）。
+   * ask 是現在問到哪一題：question 是欄位 id 或 "who"，null 表示都答完了、只剩選交給誰。
+   * options 是這一題還能選的東西：一般的題目是手上還沒在這一題選錯過的疑點，"who" 是嫌疑人，最後是交付對象。
+   */
   challenge: {
-    suspects: CharacterId[];
-    fields: string[];
-    records: ItemId[];
-    recipients: CharacterId[];
-    maxPicks: number;
+    ask: { index: number; total: number; question: string | null; options: string[]; retryCost: number };
     /**
-     * 一題一題問的時候，現在問到哪一題；資料沒寫 sequence 時是 null（照舊一次填完）。
-     * question 是欄位 id 或 "who"，null 表示都答完了、只剩選交給誰。
-     * options 是這一題還能選的東西（紀錄、人，或交付對象）。
+     * 一次交卷（資料有寫 challenge.submitAll）時才有，否則是 null。有 form 時畫面請照 form 畫，
+     * ask 只在 passed 之後有用（question 是 null、options 是交付對象）。
+     * slots 照提問順序：question 是欄位 id 或 "who"；answer 是現在放的疑點（或人），沒填是 null；
+     * options 是這一格能放的東西（手上成立的疑點，或嫌疑人）。
+     * ready：每一格都填了，可以交。passed：已經交卷通過，只剩選交給誰。
      */
-    ask: { index: number; total: number; question: string | null; options: string[]; retryCost: number } | null;
+    form: { slots: { question: string; answer: string | null; options: string[] }[]; ready: boolean; passed: boolean; retryCost: number } | null;
   } | null;
 }

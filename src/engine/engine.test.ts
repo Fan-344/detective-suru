@@ -266,13 +266,20 @@ describe('engine', () => {
     }
   });
 
-  it('指認兇手一題一題問：答錯扣電、同一筆不能再選，答對才問下一題，全部答完才選交給誰', () => {
+  it('指認兇手一題一題問：每題選一張疑點，選錯扣電、同一張不能再選，答對才問下一題，全部答完才選交給誰', () => {
+    // 用副本把「一次交卷」關掉，測一題一題問的規則本身
+    const copy = structuredClone(content);
+    delete copy.endings.challenge.submitAll;
+    const engine = createEngine(copy);
     const ch = content.endings.challenge;
+    expect(engine.menu({ ...afterCover(), cards: [content.cards[0].id] }).challenge?.form).toBeNull();
+    expect(engine.step(afterCover(), { type: 'submitChallenge' }).outcomes[0].kind).toBe('invalid');
     const sequence = ch.sequence!;
-    // 直接把所有東西都當作看過，不依賴資料檔裡怎麼拿到
-    let s: GameState = { ...afterCover(), seen: content.items.map((i) => i.id) };
-    const ask = () => engine.menu(s).challenge!.ask!;
-    expect(engine.step(s, { type: 'submitChallenge', accused: ch.culprit, fields: {}, givenTo: ch.recipients[0] }).outcomes[0].kind).toBe('invalid');
+    // 手上一張疑點都沒有就不能開始；還在「在意的地方」階段的不算
+    expect(engine.menu({ ...afterCover(), cards: [] }).challenge).toBeNull();
+    // 直接把所有疑點都當作成立，不依賴資料檔裡怎麼拿到
+    let s: GameState = { ...afterCover(), concerns: [], cards: content.cards.map((c) => c.id) };
+    const ask = () => engine.menu(s).challenge!.ask;
     expect(engine.step(s, { type: 'handOver', givenTo: ch.recipients[0] }).outcomes[0].kind).toBe('invalid');
     sequence.forEach((question, index) => {
       expect(ask()).toMatchObject({ index, total: sequence.length, question });
@@ -284,15 +291,19 @@ describe('engine', () => {
         return;
       }
       const field = ch.fields.find((f) => f.id === question)!;
-      const wrong = ask().options.find((id) => !field.accept.some((g) => g.includes(id)))!;
+      const right = field.cards[0];
+      expect(ask().options).toEqual(s.cards);
+      const wrong = ask().options.find((id) => !field.cards.includes(id))!;
       const miss = engine.step(s, { type: 'answerChallenge', answer: wrong });
       expect(miss.outcomes).toContainEqual({ kind: 'challengeAnswer', question, answer: wrong, right: false, cost: cost.challengeRetry });
       expect(s.battery - miss.state.battery).toBe(cost.challengeRetry);
       expect(miss.state.accusation.step).toBe(index);
-      expect(engine.menu(miss.state).challenge!.ask!.options).not.toContain(wrong);
+      expect(engine.menu(miss.state).challenge!.ask.options).not.toContain(wrong);
       expect(engine.step(miss.state, { type: 'answerChallenge', answer: wrong }).outcomes[0].kind).toBe('invalid');
-      const hit = engine.step(miss.state, { type: 'answerChallenge', answer: field.accept[0][0] });
-      expect(hit.outcomes).toContainEqual({ kind: 'challengeAnswer', question, answer: field.accept[0][0], right: true, cost: 0 });
+      // 不是手上的疑點（例如一筆紀錄）不能拿來回答
+      expect(engine.step(miss.state, { type: 'answerChallenge', answer: content.items[0].id }).outcomes[0].kind).toBe('invalid');
+      const hit = engine.step(miss.state, { type: 'answerChallenge', answer: right });
+      expect(hit.outcomes).toContainEqual({ kind: 'challengeAnswer', question, answer: right, right: true, cost: 0 });
       expect(hit.state.battery).toBe(miss.state.battery);
       s = hit.state;
     });
@@ -300,27 +311,88 @@ describe('engine', () => {
     expect(engine.step(s, { type: 'handOver', givenTo: 'pinyu' }).state.ended).toBe('end_pinyu');
   });
 
-  it('挑戰書（沒寫提問順序時的舊流程）：指錯人直接進結局；指對人但欄位沒選對就退回並扣電', () => {
+  it('指認兇手一次交卷：每格放一張疑點、隨意換不扣電，填滿才能交；格子不對退回扣電並指出是哪幾格，全對才選交給誰', () => {
+    // 用副本打開「一次交卷」，不依賴資料檔現在開不開
     const copy = structuredClone(content);
-    delete copy.endings.challenge.sequence;
-    const engine = createEngine(copy);
-    const s = run(engine.step(engine.start(), { type: 'sendCover' }).state, [
-      { type: 'openApp', app: 'photos' },
-      { type: 'viewImage', item: 'ph_compare' },
-      { type: 'viewImage', item: 'ph_ipad' },
-      { type: 'viewImage', item: 'ph_boxes' },
-      { type: 'openApp', app: 'weather' },
-      { type: 'openApp', app: 'sms' },
-    ]).state;
-    const fields = { motive: ['ph_compare'], alibi: ['wx_taichung_sat'], method: ['sms_er'], presence: ['sms_er'] };
-    const wrong = engine.step(s, { type: 'submitChallenge', accused: 'zonghan', fields, givenTo: 'pinyu' });
-    expect(wrong.state.ended).toBe('end_wrong_zonghan');
-    const retry = engine.step(s, { type: 'submitChallenge', accused: 'jingwen', fields, givenTo: 'pinyu' });
-    expect(retry.state.ended).toBeNull();
-    expect(retry.outcomes).toContainEqual({ kind: 'challengeRejected', fields: ['method', 'presence'], cost: cost.challengeRetry });
-    expect(s.battery - retry.state.battery).toBe(cost.challengeRetry);
-    const tooMany = engine.step(s, { type: 'submitChallenge', accused: 'jingwen', fields: { ...fields, motive: ['ph_compare', 'ph_ipad', 'ph_boxes'] }, givenTo: 'pinyu' });
-    expect(tooMany.outcomes[0].kind).toBe('invalid');
+    copy.endings.challenge.submitAll = true;
+    const e2 = createEngine(copy);
+    const ch = copy.endings.challenge;
+    const sequence = ch.sequence ?? [...ch.fields.map((f) => f.id), 'who'];
+    const fieldIds = sequence.filter((q) => q !== 'who');
+    const fieldOf = (q: string) => ch.fields.find((f) => f.id === q)!;
+    let s: GameState = { ...afterCover(), concerns: [], cards: copy.cards.map((c) => c.id) };
+    const form = () => e2.menu(s).challenge!.form!;
+    const fill = (question: string, answer: string | null) => {
+      const r = e2.step(s, { type: 'fillChallenge', question, answer });
+      expect(r.outcomes.some((o) => o.kind === 'invalid')).toBe(false);
+      s = r.state;
+    };
+    expect(form().slots.map((x) => x.question)).toEqual(sequence);
+    expect(form()).toMatchObject({ ready: false, passed: false });
+    // 一題一題的動作在這裡不能用；沒填滿不能交、也不能直接選交給誰
+    expect(e2.step(s, { type: 'answerChallenge', answer: s.cards[0] }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step(s, { type: 'submitChallenge' }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step(s, { type: 'handOver', givenTo: ch.recipients[0] }).outcomes[0].kind).toBe('invalid');
+    // 每一格都能放任何一張手上的疑點（含只能自己想的）；不是手上的不能放
+    for (const q of fieldIds) expect(form().slots.find((x) => x.question === q)?.options).toEqual(s.cards);
+    expect(e2.step(s, { type: 'fillChallenge', question: fieldIds[0], answer: copy.items[0].id }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step({ ...s, cards: [], concerns: [{ card: s.cards[0], tried: [] }] }, { type: 'fillChallenge', question: fieldIds[0], answer: s.cards[0] }).outcomes[0].kind).toBe('invalid');
+    // 全部先放同一張錯的（同一張可以放不只一格），人指對：填的時候不扣電、不說對錯
+    const battery = s.battery;
+    const wrongFor = (q: string) => s.cards.find((id) => !fieldOf(q).cards.includes(id))!;
+    for (const q of fieldIds) fill(q, wrongFor(fieldIds[0]));
+    fill('who', ch.culprit);
+    fill(fieldIds[0], null);
+    expect(form().ready).toBe(false);
+    fill(fieldIds[0], wrongFor(fieldIds[0]));
+    expect(s.battery).toBe(battery);
+    expect(form().ready).toBe(true);
+    // 交出去被退回：扣一次、指出不對的格子、格子內容保留
+    const wrongFields = fieldIds.filter((q) => !fieldOf(q).cards.includes(s.accusation.slots[q]));
+    expect(wrongFields).toContain(fieldIds[0]);
+    const rejected = e2.step(s, { type: 'submitChallenge' });
+    expect(rejected.outcomes).toContainEqual({ kind: 'challengeRejected', fields: wrongFields, cost: cost.challengeRetry });
+    expect(s.battery - rejected.state.battery).toBe(cost.challengeRetry);
+    expect(rejected.state.accusation.slots).toEqual(s.accusation.slots);
+    expect(rejected.state.ended).toBeNull();
+    s = rejected.state;
+    // 人指錯：不管格子對不對，直接進那個人的結局
+    const innocent = ch.suspects.find((x) => x !== ch.culprit)!;
+    const framed = e2.step(e2.step(s, { type: 'fillChallenge', question: 'who', answer: innocent }).state, { type: 'submitChallenge' });
+    expect(framed.state.ended).toBe('end_wrong_' + innocent);
+    // 改成全對：通過，接著才選交給誰；通過之後不能再改
+    for (const q of fieldIds) fill(q, fieldOf(q).cards[0]);
+    const passed = e2.step(s, { type: 'submitChallenge' });
+    expect(passed.outcomes).toContainEqual({ kind: 'challengePassed' });
+    expect(passed.state.battery).toBe(s.battery);
+    s = passed.state;
+    expect(form().passed).toBe(true);
+    expect(e2.menu(s).challenge!.ask).toMatchObject({ question: null, options: ch.recipients });
+    expect(e2.step(s, { type: 'fillChallenge', question: 'who', answer: innocent }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step(s, { type: 'handOver', givenTo: 'pinyu' }).state.ended).toBe('end_pinyu');
+  });
+
+  it('只能自己想、但要先指出哪裡有問題的疑點：先進在意的地方，指對才成立，成立後可以放進指認的格子', () => {
+    const copy = structuredClone(content);
+    copy.endings.challenge.submitAll = true;
+    const base = copy.cards.find((c) => c.spot && c.availableWhen)!;
+    const mine = { ...structuredClone(base), id: 'card_think_spot', thinkOnly: true };
+    delete mine.say;
+    delete mine.sayTo;
+    delete mine.targets;
+    copy.cards = copy.cards.filter((c) => c.id !== base.id);
+    copy.cards.push(mine);
+    const e2 = createEngine(copy);
+    // 把所有東西都當作看過，讓條件成立
+    let s: GameState = { ...e2.step(e2.start(), { type: 'sendCover' }).state, seen: copy.items.map((i) => i.id) };
+    s = e2.step(s, { type: 'openApp', app: copy.apps.apps[0].id }).state;
+    expect(s.concerns.map((x) => x.card)).toContain(mine.id);
+    expect(s.cards).not.toContain(mine.id);
+    s = spotAll(e2, s);
+    expect(s.cards).toContain(mine.id);
+    expect(e2.menu(s).tests.some((t) => t.card === mine.id)).toBe(false);
+    const field = copy.endings.challenge.fields[0].id;
+    expect(e2.step(s, { type: 'fillChallenge', question: field, answer: mine.id }).state.accusation.slots[field]).toBe(mine.id);
   });
 
   it('背景 App 耗電較少（可以是小數），連續逛幾個會跳出提醒，不擋操作', () => {
@@ -349,7 +421,6 @@ describe('engine', () => {
     const m = memo(content, s);
     expect([...m.records, ...m.statements].map((i) => i.id)).not.toContain(flavor.id);
     expect(m.timeline.map((r) => r.item)).not.toContain(flavor.id);
-    expect(engine.menu(s).challenge?.records ?? []).not.toContain(flavor.id);
   });
 
   it('點開照片不耗電；照片要點開才算看過的規則打開時，沒點開就不進備忘錄、也不會帶出疑點', () => {
@@ -648,6 +719,59 @@ describe('engine', () => {
     // 沒給 visible（文字試玩整串印出來）就整串都算
     const whole = afterCover();
     expect(all.every((id) => whole.seen.includes(id) || whole.unopened.includes(id))).toBe(true);
+  });
+
+  it('滑到就算看過的 App（動態牆）：打開只算畫面上那幾筆，往下滑才算其餘的，有照片的也不用點開', () => {
+    // 用副本自己標，不依賴資料檔標了哪個 App
+    const copy = structuredClone(content);
+    const app = copy.apps.apps.find((a) => copy.items.filter((i) => i.app === a.id && !i.thread && !i.hidden && !i.needsLocate).length >= 3 && copy.items.some((i) => i.app === a.id && i.image && !i.hidden))!;
+    for (const a of copy.apps.apps) delete a.seeOnScroll;
+    app.seeOnScroll = true;
+    const page = copy.items.filter((i) => i.app === app.id && !i.thread && !i.hidden && !i.needsLocate).map((i) => i.id);
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover', visible: [] }).state;
+    expect(e2.menu(s).apps.find((a) => a.app === app.id)?.unseen).toEqual(page);
+    expect(e2.step(s, { type: 'seeItems', app: app.id, items: page }).outcomes[0].kind).toBe('invalid');
+    s = e2.step(s, { type: 'openApp', app: app.id, visible: page.slice(0, 1) }).state;
+    expect(s.seen).toContain(page[0]);
+    expect(page.slice(1).some((id) => s.seen.includes(id) || s.unopened.includes(id))).toBe(false);
+    expect(e2.menu(s).apps.find((a) => a.app === app.id)?.unseen).toEqual(page.slice(1));
+    const battery = s.battery;
+    const stranger = copy.items.find((i) => i.app !== app.id && !s.seen.includes(i.id))!;
+    s = e2.step(s, { type: 'seeItems', app: app.id, items: [...page, stranger.id] }).state;
+    // 有照片的也直接算看過，不用點開
+    expect(page.every((id) => s.seen.includes(id))).toBe(true);
+    expect(s.unopened.some((id) => page.includes(id))).toBe(false);
+    expect(s.seen).not.toContain(stranger.id);
+    expect(s.battery).toBe(battery);
+    // 沒給 visible（文字試玩）就整頁都算
+    const whole = e2.step(e2.step(e2.start(), { type: 'sendCover' }).state, { type: 'openApp', app: app.id }).state;
+    expect(page.every((id) => whole.seen.includes(id))).toBe(true);
+    // 沒標的 App 不能用這個動作，照片照舊要點開
+    const other = copy.apps.apps.find((a) => a.id !== app.id && copy.items.some((i) => i.app === a.id && i.image && !i.hidden && !i.thread))!;
+    const opened = e2.step(s, { type: 'openApp', app: other.id }).state;
+    expect(e2.step(opened, { type: 'seeItems', app: other.id, items: [] }).outcomes[0].kind).toBe('invalid');
+    expect(opened.unopened.length).toBeGreaterThan(0);
+  });
+
+  it('同一張疑點可以依對象在不同的聊天室問（threadTo）：有寫的用指定的，沒寫的用私訊', () => {
+    const copy = structuredClone(content);
+    const group = copy.threads.find((t) => t.members.length > 1)!;
+    const [a, b] = group.members;
+    const card = copy.cards.find((c) => !c.thinkOnly)!;
+    delete card.thread;
+    delete card.targets;
+    card.threadTo = { [a]: group.id };
+    const e2 = createEngine(copy);
+    const dm = (who: string) => copy.threads.find((t) => t.members.length === 1 && t.members[0] === who)!.id;
+    expect(e2.testThread(card, a)).toBe(group.id);
+    expect(e2.testThread(card, b)).toBe(dm(b));
+    let s: GameState = { ...e2.step(e2.start(), { type: 'sendCover' }).state, concerns: [], cards: [card.id] };
+    for (const t of copy.threads) s = e2.step(s, { type: 'readThread', thread: t.id }).state;
+    expect(e2.menu(s).tests.find((t) => t.card === card.id)?.threadOf).toMatchObject({ [a]: group.id, [b]: dm(b) });
+    const sent = (who: string) => e2.step(s, { type: 'test', card: card.id, target: who }).outcomes.find((o) => o.kind === 'sent');
+    expect(sent(a)).toMatchObject({ thread: group.id });
+    expect(sent(b)).toMatchObject({ thread: dm(b) });
   });
 
   it('看個人頁面：自介是一筆說法的，打開才算看過，不耗電；沒有的人打開沒有效果', () => {
