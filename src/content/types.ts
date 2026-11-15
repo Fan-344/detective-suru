@@ -598,11 +598,6 @@ export interface Ending {
 
 export interface EndingsFile {
   /**
-   * 指錯人的結局看完，玩家選「我想知道真相」時顯示的那個結局（endings 裡某一個破案結局的 id）。
-   * 不另外寫一份真相，直接用已經寫好的結局。沒寫就不提供這個選項。
-   */
-  truthEnding?: string;
-  /**
    * 解答篇：指對兇手的結局（trigger.accused 等於 challenge.culprit）看完之後，接著顯示的事情全貌。
    * 指錯人、沒電、被查到的結局不顯示，免得把答案講破。旁白在這裡可以直接陳述，因為玩家已經自己答對了。
    */

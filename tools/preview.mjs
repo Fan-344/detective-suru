@@ -340,10 +340,6 @@ if (endingsFile) {
   p(`可以交給：${ch.recipients.map(who).join('、')}。${endingsFile.endings.some((e) => e.trigger.fieldsWrong) ? '指對人但有格子放錯：不退回，進「站不住」結局。' : `指對人但有欄位沒選對：退回重填，扣 ${meta.battery?.cost?.challengeRetry ?? '?'}% 電。`}`);
   p();
   p('## 結局');
-  if (endingsFile.truthEnding) {
-    p();
-    p(`指錯人之後選「我想知道真相」，顯示的是結局「${endingsFile.endings.find((x) => x.id === endingsFile.truthEnding)?.title ?? endingsFile.truthEnding}」（${endingsFile.truthEnding}）。`);
-  }
   for (const e of endingsFile.endings) {
     const t = e.trigger;
     let cond = '';
