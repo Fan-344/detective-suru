@@ -25,9 +25,14 @@ const afterCover = () => run(engine.start(), [{ type: 'sendCover' }]).state;
 function legacy(): typeof content {
   const copy = structuredClone(content);
   copy.meta.battery.ladderAuto = true;
+  // 舊做法下傳訊息會耗電（這些測試靠一直回訊息把電耗下去）；現在的資料是不扣的
+  if (!copy.meta.battery.cost.send) copy.meta.battery.cost.send = 2;
   delete copy.meta.readIgnore;
   // 階梯上各級自己的門檻（when）也拿掉，要測門檻的測試自己標
   for (const c of copy.characters) for (const l of c.ladder) delete l.when;
+  // 來電也拿掉：這些測試走固定的流程，電話一響就會被打斷。來電有自己的測試。
+  const calls = new Set(copy.events.filter((e) => e.kind === 'call').map((e) => e.id));
+  for (const c of copy.characters) for (const l of c.ladder) l.onEnter = l.onEnter.filter((id) => !calls.has(id));
   return copy;
 }
 
@@ -39,6 +44,23 @@ function spotAll(e: Engine, state: GameState): GameState {
     state = e.step(state, { type: 'spot', card: concern.card, option: right.id }).state;
   }
   return state;
+}
+
+/**
+ * 把電耗下去：把所有疑點都當作成立，一張一張拿去問人（每問一次都耗電），直到 done 成立。
+ * only 有給的話只問那個人。不依賴資料裡每個動作耗多少電、誰還有訊息等著回。
+ */
+function burnByAsking(e: Engine, state: GameState, done: (s: GameState) => boolean, only?: string): GameState {
+  let s: GameState = { ...state, concerns: [], cards: e.content.cards.filter((c) => !c.thinkOnly).map((c) => c.id) };
+  for (const t of e.menu(s).tests) {
+    for (const target of t.targets) {
+      if (only && target !== only) continue;
+      if (s.phase !== 'play' || s.prompt || s.call || done(s)) return s;
+      const r = e.step(s, { type: 'test', card: t.card, target });
+      if (!r.outcomes.some((o) => o.kind === 'invalid')) s = r.state;
+    }
+  }
+  return s;
 }
 
 describe('engine', () => {
@@ -159,13 +181,8 @@ describe('engine', () => {
     expect(s.prompt).toBeNull();
     expect(s.seen).not.toContain('rec_login');
     // 開口之後，下一次輪到她就照常往上
-    // 一直回訊息把電耗下去（不依賴資料裡的間隔數字），直到輪到她
-    for (let i = 0; i < 20 && s.phase === 'play' && s.ladder[jw.id] < gate.level; i++) {
-      const id = s.awaiting[0];
-      const e = copy.events.find((x) => x.id === id);
-      if (e?.kind !== 'message') break;
-      s = e2.step(s, { type: 'reply', event: id, option: e.options![e.options!.length - 1].id }).state;
-    }
+    // 一直拿疑點去問人把電耗下去（不依賴資料裡的間隔數字），直到輪到她
+    s = burnByAsking(e2, s, (st) => (st.ladder[jw.id] ?? 0) >= gate.level);
     expect(s.attended.length).toBeGreaterThan(0);
     expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(gate.level);
     expect(s.seen).toContain('rec_login');
@@ -182,11 +199,17 @@ describe('engine', () => {
     jw.ladder.find((l) => l.level === 2)!.when = { seen: ['rcp_1628'] };
     const e2 = createEngine(copy);
     let s = e2.step(e2.start(), { type: 'sendCover' }).state;
-    // 耗電讓她自己往上：一直輪流看聊天室，不開發票
+    // 耗電讓她自己往上：看聊天室、開別的 App、定位，就是不開發票（不依賴資料裡每個動作耗多少電）
+    const others: Action[] = [
+      ...copy.threads.map((t): Action => ({ type: 'readThread', thread: t.id })),
+      ...copy.apps.apps.filter((x) => x.id !== 'receipts' && x.view !== 'chat').map((x): Action => ({ type: 'openApp', app: x.id })),
+      { type: 'locate', app: 'finder' },
+    ];
     const burn = (target: number) => {
-      for (let i = 0; i < 200 && s.phase === 'play' && (s.ladder[jw.id] ?? 0) < target; i++) {
-        s = e2.step(s, { type: 'readThread', thread: copy.threads[i % copy.threads.length].id }).state;
-        if (s.prompt) break;
+      for (const action of others) {
+        if (s.phase !== 'play' || s.prompt || s.call || (s.ladder[jw.id] ?? 0) >= target) break;
+        const r = e2.step(s, action);
+        if (!r.outcomes.some((o) => o.kind === 'invalid')) s = r.state;
       }
     };
     burn(2);
@@ -196,7 +219,14 @@ describe('engine', () => {
     // 看過發票之後，下一次輪到她就照常往上
     s = e2.step(s, { type: 'openApp', app: 'receipts' }).state;
     expect(s.seen).toContain('rcp_1628');
-    burn(2);
+    // 再耗一段電（借一張疑點反覆拿去問人，每次都耗電）
+    s = { ...s, cards: copy.cards.filter((c) => !c.thinkOnly).map((c) => c.id), concerns: [] };
+    for (const t of e2.menu(s).tests) {
+      for (const target of t.targets) {
+        if (s.phase !== 'play' || s.prompt || s.call || (s.ladder[jw.id] ?? 0) >= 2) break;
+        s = e2.step(s, { type: 'test', card: t.card, target }).state;
+      }
+    }
     expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(2);
   });
 
@@ -216,18 +246,17 @@ describe('engine', () => {
     expect(s.attended).not.toContain(jw.id);
     expect(s.ladder[jw.id]).toBe(gate.level - 1);
     expect(s.seen).not.toContain('rec_login');
-    // 回她本人一句之後，再耗一段電就照常往上
-    const mine = s.awaiting.find((id) => copy.events.find((e) => e.id === id && e.kind === 'message' && e.from === jw.id));
-    const event = copy.events.find((e) => e.id === mine);
-    if (event?.kind !== 'message') throw new Error('沒有她等著回的訊息');
-    s = e2.step(s, { type: 'reply', event: event.id, option: event.options![event.options!.length - 1].id }).state;
+    // 再理別人、耗再多電也一樣進不去
+    // （只多耗一段：問別人到電量又掉了至少一個間隔為止，免得把電耗光）
+    const other = copy.characters.map((c) => c.id).find((id) => id !== jw.id)!;
+    const spentBefore = s.spent;
+    s = burnByAsking(e2, s, (st) => st.spent - spentBefore >= copy.meta.battery.ladderTickEvery, other);
+    expect(s.phase).toBe('play');
+    expect(s.attended).not.toContain(jw.id);
+    expect(s.ladder[jw.id]).toBe(gate.level - 1);
+    // 理過她本人（拿疑點問她）之後，再耗一段電就照常往上
+    s = burnByAsking(e2, s, (st) => (st.ladder[jw.id] ?? 0) >= gate.level, jw.id);
     expect(s.attended).toContain(jw.id);
-    for (let i = 0; i < 20 && s.phase === 'play' && s.ladder[jw.id] < gate.level; i++) {
-      const id = s.awaiting[0];
-      const e = copy.events.find((x) => x.id === id);
-      if (e?.kind !== 'message') break;
-      s = e2.step(s, { type: 'reply', event: id, option: e.options![e.options!.length - 1].id }).state;
-    }
     expect(s.ladder[jw.id]).toBeGreaterThanOrEqual(gate.level);
   });
 
@@ -772,6 +801,237 @@ describe('engine', () => {
     const sent = (who: string) => e2.step(s, { type: 'test', card: card.id, target: who }).outcomes.find((o) => o.kind === 'sent');
     expect(sent(a)).toMatchObject({ thread: group.id });
     expect(sent(b)).toMatchObject({ thread: dm(b) });
+  });
+
+  // 來電的測試用副本自己寫事件，開局就打來，不依賴資料檔
+  function withCall(extra: Record<string, unknown> = {}) {
+    const copy = structuredClone(content);
+    copy.meta.readIgnore = undefined;
+    const who = copy.characters[0].id;
+    const thread = copy.threads.find((t) => t.members.length === 1 && t.members[0] === who)!.id;
+    const message = (id: string, options?: unknown) => ({ id, kind: 'message', thread, from: who, text: [id], ...(options ? { options } : {}) });
+    const events = [
+      { id: 'call_test', kind: 'call', from: who, onDecline: { effects: { flags: { hung_up: true } }, then: ['msg_after_decline'] }, onMissed: { then: ['msg_after_missed'] }, ...extra },
+      message('msg_after_decline'),
+      message('msg_after_missed', [{ id: 'calm', text: '別打了', effects: { flags: { calm: true } } }]),
+    ];
+    copy.events.push(...(events as unknown as typeof copy.events));
+    copy.meta.afterCover = ['call_test'];
+    copy.meta.afterCoverEffects = undefined;
+    const e2 = createEngine(copy);
+    return { copy, e2, who, thread, start: e2.step(e2.start(), { type: 'sendCover' }) };
+  }
+
+  it('來電：響的時候只能掛斷或讓它響完；掛斷扣電、對方知道被按掉', () => {
+    const { copy, e2, who, start } = withCall();
+    expect(start.outcomes).toContainEqual({ kind: 'call', event: 'call_test', from: who });
+    const s = start.state;
+    expect(e2.menu(s).call).toEqual({ event: 'call_test', from: who, declineCost: cost.callDecline ?? 0, ringCost: cost.callRing ?? 0 });
+    // 響著的時候別的事都不能做
+    expect(e2.step(s, { type: 'openApp', app: copy.apps.apps[0].id }).outcomes[0].kind).toBe('invalid');
+    const r = e2.step(s, { type: 'declineCall' });
+    expect(r.outcomes).toContainEqual({ kind: 'callEnded', event: 'call_test', from: who, declined: true, cost: cost.callDecline ?? 0 });
+    expect(s.battery - r.state.battery).toBe(cost.callDecline ?? 0);
+    expect(r.state.call).toBeNull();
+    expect(r.state.flags.hung_up).toBe(true);
+    expect(r.state.fired).toContain('msg_after_decline');
+    expect(r.state.fired).not.toContain('msg_after_missed');
+    expect(r.state.missedCalls).toEqual([]);
+    // 沒有來電的時候這兩個動作不能用
+    expect(e2.step(r.state, { type: 'declineCall' }).outcomes[0].kind).toBe('invalid');
+    expect(e2.step(r.state, { type: 'letRing' }).outcomes[0].kind).toBe('invalid');
+  });
+
+  it('來電：放著響完扣比較多電，記一筆未接來電，走另一條後續', () => {
+    const { e2, who, start } = withCall();
+    const r = e2.step(start.state, { type: 'letRing' });
+    expect(r.outcomes).toContainEqual({ kind: 'callEnded', event: 'call_test', from: who, declined: false, cost: cost.callRing ?? 0 });
+    expect(start.state.battery - r.state.battery).toBe(cost.callRing ?? 0);
+    expect(r.state.missedCalls).toEqual([{ event: 'call_test', from: who }]);
+    expect(e2.menu(r.state).missedCalls).toEqual([{ event: 'call_test', from: who }]);
+    expect(r.state.flags.hung_up).toBeUndefined();
+    expect(r.state.fired).toContain('msg_after_missed');
+    expect(r.state.fired).not.toContain('msg_after_decline');
+  });
+
+  it('連環來電：條件成立之前每隔幾個動作再打一通、每通照樣扣電，後續事件不重複；條件成立就停', () => {
+    const { copy, e2, thread, start } = withCall({ repeat: { everyActions: 2, until: { flags: { calm: true } } } });
+    const app = copy.apps.apps.find((a) => a.view !== 'chat' && a.view !== 'assistant')!.id;
+    const messages = (st: GameState) => st.threads[thread].appended.filter((m) => m.text[0] === 'msg_after_missed').length;
+    let s = e2.step(start.state, { type: 'letRing' }).state;
+    expect(messages(s)).toBe(1);
+    // 看和想不算動作；算動作的做滿兩個才再打
+    s = e2.step(s, { type: 'viewProfile', character: copy.characters[1].id }).state;
+    s = e2.step(s, { type: 'openApp', app }).state;
+    expect(s.call).toBeNull();
+    const second = e2.step(s, { type: 'openApp', app });
+    expect(second.outcomes.filter((o) => o.kind === 'call')).toHaveLength(1);
+    s = second.state;
+    const before = s.battery;
+    s = e2.step(s, { type: 'letRing' }).state;
+    expect(before - s.battery).toBe(cost.callRing ?? 0);
+    expect(s.missedCalls).toHaveLength(2);
+    // 後續那則訊息已經發生過，不會再傳一次
+    expect(messages(s)).toBe(1);
+    // 第三通照樣打來
+    s = e2.step(e2.step(s, { type: 'openApp', app }).state, { type: 'openApp', app }).state;
+    expect(s.call).not.toBeNull();
+    s = e2.step(s, { type: 'letRing' }).state;
+    expect(s.missedCalls).toHaveLength(3);
+    // 回一句讓條件成立，之後就不再打
+    s = e2.step(s, { type: 'readThread', thread }).state;
+    expect(s.call).toBeNull();
+    s = e2.step(s, { type: 'reply', event: 'msg_after_missed', option: 'calm' }).state;
+    expect(s.flags.calm).toBe(true);
+    for (let i = 0; i < 6; i++) s = e2.step(s, { type: 'openApp', app }).state;
+    expect(s.call).toBeNull();
+    // 條件成立的期間不打也不累計（之後條件又不成立才會重新數）
+    expect(s.callRepeat).toEqual({ call_test: 0 });
+  });
+
+  it('連環來電停了之後，條件又不成立就重新開打', () => {
+    const { copy, e2, thread, start } = withCall({ repeat: { everyActions: 2, until: { flags: { calm: true } } } });
+    const app = copy.apps.apps.find((a) => a.view !== 'chat' && a.view !== 'assistant')!.id;
+    let s = e2.step(start.state, { type: 'letRing' }).state;
+    s = e2.step(s, { type: 'readThread', thread }).state;
+    s = e2.step(s, { type: 'reply', event: 'msg_after_missed', option: 'calm' }).state;
+    for (let i = 0; i < 5; i++) s = e2.step(s, { type: 'openApp', app }).state;
+    expect(s.call).toBeNull();
+    // 條件被改回不成立（資料裡是另一則訊息的效果）：過兩個動作又打來
+    s = { ...s, flags: { ...s.flags, calm: false } };
+    s = e2.step(s, { type: 'openApp', app }).state;
+    expect(s.call).toBeNull();
+    s = e2.step(s, { type: 'openApp', app }).state;
+    expect(s.call).toEqual({ event: 'call_test', from: copy.characters[0].id });
+  });
+
+  it('被已讀不回而受罰的時候，另外觸發那個人的 onIgnored 事件（只發生一次）', () => {
+    const copy = structuredClone(content);
+    copy.meta.readIgnore = { nudgeAfterActions: 1, raiseAfterActions: 1 };
+    const who = copy.characters.find((c) => c.nudges?.length && copy.events.some((e) => e.kind === 'message' && e.from === c.id && e.options?.length))!;
+    const thread = copy.threads.find((t) => t.members.length === 1 && t.members[0] === who.id)!.id;
+    const extra = [
+      { id: 'msg_wait_reply', kind: 'message', thread, from: who.id, text: ['在嗎'], options: [{ id: 'ok', text: '在' }] },
+      { id: 'msg_you_ignored', kind: 'message', thread, from: who.id, text: ['妳說過會回的'] },
+    ];
+    copy.events.push(...(extra as unknown as typeof copy.events));
+    copy.meta.afterCover = ['msg_wait_reply'];
+    copy.meta.afterCoverEffects = undefined;
+    who.onIgnored = ['msg_you_ignored'];
+    const e2 = createEngine(copy);
+    const app = copy.apps.apps.find((a) => a.view !== 'chat' && a.view !== 'assistant')!.id;
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    // 讀了沒回就離開，一直做別的事，直到她受不了
+    s = e2.step(s, { type: 'readThread', thread }).state;
+    for (let i = 0; i < 6 && !s.fired.includes('msg_you_ignored'); i++) s = e2.step(s, { type: 'openApp', app }).state;
+    expect(s.ignoredOut).toContain('msg_wait_reply');
+    expect(s.fired).toContain('msg_you_ignored');
+    expect(s.threads[thread].appended.filter((m) => m.text[0] === '妳說過會回的')).toHaveLength(1);
+  });
+
+  it('進某一級時發生的事把他退回去（有人替玩家擋掉）：往上那筆排在前面，那一級之後的不再走', () => {
+    const copy = legacy();
+    const jw = copy.characters.find((c) => c.id === copy.endings.challenge.culprit)!;
+    for (const l of jw.ladder) {
+      delete l.needsContact;
+      delete l.when;
+    }
+    const thread = copy.threads.find((t) => t.members.length === 1)!;
+    copy.events.push({ id: 'msg_blocked', kind: 'message', thread: thread.id, from: thread.members[0], text: ['我幫妳擋了'], effects: { ladder: { [jw.id]: -1 } } } as unknown as (typeof copy.events)[number]);
+    jw.ladder.find((l) => l.level === 2)!.onEnter = ['msg_blocked'];
+    // 借一個回覆選項，讓它一次把她往上推三級
+    const e = copy.events.find((x) => x.kind === 'message' && x.id === 'cov_py_dm')!;
+    if (e.kind !== 'message') throw new Error('找不到那則訊息');
+    e.options![0].effects = { ladder: { [jw.id]: 3 } };
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    s = e2.step(s, { type: 'readThread', thread: e.thread }).state;
+    const from = s.ladder[jw.id] ?? 0;
+    if (from !== 1) return;
+    const r = e2.step(s, { type: 'reply', event: e.id, option: e.options![0].id });
+    const moves = r.outcomes.filter((o) => o.kind === 'ladder' && o.character === jw.id);
+    expect(moves).toEqual([
+      { kind: 'ladder', character: jw.id, from: 1, to: 2, auto: false },
+      { kind: 'ladder', character: jw.id, from: 2, to: 1, auto: false },
+    ]);
+    expect(r.state.ladder[jw.id]).toBe(1);
+    expect(r.outcomes.findIndex((o) => o.kind === 'ladder')).toBeLessThan(r.outcomes.findIndex((o) => o.kind === 'message' && o.event === 'msg_blocked'));
+  });
+
+  it('回覆選項可以接著觸發事件（triggers）；事件帶 delay 的話過一陣子才出現', () => {
+    const copy = structuredClone(content);
+    copy.meta.readIgnore = undefined;
+    const who = copy.characters[0].id;
+    const thread = copy.threads.find((t) => t.members.length === 1 && t.members[0] === who)!.id;
+    const extra = [
+      { id: 'msg_ask', kind: 'message', thread, from: who, text: ['在嗎'], options: [{ id: 'now', text: '在', triggers: ['msg_now'] }, { id: 'later', text: '等等', triggers: ['msg_later'] }] },
+      { id: 'msg_now', kind: 'message', thread, from: who, text: ['好'] },
+      { id: 'msg_later', kind: 'message', thread, from: who, text: ['我回來了'], delay: 2 },
+    ];
+    copy.events.push(...(extra as unknown as typeof copy.events));
+    copy.meta.afterCover = ['msg_ask'];
+    copy.meta.afterCoverEffects = undefined;
+    const e2 = createEngine(copy);
+    const s = e2.step(e2.step(e2.start(), { type: 'sendCover' }).state, { type: 'readThread', thread }).state;
+    expect(e2.step(s, { type: 'reply', event: 'msg_ask', option: 'now' }).state.fired).toContain('msg_now');
+    let later = e2.step(s, { type: 'reply', event: 'msg_ask', option: 'later' }).state;
+    expect(later.fired).not.toContain('msg_now');
+    if (!later.fired.includes('msg_later')) {
+      // 還沒到：再耗一些電就出現
+      for (const a of copy.apps.apps) if (!later.fired.includes('msg_later')) later = e2.step(later, { type: 'openApp', app: a.id }).state;
+    }
+    expect(later.fired).toContain('msg_later');
+  });
+
+  it('不理玩家的人（silentWhen）：問他、回他都只有已讀、沒有效果但照扣電；不催、不升級、不打來、不插話', () => {
+    const copy = structuredClone(content);
+    copy.meta.readIgnore = { nudgeAfterActions: 1, raiseAfterActions: 1 };
+    const who = copy.characters.find((c) => copy.reactions.some((r) => r.target === c.id && !r.when))!;
+    who.silentWhen = { flags: { gone: true } };
+    const thread = copy.threads.find((t) => t.members.length === 1 && t.members[0] === who.id)!.id;
+    const extra = [
+      { id: 'msg_last_word', kind: 'message', thread, from: who.id, text: ['算了'], options: [{ id: 'sorry', text: '對不起', reply: ['沒事'], effects: { flags: { forgiven: true }, ladder: { [who.id]: 1 } }, triggers: ['msg_after_sorry'] }] },
+      { id: 'msg_after_sorry', kind: 'message', thread, from: who.id, text: ['好啦'] },
+      { id: 'call_from_silent', kind: 'call', from: who.id },
+    ];
+    copy.events.push(...(extra as unknown as typeof copy.events));
+    copy.meta.afterCover = ['msg_last_word'];
+    copy.meta.afterCoverEffects = undefined;
+    const reaction = copy.reactions.find((r) => r.target === who.id && !r.when)!;
+    const card = copy.cards.find((c) => c.id === reaction.card)!;
+    delete card.thread;
+    delete card.threadTo;
+    const e2 = createEngine(copy);
+    let s = e2.step(e2.start(), { type: 'sendCover' }).state;
+    s = e2.step(s, { type: 'readThread', thread }).state;
+    s = { ...s, flags: { ...s.flags, gone: true }, cards: [card.id], concerns: [] };
+    expect(e2.menu(s).silent).toEqual([who.id]);
+    const level = s.ladder[who.id] ?? 0;
+    // 回他：送出去了，只有已讀；選項的效果、後續都沒有發生
+    const replied = e2.step(s, { type: 'reply', event: 'msg_last_word', option: 'sorry' });
+    expect(replied.outcomes.map((o) => o.kind)).toContain('sent');
+    expect(replied.outcomes).toContainEqual({ kind: 'noReply', thread, character: who.id });
+    expect(replied.outcomes.some((o) => o.kind === 'message')).toBe(false);
+    expect(replied.state.flags.forgiven).toBeUndefined();
+    expect(replied.state.fired).not.toContain('msg_after_sorry');
+    expect(replied.state.ladder[who.id] ?? 0).toBe(level);
+    expect(replied.state.awaiting).not.toContain('msg_last_word');
+    // 問他：一樣只有已讀，反應表不會用到，但照扣電
+    const asked = e2.step(s, { type: 'test', card: card.id, target: who.id });
+    expect(asked.outcomes).toContainEqual({ kind: 'noReply', thread, character: who.id });
+    expect(asked.outcomes.some((o) => o.kind === 'message')).toBe(false);
+    expect(s.battery - asked.state.battery).toBe(cost.test ?? 0);
+    for (const id of reaction.reveals ?? []) expect(asked.state.seen).not.toContain(id);
+    // 已讀不回他：不催、不升級
+    const app = copy.apps.apps.find((a) => a.view !== 'chat' && a.view !== 'assistant')!.id;
+    let idle = s;
+    for (let i = 0; i < 6; i++) idle = e2.step(idle, { type: 'openApp', app }).state;
+    expect(idle.threads[thread].appended.length).toBe(s.threads[thread].appended.length);
+    expect(idle.ladder[who.id] ?? 0).toBe(level);
+    // 還沒不理人的時候，同樣的回覆是有效果的（對照）
+    const before = e2.step({ ...s, flags: {} }, { type: 'reply', event: 'msg_last_word', option: 'sorry' });
+    expect(before.state.flags.forgiven).toBe(true);
+    expect(before.state.fired).toContain('msg_after_sorry');
   });
 
   it('看個人頁面：自介是一筆說法的，打開才算看過，不耗電；沒有的人打開沒有效果', () => {

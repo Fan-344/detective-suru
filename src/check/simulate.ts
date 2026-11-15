@@ -40,6 +40,8 @@ const isMessage = (a: Action) => a.type === 'reply' || a.type === 'test';
 /** 目前所有能做的具體動作（不含挑戰書；比對只列資料裡有結果、還沒比過的組合） */
 export function concreteActions(engine: Engine, s: GameState): Action[] {
   const m = engine.menu(s);
+  // 電話在響的時候只有兩件事能做
+  if (m.call) return [{ type: 'declineCall' }, { type: 'letRing' }];
   if (m.cover) {
     // 開局那個群組也一樣：只看得到最後幾則，其餘的之後往上滑
     const thread = engine.content.threads.find((t) => t.id === (engine.content.meta.coverThread ?? engine.content.threads[0]?.id));
@@ -152,7 +154,7 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
     const canChallenge = engine.menu(s).challenge !== null;
 
     let action: Action | null = null;
-    if (canChallenge && s.phase === 'play' && !s.prompt) {
+    if (canChallenge && s.phase === 'play' && !s.prompt && !s.call) {
       const ready = (accused !== ch.culprit || fields !== null) && goalFlags.every(([flag, value]) => (s.flags[flag] ?? false) === value);
       const nothingLeft = costly.length === 0;
       // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
@@ -286,6 +288,10 @@ const describe = (a: Action): string => {
       return `視窗 ${a.option ?? '不理'}`;
     case 'answerChallenge':
       return `回答 ${a.answer}`;
+    case 'declineCall':
+      return '掛斷來電';
+    case 'letRing':
+      return '讓來電響完';
     case 'fillChallenge':
       return `填 ${a.question}=${a.answer ?? '清空'}`;
     case 'submitChallenge':

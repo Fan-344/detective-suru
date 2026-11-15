@@ -33,6 +33,9 @@ export interface Engine {
 /** 疑點成立前多的一層（見 Card.spot）。沒寫或沒有選項就當作沒有這一層。 */
 export type Spot = NonNullable<Card['spot']>;
 
+/** 算一個「動作」的種類（已讀不回、連環來電都用這個數）：打開 App、讀聊天室、定位、傳訊息。看和想不算。 */
+const COUNTED = ['openApp', 'readThread', 'locate', 'reply', 'test'];
+
 /** 只能自己想、不能拿去問人的疑點（沒有 say、沒有對象，只能按「再想想」） */
 export function isThinkOnly(card: Card): boolean {
   return card.thinkOnly === true;
@@ -70,6 +73,11 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   const sequence: string[] = content.endings.challenge.sequence?.length
     ? content.endings.challenge.sequence
     : [...content.endings.challenge.fields.map((f) => f.id), 'who'];
+  /** 這個人現在是不是不理玩家了（Character.silentWhen 成立）：不回、不催、不升級、不打來、不插話 */
+  const isSilent = (state: GameState, who: CharacterId) => {
+    const when = characters.get(who)?.silentWhen;
+    return when !== undefined && holds(state, when);
+  };
   /** 一次交卷：所有格子填好才交出去（見 EndingsFile.challenge.submitAll）。否則是一題一題問。 */
   const submitAll = content.endings.challenge.submitAll === true;
   /** 「滑到就算看過」的 App（例如動態牆）：裡面的東西捲進畫面就算看過，有照片的也不用點開 */
@@ -140,6 +148,10 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       genericIndex,
       wanderStreak: 0,
       wanderIndex: 0,
+      call: null,
+      callQueue: [],
+      missedCalls: [],
+      callRepeat: {},
       assistantUnread: false,
       currentThread: null,
       readAwaiting: [],
@@ -186,12 +198,16 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       const from = s.ladder[who] ?? 0;
       const to = Math.max(0, Math.min(max, from + delta));
       if (to === from) return;
+      // 不理玩家的人，階梯不再動（不升也不降）
+      if (isSilent(s, who)) return;
       if (to < from) {
         out.push({ kind: 'ladder', character: who, from, to, auto });
         s.ladder[who] = to;
         return;
       }
       // 往上時一級一級走，每一級的 onEnter 都會發生
+      const mark = out.length;
+      let reached = from;
       for (let level = from + 1; level <= to && !s.ended; level++) {
         const rung = character.ladder.find((l) => l.level === level);
         // 標了 needsContact 的那一級要玩家先開口才進得去（否則停在前一級）：
@@ -201,12 +217,16 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         // 這一級自己帶的門檻（when）：條件還沒成立也停在前一級，成立之後照常
         if (rung?.when && !holds(s, rung.when)) break;
         s.ladder[who] = level;
+        reached = level;
         for (const id of rung?.onEnter ?? []) fire(id);
+        // 進這一級時發生的事把他又推走了（例如有人替玩家擋掉，退一級）：到此為止，這一級的結局也不算
+        if (s.ladder[who] !== level) break;
         for (const e of content.endings.endings) {
           if (e.trigger.kind === 'ladder' && e.trigger.character === who && e.trigger.level === level) end(e.id);
         }
       }
-      if (s.ladder[who] !== from) out.push({ kind: 'ladder', character: who, from, to: s.ladder[who], auto });
+      // 往上的這一筆排在它引起的事情（訊息、退回）前面
+      if (reached !== from) out.splice(mark, 0, { kind: 'ladder', character: who, from, to: reached, auto });
     };
 
     /** byPlayer：這個效果是玩家送出的東西造成的，會記入「有沒有被安撫」 */
@@ -222,12 +242,75 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       }
     };
 
+    /** 讓某個來電事件響起來。已經有一通在響就排在後面。 */
+    function ring(id: EventId) {
+      const e = events.get(id);
+      if (e?.kind !== 'call' || s.ended) return;
+      // 不理玩家的人不會再打來
+      if (isSilent(s, e.from)) return;
+      if (s.call) {
+        if (!s.callQueue.includes(id)) s.callQueue.push(id);
+        return;
+      }
+      s.call = { event: id, from: e.from };
+      out.push({ kind: 'call', event: id, from: e.from });
+    }
+
+    /** 正在響的那一通結束：declined 是玩家掛斷，否則是放著響完 */
+    function endCall(declined: boolean) {
+      const current = s.call;
+      const e = current ? events.get(current.event) : undefined;
+      if (!current || e?.kind !== 'call') return;
+      s.call = null;
+      const used = declined ? (cost.callDecline ?? 0) : (cost.callRing ?? 0);
+      out.push({ kind: 'callEnded', event: e.id, from: e.from, declined, cost: used });
+      if (!declined) s.missedCalls.push({ event: e.id, from: e.from });
+      spend(used);
+      if (s.ended) return;
+      const branch = declined ? e.onDecline : e.onMissed;
+      apply(branch?.effects, declined);
+      // 連環來電後面幾通：已經發生過的事件 fire 自己會跳過，不會重複
+      for (const id of branch?.then ?? []) fire(id);
+      if (s.ended) return;
+      // 連環來電：記著，過幾個動作再打（條件成立期間不打，見 callTick）
+      if (e.repeat) s.callRepeat[e.id] = 0;
+      const next = s.callQueue.shift();
+      if (next) ring(next);
+    }
+
+    /** 連環來電的計數。每個動作結束時算一次（排在已讀不回之後，這樣被已讀不回惹到的當下就會數到）；算「動作」的種類跟已讀不回一樣。 */
+    const callTick = (counted: boolean) => {
+      for (const id of Object.keys(s.callRepeat)) {
+        const e = events.get(id);
+        if (e?.kind !== 'call' || !e.repeat) {
+          delete s.callRepeat[id];
+          continue;
+        }
+        // 條件成立的期間不打，也不累計；之後條件又不成立（例如答應會回卻又已讀不回）就重新數、重新開打
+        if (holds(s, e.repeat.until)) {
+          s.callRepeat[id] = 0;
+          continue;
+        }
+        if (counted) s.callRepeat[id] += 1;
+        if (s.callRepeat[id] >= e.repeat.everyActions && !s.call) {
+          s.callRepeat[id] = 0;
+          ring(id);
+        }
+      }
+    };
+
     function fire(id: EventId, fromSchedule = false) {
       const e = events.get(id);
       if (!e || s.ended || s.fired.includes(id)) return;
       if (e.kind === 'ending') {
         s.fired.push(id);
         end(e.ending);
+        return;
+      }
+      if (e.kind === 'call') {
+        if (!holds(s, e.when)) return;
+        s.fired.push(id);
+        ring(id);
         return;
       }
       if (e.kind === 'system') {
@@ -351,13 +434,18 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       s.currentThread = here;
       if (!config) return;
 
-      const counts = ['openApp', 'readThread', 'locate', 'reply', 'test'].includes(action.type);
+      const counts = COUNTED.includes(action.type);
       const pendingOf = (who: CharacterId) =>
         s.awaiting.map((id) => events.get(id)).find((e) => e?.kind === 'message' && e.from === who && s.readAwaiting.includes(e.id) && !s.ignoredOut.includes(e.id));
       for (const c of content.characters) {
         if (s.ended) return;
         const clock = s.ignoring[c.id];
         if (!clock) continue;
+        // 不理玩家的人不會再催
+        if (isSilent(s, c.id)) {
+          delete s.ignoring[c.id];
+          continue;
+        }
         const pending = pendingOf(c.id);
         if (!pending || pending.kind !== 'message') {
           delete s.ignoring[c.id];
@@ -379,6 +467,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           delete s.ignoring[c.id];
           s.ignoredOut.push(pending.id);
           moveLadder(c.id, 1, true);
+          // 被已讀不回惹到的後續（「妳說過會回的」）。不管這次有沒有真的升上去都會發生；每個事件照舊只發生一次
+          for (const id of c.onIgnored ?? []) fire(id);
         }
       }
       if (s.ended) return;
@@ -395,6 +485,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
 
     const done = (): StepResult => {
       if (!s.ended) readIgnore();
+      if (!s.ended) callTick(COUNTED.includes(action.type));
       if (!s.ended) gainCards();
       return { state: s, outcomes: out };
     };
@@ -419,6 +510,13 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       for (const id of meta.afterCover ?? []) fire(id);
       apply(meta.afterCoverEffects, false);
       spend(cost.send);
+      return done();
+    }
+
+    // 電話在響的時候只能掛斷或讓它響完；助理不能說話，所以沒有「接」
+    if (s.call) {
+      if (action.type !== 'declineCall' && action.type !== 'letRing') return invalid('電話還在響');
+      endCall(action.type === 'declineCall');
       return done();
     }
 
@@ -460,6 +558,10 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
 
       case 'answerPrompt':
         return invalid('現在沒有系統視窗');
+
+      case 'declineCall':
+      case 'letRing':
+        return invalid('現在沒有來電');
 
       case 'openApp': {
         const app = content.apps.apps.find((a) => a.id === action.app);
@@ -550,10 +652,18 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         if (!option) return invalid('沒有這個回覆選項');
         s.awaiting = s.awaiting.filter((id) => id !== e.id);
         say(e.thread, option.text);
+        if (isSilent(s, e.from)) {
+          // 他不理玩家了：已讀不回，這句話沒有任何效果，電照扣
+          out.push({ kind: 'noReply', thread: e.thread, character: e.from });
+          spend(cost.send);
+          return done();
+        }
         attend(e.from);
         hear(e.thread, e.from, option.reply ?? [], option.signal);
         see(option.reveals ?? []);
         apply(option.effects, true);
+        // 選了這句之後接著發生的事（事件自己帶 delay 的話會過一陣子才出現）
+        for (const id of option.triggers ?? []) fire(id);
         spend(cost.send);
         return done();
       }
@@ -588,10 +698,17 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         s.cardsUsed.push(key);
         attend(action.target);
         say(thread, card.sayTo?.[action.target] ?? card.say ?? '');
+        if (isSilent(s, action.target)) {
+          // 他不理玩家了：已讀不回，什麼都沒發生，電照扣
+          out.push({ kind: 'noReply', thread, character: action.target });
+          spend(testCost);
+          return done();
+        }
         const reaction = content.reactions.find((r) => r.card === card.id && r.target === action.target && holds(s, r.when));
         if (reaction) {
           hear(thread, action.target, reaction.reply, reaction.signal);
-          for (const o of reaction.others ?? []) hear(thread, o.from, o.reply, o.signal);
+          // 不理玩家的人在別人的反應裡也不插話
+          for (const o of reaction.others ?? []) if (!isSilent(s, o.from)) hear(thread, o.from, o.reply, o.signal);
           see(reaction.reveals ?? []);
           apply(reaction.effects, true);
           for (const id of reaction.triggers ?? []) fire(id);
@@ -749,13 +866,16 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   }
 
   function menu(s: GameState): Menu {
-    const empty: Menu = { cover: false, prompt: null, apps: [], threads: [], locate: [], images: [], assistantUnread: false, profiles: [], concerns: [], replies: [], tests: [], thoughts: [], challenge: null };
+    const empty: Menu = { cover: false, prompt: null, call: null, missedCalls: [], silent: [], apps: [], threads: [], locate: [], images: [], assistantUnread: false, profiles: [], concerns: [], replies: [], tests: [], thoughts: [], challenge: null };
     if (s.phase === 'ended') return empty;
     if (s.phase === 'cover') return { ...empty, cover: true };
     const chatOpen = chatApps.some((a) => s.openedApps.includes(a));
     const promptEvent = s.prompt ? events.get(s.prompt) : undefined;
     return {
       cover: false,
+      call: s.call ? { ...s.call, declineCost: cost.callDecline ?? 0, ringCost: cost.callRing ?? 0 } : null,
+      missedCalls: s.missedCalls.map((x) => ({ ...x })),
+      silent: content.characters.filter((c) => isSilent(s, c.id)).map((c) => c.id),
       prompt: s.prompt ? { event: s.prompt, options: promptEvent?.kind === 'system' ? (promptEvent.options ?? []).map((o) => o.id) : [] } : null,
       apps: content.apps.apps.map((a) => {
         const opened = s.openedApps.includes(a.id);

@@ -48,6 +48,14 @@ export class TextGame {
     const s = this.state;
     if (s.phase === 'ended') return [{ label: '重新開始', run: () => this.restart() }];
     if (s.phase === 'cover') return [{ label: '送出', run: () => this.act({ type: 'sendCover' }) }];
+    const call = this.engine.menu(s).call;
+    if (call) {
+      // 電話在響：只能掛斷或讓它響完
+      return [
+        { label: '掛斷' + this.costTag(call.declineCost), run: () => void this.act({ type: 'declineCall' }) },
+        { label: '不接，讓它響完' + this.costTag(call.ringCost), run: () => void this.act({ type: 'letRing' }) },
+      ];
+    }
     if (s.prompt) {
       // 視窗不擋操作：按按鈕、關掉，或直接選後面的事（等於不理它）
       const e = this.content.events.find((x) => x.id === s.prompt);
@@ -222,8 +230,22 @@ export class TextGame {
       case 'ending': {
         const e = this.content.endings.endings.find((x) => x.id === o.ending);
         if (e) this.say('', `════ 結局：${e.title} ════`, '', ...e.text.flatMap((p) => [p, '']));
+        // 解答篇：只有指對兇手的結局才接著印
+        const solution = this.content.endings.solution;
+        if (e && solution && e.trigger.kind === 'challenge' && e.trigger.accused === this.content.endings.challenge.culprit) {
+          this.say(`──── ${solution.title} ────`, '', ...solution.text.flatMap((p) => [p, '']));
+        }
         break;
       }
+      case 'noReply':
+        this.say('（' + this.name(o.character) + '已讀，沒有回。）');
+        break;
+      case 'call':
+        this.say('', '☎ ' + this.name(o.from) + ' 來電……（Suru 不能說話，接了也沒用。）');
+        break;
+      case 'callEnded':
+        this.say(o.declined ? '（掛斷了。）' : '（響到自己停了。未接來電：' + this.name(o.from) + '）');
+        break;
       case 'wander':
         this.say('', `（${o.text}）`);
         break;

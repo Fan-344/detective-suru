@@ -93,6 +93,14 @@ export interface GameState {
   ignoredOut: EventId[];
   /** 各角色下一次追問用第幾句 */
   nudgeIndex: Record<CharacterId, number>;
+  /** 正在響的來電。響著的時候玩家只能掛斷或讓它響完，別的事都不能做。 */
+  call: { event: EventId; from: CharacterId } | null;
+  /** 正在響的那通還沒結束時又有人打來，排在後面等 */
+  callQueue: EventId[];
+  /** 沒接到（放著響完）的來電，依先後。電話 App 用來列未接來電。 */
+  missedCalls: { event: EventId; from: CharacterId }[];
+  /** 連環來電：還會再打來的那幾個來電事件，各自在上一通之後又過了幾個動作（數到 repeat.everyActions 就再打） */
+  callRepeat: Record<EventId, number>;
   challengeTries: number;
   /**
    * 指認兇手一題一題問的進度。
@@ -145,6 +153,10 @@ export type Action =
   | { type: 'test'; card: CardId; target: CharacterId }
   /** 再想想：對手上的某個疑點（或還在「在意的地方」階段的）要下一句提示 */
   | { type: 'think'; card: CardId }
+  /** 掛斷正在響的來電。對方馬上知道被按掉。 */
+  | { type: 'declineCall' }
+  /** 放著讓來電響完，變成未接來電。 */
+  | { type: 'letRing' }
   /** option 為 null 表示把視窗關掉（不理它） */
   | { type: 'answerPrompt'; option: string | null }
   /** 指認兇手：回答目前這一題。一般的題目給一張已經成立的疑點的 id，「是誰」那一題給人的 id。 */
@@ -177,6 +189,12 @@ export type Outcome =
   | { kind: 'spot'; card: CardId; option: string; right: boolean }
   /** 按了「再想想」得到的那一句。index 從 0 起算；more 表示後面還有沒有下一句 */
   | { kind: 'hint'; card: CardId; index: number; text: string; more: boolean }
+  /** 對方已讀但沒有回（這個人已經不理玩家了，見 Character.silentWhen）。訊息送出去了、電照扣，但什麼都沒發生。 */
+  | { kind: 'noReply'; thread: ThreadId; character: CharacterId }
+  /** 有人打電話來了，開始響 */
+  | { kind: 'call'; event: EventId; from: CharacterId }
+  /** 這一通結束了。declined：玩家掛斷的；否則是響完沒接（另外記一筆未接來電）。cost 是這一通耗的電。 */
+  | { kind: 'callEnded'; event: EventId; from: CharacterId; declined: boolean; cost: number }
   | { kind: 'prompt'; event: EventId }
   /** 按了視窗上的軟牆按鈕：只丟出一句提醒，視窗還在 */
   | { kind: 'promptHint'; event: EventId; text: string }
@@ -203,6 +221,12 @@ export interface StepResult {
 export interface Menu {
   cover: boolean;
   prompt: { event: EventId; options: string[] } | null;
+  /** 正在響的來電。有值的時候只能送 declineCall 或 letRing，其他動作都會被擋下。助理不能說話，所以沒有接聽。 */
+  call: { event: EventId; from: CharacterId; declineCost: number; ringCost: number } | null;
+  /** 未接來電，依先後 */
+  missedCalls: { event: EventId; from: CharacterId }[];
+  /** 現在不理玩家的人（Character.silentWhen 成立）。問他、回他都只會已讀不回。 */
+  silent: CharacterId[];
   /** unseen：「滑到就算看過」的 App 裡還沒滑到的那幾筆（照頁面上的順序）；其他 App 是空的 */
   apps: { app: AppId; opened: boolean; cost: number; unseen: ItemId[] }[];
   /** unseen：這個聊天室的舊訊息裡，玩家還沒滑到的那幾則（訊息上的 item id）。還沒打開過的聊天室是整串 */
