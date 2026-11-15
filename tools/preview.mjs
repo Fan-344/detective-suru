@@ -82,7 +82,7 @@ for (const app of apps.apps) {
     continue;
   }
   if (app.view === 'assistant') {
-    p('助理自己的 App。心聲、時間軸、紀錄、說法、疑點都在這裡，內容隨遊戲進行產生。');
+    p('助理自己的 App。疑點和時間軸都在這裡，內容隨遊戲進行產生。');
     continue;
   }
   if (app.view === 'chat') {
@@ -220,7 +220,7 @@ if (events.length) {
   }
 }
 
-if (links.length) {
+if (false && links.length) { // links.json 是已停用的舊資料（拖曳比對），不再列進預覽
   p();
   p('## 備忘錄的比對');
   p();
@@ -240,7 +240,7 @@ if (cards.length) {
     const to = c.targets ? `｜只能問${c.targets.map(who).join('、')}` : '';
     const where = c.thread ? `｜在「${threadById[c.thread]?.title ?? c.thread}」送出` : '';
     const need = c.availableWhen?.seen ? `｜看過 ${c.availableWhen.seen.map(itemLabel).join('、')} 就拿到` : '';
-    p(`- **${c.title}**：「${c.say}」${to}${where}${need}`);
+    p(`- **${c.title}**：${c.thinkOnly ? '不能拿去問人，只用在指認' : `「${c.say}」`}${to}${where}${need}`);
     if (c.spot) {
       const right = [].concat(c.spot.answer);
       const opts = c.spot.options.map((o) => (right.includes(o.id) ? `**${o.text}**（對）` : o.text)).join('／');
@@ -302,7 +302,7 @@ const conclusions = read('conclusions', []);
 const voice = read('voice', []);
 if (conclusions.length) {
   p();
-  p('## 關鍵結論、備援路徑與三級心聲');
+  p('## 關鍵結論與備援路徑');
   for (const c of conclusions) {
     p();
     p(`### ${c.text}`);
@@ -337,9 +337,13 @@ if (endingsFile) {
     p(`   - 沒選對時的提示：${f.hint}`);
   });
   p();
-  p(`可以交給：${ch.recipients.map(who).join('、')}。指對人但有欄位沒選對：退回重填，扣 ${meta.battery?.cost?.challengeRetry ?? '?'}% 電。`);
+  p(`可以交給：${ch.recipients.map(who).join('、')}。${endingsFile.endings.some((e) => e.trigger.fieldsWrong) ? '指對人但有格子放錯：不退回，進「站不住」結局。' : `指對人但有欄位沒選對：退回重填，扣 ${meta.battery?.cost?.challengeRetry ?? '?'}% 電。`}`);
   p();
   p('## 結局');
+  if (endingsFile.truthEnding) {
+    p();
+    p(`指錯人之後選「我想知道真相」，顯示的是結局「${endingsFile.endings.find((x) => x.id === endingsFile.truthEnding)?.title ?? endingsFile.truthEnding}」（${endingsFile.truthEnding}）。`);
+  }
   for (const e of endingsFile.endings) {
     const t = e.trigger;
     let cond = '';
@@ -348,6 +352,7 @@ if (endingsFile) {
     else {
       const parts = [`指認${who(t.accused)}`];
       if (t.givenTo) parts.push(`交給${who(t.givenTo)}`);
+      if (t.fieldsWrong) parts.push('但有格子放錯');
       for (const [k, v] of Object.entries(t.flags ?? {})) parts.push(`「${k}」＝${v ? '是' : '否'}`);
       cond = parts.join('、');
     }
@@ -355,6 +360,16 @@ if (endingsFile) {
     p(`### ${e.title}　〔${cond}〕`);
     p();
     for (const line of e.text) {
+      if (line === '{rebuttals}') {
+        p('（依放錯的格子出現，放錯幾格就出現幾組）');
+        p();
+        for (const [field, lines] of Object.entries(e.rebuttals ?? {})) {
+          const prompt = ch.fields.find((f) => f.id === field)?.prompt ?? field;
+          for (const x of lines) p(`- 「${prompt}」放錯：${x}`);
+        }
+        p();
+        continue;
+      }
       p(line);
       p();
     }

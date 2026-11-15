@@ -578,10 +578,30 @@ export interface Ending {
   trigger:
     | { kind: 'battery' }
     | { kind: 'ladder'; character: CharacterId; level: number }
-    | { kind: 'challenge'; accused?: CharacterId; givenTo?: CharacterId; flags?: Record<string, boolean> };
+    | {
+        kind: 'challenge';
+        accused?: CharacterId;
+        givenTo?: CharacterId;
+        flags?: Record<string, boolean>;
+        /**
+         * true 表示「人指對了、但有格子放錯」時進這個結局（不再退回）。它的 accused 是真兇，但不算破案，
+         * 也不會問交給誰。資料裡有這種結局時，規則就不退回。
+         */
+        fieldsWrong?: boolean;
+      };
+  /**
+   * fieldsWrong 的結局用：text 裡寫成 "{rebuttals}" 的那一行，會換成這裡「放錯的那幾格」對應的句子
+   * （照提問順序，放錯幾格就出現幾組）。鍵是 challenge.fields 的 id。用規則的 endingText 組出內文。
+   */
+  rebuttals?: Record<string, string[]>;
 }
 
 export interface EndingsFile {
+  /**
+   * 指錯人的結局看完，玩家選「我想知道真相」時顯示的那個結局（endings 裡某一個破案結局的 id）。
+   * 不另外寫一份真相，直接用已經寫好的結局。沒寫就不提供這個選項。
+   */
+  truthEnding?: string;
   /**
    * 解答篇：指對兇手的結局（trigger.accused 等於 challenge.culprit）看完之後，接著顯示的事情全貌。
    * 指錯人、沒電、被查到的結局不顯示，免得把答案講破。旁白在這裡可以直接陳述，因為玩家已經自己答對了。
