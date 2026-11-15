@@ -157,12 +157,14 @@ export interface CaseMeta {
 
 /**
  * 開場的一段。text 旁白、quote 以晴留的話、notice 通知，
+ * guide 是一頁工具介紹（標題、一兩句說明、幾個「名稱＋說明」的項目），用來介紹助理自己的 App，
  * goal 是遊戲目標：放在最後，畫面要做得比旁白醒目。
  */
 export type IntroSegment =
   | { kind: 'text'; lines: string[] }
   | { kind: 'quote'; lines: string[]; signature?: string }
   | { kind: 'notice'; label: string; lines: string[] }
+  | { kind: 'guide'; title: string; lines: string[]; items: { label: string; text: string }[] }
   | { kind: 'goal'; lines: string[] };
 
 // ───────────────────────── characters.json ─────────────────────────

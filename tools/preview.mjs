@@ -48,6 +48,11 @@ for (const seg of meta.intro ?? []) {
   } else if (seg.kind === 'notice') {
     p(`**［${seg.label}］**  `);
     p(seg.lines.join('  \n'));
+  } else if (seg.kind === 'guide') {
+    p(`**【介紹頁：${seg.title}】**  `);
+    p(seg.lines.join('  \n'));
+    p();
+    for (const item of seg.items) p(`- **${item.label}**：${item.text}`);
   } else {
     p(seg.lines.join('  \n'));
   }
