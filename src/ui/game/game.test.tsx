@@ -437,6 +437,8 @@ describe('接上遊戲規則', () => {
     for (const line of (ch as { premise?: string[] }).premise ?? []) expect(screen.getByText(line)).toBeTruthy();
     expect(screen.getByText(ch.intro![0])).toBeTruthy();
     expect(handIn().disabled).toBe(true);
+    // 交出去不會被退回的話，表上不該寫「被退回一次扣多少電」
+    if (content.endings.endings.some((e) => isWeakEnding(e))) expect(screen.queryByText(S.accuseRejectCost.replace('{cost}', String(cost.challengeRetry ?? 0)))).toBeNull();
     // 第一格故意放錯的，其他放對的；填的時候不顯示對錯、不扣電
     const first = cardFields[0];
     const wrong = content.cards.find((c) => !first.cards!.includes(c.id))!.id;

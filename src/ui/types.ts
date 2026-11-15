@@ -178,6 +178,8 @@ export type IntroSegment =
   | { kind: 'text'; lines: string[] }
   | { kind: 'quote'; lines: string[]; signature?: string }
   | { kind: 'notice'; label: string; lines: string[] }
+  /** Suru App 的介紹：標題、兩句說明、幾個項目（名稱和一行說明） */
+  | { kind: 'guide'; title: string; lines: string[]; items: { label: string; text: string }[] }
   /** 遊戲目標：開場最後的說明，要比旁白醒目 */
   | { kind: 'goal'; lines: string[] };
 

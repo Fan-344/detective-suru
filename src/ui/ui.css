@@ -1334,3 +1334,20 @@ ul, ol { list-style: none; }
 /* 結局：看真相之前的確認，和內文最後的小字 */
 .ending__scroll .ending__note { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--s-line); font-size: 13px; line-height: 1.6; color: var(--s-dim); }
 .ending .suru-button + .ending__minor, .ending .ending__minor + .ending__minor { margin-top: -6px; }
+
+/* 開場裡 Suru App 的介紹：自己一頁，圖示和名字、兩句說明、幾個項目 */
+/* 內容比畫面高的時候要能從頭捲，所以置中交給裡面那一層（放不下時自然從上面開始） */
+.guide { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 0 22px; text-align: left; animation: seg-in 0.8s ease-out; }
+.guide__in { min-height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 6px 0; }
+.guide::-webkit-scrollbar { display: none; }
+.guide__head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.guide__head .app-icon { width: 36px; height: 36px; border-radius: 9px; flex: none; }
+.guide__title { font-size: 22px; font-weight: 600; letter-spacing: 0.06em; background: var(--s-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.guide__lines { margin-bottom: 10px; font-size: 14px; line-height: 1.6; font-weight: 400; color: #d5d9e6; }
+.guide__items { list-style: none; margin: 0; padding: 2px 14px; border-radius: 16px; border: 1px solid var(--s-line); background: rgba(255, 255, 255, 0.035); }
+.guide__items li { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 0; opacity: 0; animation: goal-line 0.6s ease-out forwards; }
+.guide__items li + li { border-top: 1px solid var(--s-line); }
+.guide__label { padding: 1px 9px; border-radius: 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #e9ebf5; border: 1px solid rgba(255, 255, 255, 0.35); }
+.guide__label--concern { color: #06262e; background: #7fe6ff; border-color: transparent; }
+.guide__label--card { color: #2a0626; background: #ff9ae8; border-color: transparent; }
+.guide__text { font-size: 13.500px; line-height: 1.5; font-weight: 400; color: #c7cbdc; }

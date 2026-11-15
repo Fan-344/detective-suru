@@ -64,6 +64,46 @@ export function Intro({ title, segments, onDone, noticeIcon }: Props) {
     );
   }
 
+  // Suru App 的介紹也自己佔一頁：圖示和名字、兩句說明、幾個項目。項目的標籤用跟實際畫面一樣的樣子
+  if (last?.kind === 'guide') {
+    return (
+      <button className="suru intro intro--goal" onClick={advance} aria-label={S.tapToContinue}>
+        <SuruHeader title={title} counter={two(shown) + ' / ' + two(segments.length)} />
+        <div className="guide">
+          <div className="guide__in">
+          <div className="guide__head">
+            <AppIcon icon="suru" size="sm" />
+            <span className="guide__title">{last.title}</span>
+          </div>
+          <div className="guide__lines">
+            {last.lines.map((line, j) => (
+              <p key={j}>{line}</p>
+            ))}
+          </div>
+          <ul className="guide__items">
+            {last.items.map((it, j) => (
+              <li key={j} style={{ animationDelay: 0.2 + j * 0.18 + 's' }}>
+                <span
+                  className={
+                    'guide__label' + (it.label === S.concernsLabel ? ' guide__label--concern' : it.label === S.doubtsLabel ? ' guide__label--card' : '')
+                  }
+                >
+                  {it.label}
+                </span>
+                <span className="guide__text">{it.text}</span>
+              </li>
+            ))}
+          </ul>
+          </div>
+        </div>
+        <div className="intro__hint">
+          <SuruMark pulse />
+          <span>{S.tapToContinue}</span>
+        </div>
+      </button>
+    );
+  }
+
   return (
     <button className="suru intro" onClick={advance} aria-label={S.tapToContinue}>
       <SuruHeader title={title} counter={two(shown) + ' / ' + two(segments.length)} />

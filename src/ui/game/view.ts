@@ -2,7 +2,7 @@
 // 能做什麼、要扣多少電，一律問 engine；這裡只決定「怎麼排給畫面看」。
 
 import type { CaseContent, ImageRef, Item } from '../../content';
-import { memo, spotOf, type Engine, type GameState, type Menu, type Outcome } from '../../engine';
+import { isWeakEnding, memo, spotOf, type Engine, type GameState, type Menu, type Outcome } from '../../engine';
 import { S } from '../strings';
 import type {
   AccuseData,
@@ -516,7 +516,8 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
         ready: rawForm.ready,
         passed: rawForm.passed,
         recipients: ch.recipients.map((id) => ({ id, name: n.nameOf(id) })),
-        retryCost: rawForm.retryCost,
+        // 資料有「站不住」的結局時，交出去不會被退回，也就沒有退回要扣的電：那行小字不顯示
+        retryCost: content.endings.endings.some(isWeakEnding) ? 0 : rawForm.retryCost,
       }
     : undefined;
   const accuse: AccuseData = {
