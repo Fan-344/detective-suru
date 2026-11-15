@@ -37,7 +37,8 @@
       "id": "moments",
       "name": "Instory",
       "icon": "moments",
-      "view": "gallery"
+      "view": "gallery",
+      "seeOnScroll": true
     },
     {
       "id": "weather",

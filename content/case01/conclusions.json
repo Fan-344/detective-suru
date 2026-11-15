@@ -39,7 +39,8 @@
         "ph_deposit"
       ],
       [
-        "say_zh_admit"
+        "ph_deposit",
+        "say_zh_dodge"
       ]
     ]
   },
@@ -72,6 +73,9 @@
       ],
       [
         "rec_login"
+      ],
+      [
+        "say_aze_came"
       ]
     ]
   },

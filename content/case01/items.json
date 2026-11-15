@@ -629,7 +629,7 @@
     "kind": "statement",
     "speaker": "zonghan",
     "when": "週五 22:05",
-    "body": "OK的，明天我帶看到九點，結束直接過去，大概九點多到。"
+    "body": "OK的，明天我帶看到九點，結束直接過去，大概九點多到。我還有事會先走，妳一樣把門帶上。"
   },
   {
     "id": "say_zh_sunday",
@@ -917,7 +917,7 @@
     "thread": "dm_aze",
     "kind": "statement",
     "speaker": "aze",
-    "body": "是雯叫我去問的 她想先知道你手上有什麼",
+    "body": "是她叫我去問的 她想先知道你手上有什麼",
     "hidden": true
   },
   {
@@ -937,6 +937,23 @@
     "speaker": "aze",
     "body": "我這邊沒有你的 iPad 啊",
     "hidden": true
+  },
+  {
+    "id": "say_aze_came",
+    "app": "chat",
+    "thread": "dm_aze",
+    "kind": "statement",
+    "speaker": "aze",
+    "body": "她那天半夜有來我這 淋得全身濕",
+    "hidden": true,
+    "timeline": [
+      {
+        "when": "週六 23:40",
+        "label": "週六深夜",
+        "text": "靖雯到了阿澤在泰順街的工作室（阿澤親眼看到）",
+        "who": "jingwen"
+      }
+    ]
   },
   {
     "id": "say_jw_dry",
@@ -966,12 +983,12 @@
     "hidden": true
   },
   {
-    "id": "say_zh_admit",
+    "id": "say_zh_dodge",
     "app": "chat",
     "thread": "dm_zonghan",
     "kind": "statement",
     "speaker": "zonghan",
-    "body": "房東確實有退，錢現在在我這邊。",
+    "body": "那張是點交當天簽的制式表單，後來房東那邊又有一些變動，金額還在確認。",
     "hidden": true
   },
   {
@@ -980,7 +997,7 @@
     "thread": "dm_zonghan",
     "kind": "statement",
     "speaker": "zonghan",
-    "body": "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子，手也好好的。",
+    "body": "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子。",
     "hidden": true
   },
   {
@@ -1001,12 +1018,12 @@
     ]
   },
   {
-    "id": "say_zh_refund",
+    "id": "say_zh_probe",
     "app": "chat",
     "thread": "dm_zonghan",
     "kind": "statement",
     "speaker": "zonghan",
-    "body": "妳的那一份我剛剛轉過去了。",
+    "body": "週六晚上我講話比較急，有些話妳不要放在心上。那天的事，妳現在還記得多少？",
     "hidden": true
   },
   {
@@ -1458,8 +1475,9 @@
     "title": "宗翰",
     "body": "【新案上架】中和電梯兩房，近捷運、採光佳、屋況好，屋主誠售，歡迎預約看屋🙏",
     "image": {
+      "file": "mo_fl_zh_house.jpg",
       "label": "物件照片",
-      "description": "房仲物件照。空屋的客廳，木地板擦得很亮，落地窗外是陽台，陽光照進來。照片右下角有一個房仲公司的浮水印框，裡面的字看不清楚。"
+      "description": "房仲物件照。空屋的客廳，木地板擦得很亮，落地窗外是陽台和遠處的大樓，陽光照進來，右上有一台冷氣。照片右下角有一個白底、左側帶紅色直條的浮水印，寫著「周宗翰」「買屋 賣屋 租屋」「0900-789-012」。"
     },
     "social": {
       "handle": "zonghan.house",
@@ -1477,8 +1495,9 @@
     "title": "品妤",
     "body": "大夜下班 太陽好刺",
     "image": {
+      "file": "mo_fl_py_shift.jpg",
       "label": "早晨的停車場",
-      "description": "清晨的醫院停車場，天空很亮，地上一道長長的人影比著一個勝利手勢。遠處是一排機車。"
+      "description": "清晨的停車場，朝陽把牆面照成暖色，地上一道長長的人影，綁著丸子頭、比著勝利手勢。遠處的鐵皮棚下是一排機車。"
     },
     "social": {
       "handle": "pinyupinyu",

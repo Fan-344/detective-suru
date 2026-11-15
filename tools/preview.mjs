@@ -207,6 +207,13 @@ if (events.length) {
       for (const l of ev.lines) p(`${l}  `);
       for (const opt of ev.options ?? []) p(`- 按「${opt.label}」 ${effectText(opt.effects)}`);
       if (ev.onTimeout) p(`- 不理它 ${effectText(ev.onTimeout)}`);
+    } else if (ev.kind === 'call') {
+      p(`### 來電｜${who(ev.from)}｜${ev.id}`);
+      p();
+      const then = (b) => (b?.then ?? []).map((id) => id).join('、') || '沒有後續';
+      p(`- 掛斷（扣 ${meta.battery?.cost?.callDecline ?? '?'}% 電） ${effectText(ev.onDecline?.effects)}　接著：${then(ev.onDecline)}`);
+      p(`- 放著響完（扣 ${meta.battery?.cost?.callRing ?? '?'}% 電） ${effectText(ev.onMissed?.effects)}　接著：${then(ev.onMissed)}`);
+      if (ev.repeat) p(`- 連環來電：每隔 ${ev.repeat.everyActions} 個動作再打一通，直到條件成立`);
     } else {
       p(`### 結局事件｜${ev.ending}`);
     }
@@ -263,7 +270,7 @@ if (reactions.length) {
     for (const id of r.reveals ?? []) p(`- ★ 進備忘錄：${itemLabel(id)}`);
     for (const id of r.triggers ?? []) {
       const e = eventById[id];
-      p(`- 接著發生：${e?.kind === 'system' ? `系統視窗「${e.title}」` : e ? `${who(e.from)}傳來「${e.text[0]}」` : id}`);
+      p(`- 接著發生：${e?.kind === 'system' ? `系統視窗「${e.title}」` : e?.kind === 'call' ? `${who(e.from)}來電` : e ? `${who(e.from)}傳來「${e.text[0]}」` : id}`);
     }
   }
 }
@@ -282,6 +289,7 @@ if (characters.some((c) => c.ladder?.some((s) => s.onEnter.length))) {
           if (!e) return id;
           if (e.kind === 'system') return `系統視窗「${e.title}」`;
           if (e.kind === 'ending') return `結局 ${e.ending}`;
+          if (e.kind === 'call') return `${who(e.from)}來電${e.repeat ? '（連環）' : ''}`;
           return `${who(e.from)}：「${e.text[0]}」…`;
         })
         .join('　或　');
@@ -325,8 +333,8 @@ if (endingsFile) {
   p(`0. ${ch.whoPrompt}　可選：${ch.suspects.map(who).join('、')}　〔答案：${who(ch.culprit)}〕`);
   ch.fields.forEach((f, i) => {
     p(`${i + 1}. ${f.prompt}`);
-    p(`   - 算對的選法：${f.accept.map((g) => g.map(itemLabel).join(' ＋ ')).join('　或　')}`);
-    p(`   - 沒選對時的心聲：${f.hint}`);
+    p(`   - 算對的疑點（任一張）：${(f.cards ?? []).map((id) => '「' + (cards.find((c) => c.id === id)?.title ?? id) + '」').join('、')}`);
+    p(`   - 沒選對時的提示：${f.hint}`);
   });
   p();
   p(`可以交給：${ch.recipients.map(who).join('、')}。指對人但有欄位沒選對：退回重填，扣 ${meta.battery?.cost?.challengeRetry ?? '?'}% 電。`);
@@ -347,6 +355,15 @@ if (endingsFile) {
     p(`### ${e.title}　〔${cond}〕`);
     p();
     for (const line of e.text) {
+      p(line);
+      p();
+    }
+  }
+  if (endingsFile.solution) {
+    p();
+    p(`### 解答篇：${endingsFile.solution.title}　〔指對兇手的結局之後接著顯示〕`);
+    p();
+    for (const line of endingsFile.solution.text) {
       p(line);
       p();
     }

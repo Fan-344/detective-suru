@@ -263,10 +263,12 @@
     "options": [
       {
         "id": "who",
-        "text": "誰叫你問那些的",
+        "text": "我那天到底跟你講了什麼 我真的記不清",
         "reply": [
+          "你不記得喔",
+          "就 iPad 啊 你說還在舊家 晚上要回去拿",
           "……",
-          "是雯叫我去問的 她想先知道你手上有什麼",
+          "是她叫我去問的 她想先知道你手上有什麼",
           "我以為她只是想跟你好好談"
         ],
         "signal": {
@@ -283,7 +285,7 @@
       },
       {
         "id": "consequence",
-        "text": "你知道你跟她講完之後發生什麼事嗎",
+        "text": "你知道我那天後來怎麼了嗎",
         "reply": [
           "什麼意思",
           "你不是說你是滑倒"
@@ -430,10 +432,12 @@
     "once": true,
     "title": "登入確認",
     "lines": [
-      "有人正在另一台裝置上登入你的帳號。",
-      "位置：台北市大安區附近",
+      "你的帳號正在台北市大安區附近的另一台裝置上登入。",
       "如果不是你本人，請選擇「不允許」。"
     ],
+    "map": {
+      "label": "台北市大安區附近"
+    },
     "reveals": [
       "rec_login"
     ],
@@ -526,7 +530,13 @@
           }
         }
       }
-    ]
+    ],
+    "when": {
+      "flags": {
+        "pinyu_ally": false,
+        "pinyu_silent": false
+      }
+    }
   },
   {
     "id": "msg_aze_angry",
@@ -566,7 +576,12 @@
           }
         }
       }
-    ]
+    ],
+    "when": {
+      "notSeen": [
+        "say_aze_admit"
+      ]
+    }
   },
   {
     "id": "msg_aze_confess",
@@ -619,32 +634,44 @@
     "thread": "dm_zonghan",
     "from": "zonghan",
     "text": [
-      "以晴，妳的那一份我剛剛轉過去了，妳確認一下。其他人的部分我會自己處理，這件事就到這裡，好嗎？🙏"
+      "以晴，週六晚上我講話比較急，有些話妳不要放在心上。那天的事，妳現在還記得多少？"
     ],
     "reveals": [
-      "say_zh_refund"
+      "say_zh_probe"
     ],
     "options": [
       {
-        "id": "take",
-        "text": "好喔",
+        "id": "forgot",
+        "text": "不太記得了",
         "reply": [
-          "謝謝妳體諒。改天請妳吃飯。"
+          "那就好。不是什麼要緊的事，妳好好休息，別想太多。"
         ],
         "effects": {
           "ladder": {
             "zonghan": -1
-          },
-          "flags": {
-            "took_refund": true
           }
         }
       },
       {
-        "id": "refuse",
-        "text": "那其他人的呢",
+        "id": "what",
+        "text": "你那天說了什麼",
         "reply": [
-          "以晴，我說了我會處理。妳這樣逼我，對大家都沒有好處。"
+          "沒什麼，就是一時口氣不好。妳不記得就算了，真的。"
+        ],
+        "signal": {
+          "typingStops": true
+        },
+        "effects": {
+          "ladder": {
+            "zonghan": 0
+          }
+        }
+      },
+      {
+        "id": "remember",
+        "text": "都記得",
+        "reply": [
+          "那天的事我們見面再談，好嗎？訊息裡講不清楚。妳先不要跟其他人提，免得大家誤會🙏"
         ],
         "signal": {
           "readDelay": "已讀後隔了很久"
@@ -663,16 +690,93 @@
     "thread": "group",
     "from": "zonghan",
     "text": [
-      "各位，押金的事要跟大家更正。房東後來有退，我這陣子周轉比較緊，先挪用了，原本就打算月底前補給大家。以晴週六有來問我，中間可能有些誤會。這幾天我會把錢轉給每個人，造成困擾很抱歉🙏"
-    ],
-    "reveals": [
-      "say_zh_admit"
+      "各位，有件事我想還是先說清楚比較好。週六晚上我去舊家找以晴，講到押金的事，兩個人口氣都不太好，這點我有責任。我大概九點五十就先離開了，那時候她還在拆箱子，人好好的。那棟的樓梯很陡，那天又下雨，她一個人搬到那麼晚，我後來想想其實很不放心。以晴這幾天不舒服，有些細節可能記得不太清楚，如果她提到那天的事，大家先聽聽就好，別急著下結論🙏"
     ],
     "effects": {
       "flags": {
         "deposit_public": true
       }
-    }
+    },
+    "options": [
+      {
+        "id": "fine",
+        "text": "我沒事啦 那天只是太累",
+        "reply": [
+          "那就好，是我想太多了。妳好好休息🙏"
+        ],
+        "effects": {
+          "ladder": {
+            "zonghan": -1
+          }
+        }
+      },
+      {
+        "id": "stairs",
+        "text": "翰哥 你為什麼特別提樓梯",
+        "reply": [
+          "沒有特別的意思，那棟樓梯本來就不好走，我帶看的時候都會提醒客人。妳不要多想。"
+        ],
+        "signal": {
+          "typingStops": true
+        },
+        "effects": {
+          "ladder": {
+            "zonghan": 0
+          }
+        }
+      },
+      {
+        "id": "remember",
+        "text": "那天的事我都記得",
+        "reply": [
+          "好，那我們見面談。"
+        ],
+        "signal": {
+          "readDelay": "已讀後隔了很久"
+        },
+        "effects": {
+          "ladder": {
+            "zonghan": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_zh_group_jw",
+    "kind": "message",
+    "thread": "group",
+    "from": "jingwen",
+    "text": [
+      "翰哥不要自責啦🥺",
+      "晴那天應該只是太累了",
+      "那個樓梯真的很陡 我以前也差點滑倒～"
+    ]
+  },
+  {
+    "id": "msg_zh_group_py",
+    "kind": "message",
+    "thread": "group",
+    "from": "pinyu",
+    "when": {
+      "flags": {
+        "pinyu_silent": false
+      }
+    },
+    "text": [
+      "等一下",
+      "什麼叫不放心",
+      "她那天是怎樣"
+    ]
+  },
+  {
+    "id": "msg_zh_group_aze",
+    "kind": "message",
+    "thread": "group",
+    "from": "aze",
+    "text": [
+      "？"
+    ]
   },
   {
     "id": "msg_py_call",
@@ -680,7 +784,6 @@
     "thread": "dm_pinyu",
     "from": "pinyu",
     "text": [
-      "［未接來電］",
       "接電話",
       "沈以晴接電話"
     ],
@@ -771,5 +874,208 @@
     "id": "ev_end_found",
     "kind": "ending",
     "ending": "end_found"
+  },
+  {
+    "id": "call_py_first",
+    "kind": "call",
+    "from": "pinyu",
+    "onDecline": {
+      "effects": {
+        "ladder": {
+          "pinyu": 1
+        }
+      },
+      "then": [
+        "msg_py_declined"
+      ]
+    },
+    "onMissed": {
+      "then": [
+        "msg_py_call"
+      ]
+    }
+  },
+  {
+    "id": "msg_py_declined",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "妳掛我電話？？？",
+      "沈以晴"
+    ],
+    "options": [
+      {
+        "id": "slip",
+        "text": "手滑",
+        "reply": [
+          "手滑個頭",
+          "那我再打 妳接"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          }
+        }
+      },
+      {
+        "id": "type",
+        "text": "喉嚨痛 講不出話 打字好不好",
+        "reply": [
+          "……",
+          "好啦",
+          "那妳打 不准已讀不回"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "call_py_storm",
+    "kind": "call",
+    "from": "pinyu",
+    "repeat": {
+      "everyActions": 2,
+      "until": {
+        "flags": {
+          "pinyu_calm": true
+        }
+      }
+    },
+    "onDecline": {
+      "then": [
+        "msg_py_storm"
+      ]
+    },
+    "onMissed": {
+      "then": [
+        "msg_py_storm"
+      ]
+    }
+  },
+  {
+    "id": "msg_py_storm",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "接",
+      "接電話",
+      "妳不接我就一直打"
+    ],
+    "options": [
+      {
+        "id": "stop",
+        "text": "不要再打了",
+        "reply": [
+          "那妳接啊"
+        ],
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          }
+        }
+      },
+      {
+        "id": "truth",
+        "text": "阿妤 我不是以晴 我是她手機裡的 AI 助理",
+        "reply": [
+          "……",
+          "沈以晴",
+          "我是真的在擔心妳",
+          "妳拿這種話打發我",
+          "算了 妳不想講就不要講"
+        ],
+        "signal": {
+          "readDelay": "已讀後隔了很久"
+        },
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          },
+          "flags": {
+            "pinyu_calm": true,
+            "pinyu_silent": true
+          }
+        }
+      },
+      {
+        "id": "beg",
+        "text": "阿妤 我現在不能講電話 之後一定跟妳解釋 拜託",
+        "reply": [
+          "……",
+          "好 我不打",
+          "但妳欠我一個解釋"
+        ],
+        "signal": {
+          "readDelay": "已讀後隔了很久"
+        },
+        "effects": {
+          "ladder": {
+            "pinyu": 0
+          },
+          "flags": {
+            "pinyu_calm": true,
+            "pinyu_alerted": true,
+            "pinyu_ally": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_py_warn",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "text": [
+      "沈以晴",
+      "妳再不回我就一直打",
+      "打到妳接為止"
+    ]
+  },
+  {
+    "id": "msg_py_blocked",
+    "kind": "message",
+    "thread": "dm_pinyu",
+    "from": "pinyu",
+    "when": {
+      "flags": {
+        "pinyu_ally": true
+      }
+    },
+    "text": [
+      "欸",
+      "靖雯剛剛問我能不能幫忙查妳在哪間醫院",
+      "我跟她說我不方便查",
+      "妳欠我的解釋越來越多了"
+    ],
+    "reveals": [
+      "say_py_asked"
+    ],
+    "effects": {
+      "ladder": {
+        "jingwen": -1
+      }
+    }
+  },
+  {
+    "id": "msg_jw_asked_py",
+    "kind": "message",
+    "thread": "group",
+    "from": "jingwen",
+    "when": {
+      "flags": {
+        "pinyu_silent": true
+      }
+    },
+    "text": [
+      "@品妤 謝謝妳願意幫我問🥺",
+      "我只是想知道晴到底在哪"
+    ]
   }
 ]

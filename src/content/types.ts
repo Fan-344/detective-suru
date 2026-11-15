@@ -88,6 +88,10 @@ export interface CaseMeta {
       hint?: number;
       /** 指對了人但證據沒選對、挑戰書被退回時扣的電量 */
       challengeRetry?: number;
+      /** 來電放著響完（變成未接來電）扣的電。螢幕亮著一直響，最耗電。 */
+      callRing?: number;
+      /** 來電按掛斷扣的電 */
+      callDecline?: number;
     };
     /**
      * false 表示關掉「電量每掉一段就自動升級」。電量只當上限，不影響任何人的情緒；
@@ -206,6 +210,16 @@ export interface Character {
    * 只是催促，不帶新的資訊，也沒有回覆選項。
    */
   nudges?: string[][];
+  /**
+   * 條件成立之後，這個人不再理玩家：拿疑點問他、回他的訊息，都只會顯示已讀、沒有回覆，也沒有任何效果（電照扣）。
+   * 他不會再催、不會再升級、不會再打來，在別人的反應裡也不會插話。指認成功後仍然可以把證據交給他。
+   */
+  silentWhen?: Condition;
+  /**
+   * 這個人被已讀不回、因此升級的時候，另外觸發的事件（每個事件照舊只會發生一次，可以帶 when）。
+   * 規則已支援；case01 目前沒有用到。
+   */
+  onIgnored?: EventId[];
   /** 開局時的階梯等級。0 表示還沒踏上第一級。 */
   startLevel?: number;
   ladder: LadderStep[];
@@ -230,6 +244,11 @@ export interface AppDef {
   icon: string;
   /** 用哪一種版型顯示。none 是沒有內容的背景 App；assistant 是助理 App。 */
   view: AppView;
+  /**
+   * true 表示這個 App 的內容滑到畫面上就算看過，不用點開（動態牆）。
+   * 沒寫的照舊：要點開才算（相簿）。
+   */
+  seeOnScroll?: boolean;
   /** 放在主畫面底部那一排 */
   dock?: boolean;
   /** 收在哪個資料夾（FolderDef.id） */
@@ -362,6 +381,11 @@ export interface Card {
   targets?: CharacterId[];
   /** 【待確認】這張牌只能在某個聊天室送出（例如在群組裡標記某人） */
   thread?: ThreadId;
+  /**
+   * 對特定對象要在指定的聊天室問（例如問宗翰要在群組問，其他人照舊私訊）。
+   * 有寫的對象用這裡的聊天室，沒寫的用 thread，再沒有就是私訊。
+   */
+  threadTo?: Record<CharacterId, ThreadId>;
   /** 【待確認】不靠矛盾比對解鎖的牌：條件成立就拿到 */
   availableWhen?: Condition;
   /**
@@ -429,9 +453,36 @@ export interface ReplyOption {
   signal?: Signal;
   reveals?: ItemId[];
   effects?: Effects;
+  /** 選了這句之後接著觸發的事件（事件自己可以帶 delay）。規則已支援；case01 目前沒有用到。 */
+  triggers?: EventId[];
 }
 
+/**
+ * 來電事件。規則已支援（src/engine 的 declineCall、letRing）。
+ */
+export type CallEvent = {
+      id: EventId;
+      /**
+       * 來電：手機跳出來電畫面。助理不能說話，所以玩家只能掛斷，或放著讓它響完。
+       * 掛斷扣 meta.battery.cost.callDecline，響完扣 callRing，並在電話 App 留一筆未接來電。
+       */
+      kind: 'call';
+      when?: Condition;
+      from: CharacterId;
+      /** 玩家按了掛斷：對方馬上知道有人按掉 */
+      onDecline?: { effects?: Effects; then?: EventId[] };
+      /** 放著響完，變成未接來電 */
+      onMissed?: { effects?: Effects; then?: EventId[] };
+      /**
+       * 連環來電：until 成立之前，每隔 everyActions 個動作再打一通，每一通都照樣扣電。
+       * until 成立就暫停；之後如果又變成不成立（旗標被改回去），就重新開始打。
+       * 後面幾通不再重複觸發 then 裡已經發生過的事件。
+       */
+      repeat?: { everyActions: number; until: Condition };
+    };
+
 export type GameEvent =
+  | CallEvent
   | {
       id: EventId;
       kind: 'message';
@@ -458,6 +509,8 @@ export type GameEvent =
       once?: boolean;
       title: string;
       lines: string[];
+      /** 視窗裡的小地圖（示意圖）。label 寫在地圖角落。沒有這個欄位就不畫地圖。 */
+      map?: { label: string };
       reveals?: ItemId[];
       /**
        * 視窗上的按鈕。有 hints 的是「軟牆」按鈕：按了只跳出一句提醒（輪流用，只提問），
@@ -498,16 +551,16 @@ export interface VoiceLine {
 // ───────────────────────── endings.json ─────────────────────────
 
 /**
- * 挑戰書裡要指向紀錄的一欄。
- * 玩家從已取得的紀錄裡選；選到的紀錄包含 accept 的任一組，這一欄就算對。
+ * 指認兇手時的一題。
+ * 玩家從已經翻開的疑點裡選一張；選到 cards 裡的任一張，這一題就算對。
  */
 export interface ChallengeField {
   id: string;
   prompt: string;
   /** 這一欄沒選對、挑戰書被退回時的心聲。只提問，不說答案。 */
   hint: string;
-  /** 可接受的答案：每一組是幾筆紀錄，選到任一組就算對 */
-  accept: ItemId[][];
+  /** 可接受的答案：選到其中任一張疑點就算對 */
+  cards: CardId[];
 }
 
 export interface Ending {
@@ -529,9 +582,25 @@ export interface Ending {
 }
 
 export interface EndingsFile {
+  /**
+   * 解答篇：指對兇手的結局（trigger.accused 等於 challenge.culprit）看完之後，接著顯示的事情全貌。
+   * 指錯人、沒電、被查到的結局不顯示，免得把答案講破。旁白在這裡可以直接陳述，因為玩家已經自己答對了。
+   */
+  solution?: { title: string; text: string[] };
   challenge: {
+    /**
+     * 指認開頭由助理直接講明的前提（地點、手法）。這些不是謎，不出題。
+     */
+    premise?: string[];
     /** 進入挑戰書時先顯示的說明，講清楚兩種錯法的後果 */
     intro?: string[];
+    /**
+     * true 表示一次交卷：所有格子（fields 加上「是誰」）都填好才能交出去，交出去之前可以隨意換，
+     * 填的時候不提示對錯，手上成立的疑點每一格都能放。
+     * 交出去之後：人指錯 → 那個人的指錯結局；人對、每格都對 → 選交給誰；
+     * 人對但有格子不對 → 退回，扣一次 meta.battery.cost.challengeRetry，顯示每一個不對的格子的 hint。
+     */
+    submitAll?: boolean;
     /**
      * 提問的順序，照推理的進度一題一題問，答對才問下一題。
      * 內容是 fields 的 id，加上 "who"（指認是誰的那一題）。

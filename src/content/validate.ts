@@ -309,7 +309,7 @@ export function validateCase(raw: RawCase): Issue[] {
   for (const { entry, say } of cards) {
     if (entry.thinkOnly === true) {
       need(entry, say, 'title');
-      if (entry.say !== undefined || entry.sayTo !== undefined || entry.targets !== undefined || entry.spot !== undefined) say('thinkOnly 的疑點不能拿去問人，不要寫 say、sayTo、targets、spot');
+      if (entry.say !== undefined || entry.sayTo !== undefined || entry.targets !== undefined) say('thinkOnly 的疑點不能拿去問人，不要寫 say、sayTo、targets');
       if (entry.availableWhen === undefined) say('thinkOnly 的疑點要寫 availableWhen，不然永遠不會出現');
       if (entry.hints === undefined) say('thinkOnly 的疑點要寫 hints，不然玩家什麼都不能做');
     } else need(entry, say, 'title', 'say');
@@ -414,8 +414,23 @@ export function validateCase(raw: RawCase): Issue[] {
     } else if (entry.kind === 'ending') {
       refs(say, 'ending', entry.ending, endingIds, '結局');
       if (!isStr(entry.ending)) say('缺少 ending');
+    } else if (entry.kind === 'call') {
+      refs(say, 'from', entry.from, characterIds, '人物');
+      if (!isStr(entry.from)) say('缺少 from');
+      checkCondition(say, 'when', entry.when);
+      for (const key of ['onDecline', 'onMissed'] as const) {
+        const branch = entry[key];
+        if (branch === undefined) continue;
+        if (!isObj(branch)) { say(`${key} 應該是一個物件`); continue; }
+        checkEffects(say, `${key}.effects`, branch.effects);
+        refs(say, `${key}.then`, branch.then, eventIds, '事件');
+      }
+      if (entry.repeat !== undefined) {
+        if (!isObj(entry.repeat) || typeof entry.repeat.everyActions !== 'number' || entry.repeat.everyActions < 1) say('repeat.everyActions 應該是 1 以上的數字');
+        else checkCondition(say, 'repeat.until', entry.repeat.until);
+      }
     } else {
-      say('kind 應該是 message、system 或 ending');
+      say('kind 應該是 message、system、ending 或 call');
     }
   }
 
@@ -428,7 +443,6 @@ export function validateCase(raw: RawCase): Issue[] {
   for (const { entry } of conclusions) banFlavor('conclusions', `結論「${String(entry.id)}」`, entry.routes);
   for (const l of Array.isArray(raw.links) ? raw.links : []) if (isObj(l)) banFlavor('links', '比對', [l.statement, l.record]);
   if (isObj(endingsFile.challenge) && Array.isArray(endingsFile.challenge.fields)) {
-    for (const f of endingsFile.challenge.fields) if (isObj(f)) banFlavor('endings', 'challenge', f.accept);
   }
 
   // ── flavor.json（選填） ──
@@ -529,15 +543,8 @@ export function validateCase(raw: RawCase): Issue[] {
           const sayF = (m: string) => sayC(`fields 第 ${i + 1} 欄：${m}`);
           if (!isObj(field)) return void sayF('應該是一個物件');
           need(field, sayF, 'id', 'prompt', 'hint');
-          if (!Array.isArray(field.accept) || field.accept.length === 0 || !field.accept.every(isStrArr)) {
-            return void sayF('accept 至少要有一組可接受的答案');
-          }
-          for (const group of field.accept) {
-            for (const id of group) {
-              if (!itemIds.has(id)) sayF(`accept 指向不存在的 item「${id}」`);
-              else if (itemKind.get(id) !== 'record') sayF(`accept 裡的「${id}」不是紀錄。每一項答案都必須指向紀錄`);
-            }
-          }
+          if (!isStrArr(field.cards) || field.cards.length === 0) sayF('cards 至少要有一張疑點');
+          else refs(sayF, 'cards', field.cards, cardIds, '疑點');
         });
     }
     for (const { entry, say } of endings) {

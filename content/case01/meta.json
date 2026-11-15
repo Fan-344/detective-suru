@@ -14,13 +14,15 @@
     "cost": {
       "openApp": 1,
       "readThread": 1,
-      "send": 2,
+      "send": 0,
       "locate": 4,
       "test": 2,
       "challengeRetry": 2,
       "spotMiss": 1,
       "openIdleApp": 0.2,
-      "hint": 1
+      "hint": 1,
+      "callRing": 3,
+      "callDecline": 1
     },
     "ladderTickEvery": 10,
     "ladderTickEveryIgnored": 7,

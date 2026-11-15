@@ -55,7 +55,7 @@ function sample(): RawCase {
       { id: 'v3', conclusion: 'c1', level: 3, text: '佔位問題三？' },
     ],
     endings: {
-      challenge: { whoPrompt: '佔位', suspects: ['a'], culprit: 'a', fields: [{ id: 'f1', prompt: '佔位題目', hint: '佔位提示？', accept: [['rec_1']] }], recipients: ['a'] },
+      challenge: { whoPrompt: '佔位', suspects: ['a'], culprit: 'a', fields: [{ id: 'f1', prompt: '佔位題目', hint: '佔位提示？', cards: ['card_1'] }], recipients: ['a'] },
       endings: [
         { id: 'end_battery', title: '佔位', text: ['佔位'], trigger: { kind: 'battery' } },
         { id: 'end_ladder', title: '佔位', text: ['佔位'], trigger: { kind: 'ladder', character: 'a', level: 2 } },
@@ -132,8 +132,8 @@ describe('格式檢查', () => {
     expect(breakIt((r) => r.voice.pop())).toContain('voice.json｜結論「c1」｜缺少第 3 級的心聲');
   });
 
-  it('挑戰書的答案只能指向紀錄', () => {
-    expect(breakIt((r) => (r.endings.challenge.fields[0].accept = [['say_1']]))).toContain('每一項答案都必須指向紀錄');
+  it('指認兇手的答案要指向存在的疑點', () => {
+    expect(breakIt((r) => (r.endings.challenge.fields[0].cards = ['card_x']))).toContain('cards 指向不存在的疑點「card_x」');
   });
 
   it('assembleCase 會把全部問題列在錯誤訊息裡', () => {

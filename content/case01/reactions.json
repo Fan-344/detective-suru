@@ -16,7 +16,7 @@
     ],
     "effects": {
       "ladder": {
-        "aze": 1
+        "aze": 0
       }
     },
     "triggers": [
@@ -55,14 +55,14 @@
     "target": "zonghan",
     "tone": "evasive",
     "reply": [
-      "以晴，妳聽我說，房東確實有退，錢現在在我這邊。我最近有一筆周轉卡住，本來就打算月底前補給大家，不是要吞掉。這件事拜託先不要在群組講，給我幾天，好嗎？🙏"
+      "以晴，那張是點交當天簽的制式表單，後來房東那邊又有一些變動，金額還在確認。這個三言兩語講不清楚，等妳好一點我當面跟妳說明，好嗎？🙏"
     ],
     "signal": {
       "readDelay": "已讀後隔了很久",
       "typingStops": true
     },
     "reveals": [
-      "say_zh_admit"
+      "say_zh_dodge"
     ],
     "effects": {
       "ladder": {
@@ -119,7 +119,41 @@
     ]
   },
   {
-    "card": "card_ipad",
+    "card": "card_oldipad",
+    "target": "aze",
+    "when": {
+      "seen": [
+        "say_aze_couple"
+      ]
+    },
+    "tone": "engaged",
+    "reply": [
+      "蛤",
+      "我這邊沒有你的 iPad 啊",
+      "……",
+      "她那天半夜有來我這 淋得全身濕",
+      "說想給我驚喜"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_aze_noipad",
+      "say_aze_came"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      },
+      "flags": {
+        "aze_doubts": true,
+        "aze_understands": true
+      }
+    }
+  },
+  {
+    "card": "card_oldipad",
     "target": "aze",
     "tone": "engaged",
     "reply": [
@@ -138,12 +172,13 @@
         "aze": 1
       },
       "flags": {
-        "aze_doubts": true
+        "aze_doubts": true,
+        "aze_understands": true
       }
     }
   },
   {
-    "card": "card_ipad",
+    "card": "card_oldipad",
     "target": "jingwen",
     "tone": "evasive",
     "reply": [
@@ -209,7 +244,7 @@
     "target": "zonghan",
     "tone": "engaged",
     "reply": [
-      "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子，手也好好的。怎麼了嗎？"
+      "我大概九點五十走的，那時候剛開始下雨。我走的時候妳還在拆箱子。怎麼了嗎？"
     ],
     "reveals": [
       "say_zh_left"
@@ -254,7 +289,8 @@
         "aze": 1
       },
       "flags": {
-        "aze_doubts": true
+        "aze_doubts": true,
+        "aze_understands": true
       }
     }
   },
@@ -419,6 +455,40 @@
     "reveals": [
       "say_py_guess"
     ]
+  },
+  {
+    "card": "card_couple",
+    "target": "aze",
+    "when": {
+      "seen": [
+        "say_aze_noipad"
+      ]
+    },
+    "tone": "engaged",
+    "reply": [
+      "……",
+      "好啦 我們在一起",
+      "雯說先不要講",
+      "……她那天半夜有來我這 淋得全身濕",
+      "你剛剛說 iPad 在泰順街"
+    ],
+    "signal": {
+      "readDelay": "已讀後隔了很久",
+      "typingStops": true
+    },
+    "reveals": [
+      "say_aze_couple",
+      "say_aze_came"
+    ],
+    "effects": {
+      "ladder": {
+        "aze": 1
+      },
+      "flags": {
+        "aze_doubts": true,
+        "aze_understands": true
+      }
+    }
   },
   {
     "card": "card_couple",

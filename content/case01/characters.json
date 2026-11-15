@@ -40,6 +40,8 @@
         "level": 5,
         "id": "ask_pinyu",
         "onEnter": [
+          "msg_py_blocked",
+          "msg_jw_asked_py",
           "msg_py_asked"
         ]
       },
@@ -157,7 +159,7 @@
         ],
         "when": {
           "seen": [
-            "say_zh_admit"
+            "say_zh_dodge"
           ]
         }
       },
@@ -165,7 +167,10 @@
         "level": 3,
         "id": "preempt_group",
         "onEnter": [
-          "msg_zh_group"
+          "msg_zh_group",
+          "msg_zh_group_jw",
+          "msg_zh_group_py",
+          "msg_zh_group_aze"
         ]
       }
     ],
@@ -211,7 +216,7 @@
         "level": 2,
         "id": "call",
         "onEnter": [
-          "msg_py_call"
+          "call_py_first"
         ]
       },
       {
@@ -219,6 +224,14 @@
         "id": "come_over",
         "onEnter": [
           "msg_py_come"
+        ]
+      },
+      {
+        "level": 4,
+        "id": "call_storm",
+        "onEnter": [
+          "msg_py_warn",
+          "call_py_storm"
         ]
       }
     ],
@@ -245,6 +258,11 @@
       [
         "沈以晴"
       ]
-    ]
+    ],
+    "silentWhen": {
+      "flags": {
+        "pinyu_silent": true
+      }
+    }
   }
 ]
