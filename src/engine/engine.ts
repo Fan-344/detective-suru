@@ -9,6 +9,7 @@ import type {
   CharacterId,
   Condition,
   Effects,
+  Ending,
   EventId,
   GameEvent,
   Item,
@@ -32,6 +33,27 @@ export interface Engine {
 
 /** 疑點成立前多的一層（見 Card.spot）。沒寫或沒有選項就當作沒有這一層。 */
 export type Spot = NonNullable<Card['spot']>;
+
+/** 「人指對了、但有格子放錯」的結局（trigger.fieldsWrong）。它的 accused 是真兇，但不算破案。 */
+export function isWeakEnding(ending: Ending): boolean {
+  return ending.trigger.kind === 'challenge' && (ending.trigger as { fieldsWrong?: boolean }).fieldsWrong === true;
+}
+
+/** 這個結局算不算破案：指對人、每一格都對、交出了證據 */
+export function isSolvedEnding(content: CaseContent, ending: Ending): boolean {
+  return ending.trigger.kind === 'challenge' && ending.trigger.accused === content.endings.challenge.culprit && !isWeakEnding(ending);
+}
+
+/**
+ * 結局要顯示的內文。大部分結局就是資料裡的 text；
+ * 「站不住」結局裡 "{rebuttals}" 那一行會換成放錯的那幾格各自的句子（照提問順序，放錯幾格就出現幾組）。
+ * 畫面和文字版都用這個，不要自己組。state 給結局當下的狀態；看別的結局（例如「我想知道真相」）時不給。
+ */
+export function endingText(ending: Ending, state?: GameState): string[] {
+  const rebuttals = (ending as { rebuttals?: Record<string, string[]> }).rebuttals ?? {};
+  const wrong = state?.ended === ending.id ? (state.accusation.wrongFields ?? []) : [];
+  return ending.text.flatMap((line) => (line === '{rebuttals}' ? wrong.flatMap((field) => rebuttals[field] ?? []) : [line]));
+}
 
 /** 算一個「動作」的種類（已讀不回、連環來電都用這個數）：打開 App、讀聊天室、定位、傳訊息。看和想不算。 */
 const COUNTED = ['openApp', 'readThread', 'locate', 'reply', 'test'];
@@ -159,7 +181,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       ignoredOut: [],
       nudgeIndex: {},
       challengeTries: 0,
-      accusation: { step: 0, tried: {}, slots: {} },
+      accusation: { step: 0, tried: {}, slots: {}, count: 0, wrongFields: [] },
+      rewind: null,
       ended: null,
     };
   }
@@ -177,6 +200,21 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
       s.phase = 'ended';
       s.prompt = null;
       out.push({ kind: 'ending', ending });
+    };
+
+    /** 這次指認算一次（舊存檔沒有這個數字，當作 0） */
+    const countAccusation = () => {
+      s.accusation.count = (s.accusation.count ?? 0) + 1;
+    };
+
+    /** 指錯人：進那個人的結局，並留下交出去之前那一刻的狀態，讓玩家可以回到指認之前 */
+    const endWrong = (ending: string) => {
+      countAccusation();
+      const before = structuredClone(prev);
+      before.accusation.count = s.accusation.count;
+      before.rewind = null;
+      end(ending);
+      s.rewind = before;
     };
 
     /** direct：不管有沒有照片，直接算看過（滑到就算看過的 App 用） */
@@ -492,6 +530,13 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
 
     // ── 動作 ──
 
+    if (action.type === 'rewindChallenge') {
+      // 經過指認進入的結局（指錯人、破案）才留著之前的狀態；沒電、被查到醫院沒有
+      if (s.phase !== 'ended' || !s.rewind) return invalid('現在不能回到指認之前');
+      const back = structuredClone(s.rewind);
+      return { state: back, outcomes: [{ kind: 'rewound', count: back.accusation.count }] };
+    }
+
     if (s.phase === 'ended') return invalid('遊戲已經結束');
 
     if (s.phase === 'cover') {
@@ -746,6 +791,8 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           const right = action.answer === ch.culprit;
           out.push({ kind: 'challengeAnswer', question, answer: action.answer, right, cost: 0 });
           if (right) {
+            // 一題一題問的時候，「是誰」答對就算指認了一次
+            countAccusation();
             s.accusation.step += 1;
             return done();
           }
@@ -754,7 +801,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
             (e) => e.trigger.kind === 'challenge' && e.trigger.accused === action.answer && holds(s, { flags: e.trigger.flags }),
           );
           if (!ending) return invalid('沒有對應的結局');
-          end(ending.id);
+          endWrong(ending.id);
           return done();
         }
         const field = ch.fields.find((f) => f.id === question);
@@ -800,10 +847,18 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           // 人指錯了：直接進那個人的結局
           const ending = content.endings.endings.find((e) => e.trigger.kind === 'challenge' && e.trigger.accused === who && holds(s, { flags: e.trigger.flags }));
           if (!ending) return invalid('沒有對應的結局');
-          end(ending.id);
+          endWrong(ending.id);
           return done();
         }
         const wrong = ch.fields.filter((f) => sequence.includes(f.id) && !f.cards.includes(slots[f.id])).map((f) => f.id);
+        // 人對但有格子放錯：資料有寫這種結局就直接進去（跟指錯人一樣可以回到指認之前、算一次指認），
+        // 這樣交卷的結果不會洩漏「人指對了」。沒寫就照舊退回、扣電。
+        const weak = wrong.length ? content.endings.endings.find((e) => isWeakEnding(e) && e.trigger.kind === 'challenge' && holds(s, { flags: e.trigger.flags })) : undefined;
+        if (weak) {
+          endWrong(weak.id);
+          s.accusation.wrongFields = wrong;
+          return done();
+        }
         if (wrong.length) {
           const retry = cost.challengeRetry ?? 0;
           s.challengeTries += 1;
@@ -812,6 +867,7 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
           return done();
         }
         s.accusation.step = sequence.length;
+        countAccusation();
         out.push({ kind: 'challengePassed' });
         return done();
       }
@@ -823,12 +879,17 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
         const ending = content.endings.endings.find(
           (e) =>
             e.trigger.kind === 'challenge' &&
+            !isWeakEnding(e) &&
             (e.trigger.accused === undefined || e.trigger.accused === ch.culprit) &&
             (e.trigger.givenTo === undefined || e.trigger.givenTo === action.givenTo) &&
             holds(s, { flags: e.trigger.flags }),
         );
         if (!ending) return invalid('沒有對應的結局');
+        // 破案的結局也能回去：回到「指認通過、還沒選交給誰」那一刻，可以改交給別人看別的結局
+        const before = structuredClone(prev);
+        before.rewind = null;
         end(ending.id);
+        s.rewind = before;
         return done();
       }
     }
@@ -866,13 +927,15 @@ export function createEngine(content: CaseContent, rules: Rules = DEFAULT_RULES)
   }
 
   function menu(s: GameState): Menu {
-    const empty: Menu = { cover: false, prompt: null, call: null, missedCalls: [], silent: [], apps: [], threads: [], locate: [], images: [], assistantUnread: false, profiles: [], concerns: [], replies: [], tests: [], thoughts: [], challenge: null };
+    const empty: Menu = { cover: false, canRewind: s.phase === 'ended' && !!s.rewind, accusations: s.accusation.count ?? 0, prompt: null, call: null, missedCalls: [], silent: [], apps: [], threads: [], locate: [], images: [], assistantUnread: false, profiles: [], concerns: [], replies: [], tests: [], thoughts: [], challenge: null };
     if (s.phase === 'ended') return empty;
     if (s.phase === 'cover') return { ...empty, cover: true };
     const chatOpen = chatApps.some((a) => s.openedApps.includes(a));
     const promptEvent = s.prompt ? events.get(s.prompt) : undefined;
     return {
       cover: false,
+      canRewind: false,
+      accusations: s.accusation.count ?? 0,
       call: s.call ? { ...s.call, declineCost: cost.callDecline ?? 0, ringCost: cost.callRing ?? 0 } : null,
       missedCalls: s.missedCalls.map((x) => ({ ...x })),
       silent: content.characters.filter((c) => isSilent(s, c.id)).map((c) => c.id),

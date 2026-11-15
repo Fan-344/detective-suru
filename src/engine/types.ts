@@ -115,7 +115,23 @@ export interface GameState {
      * 欄位 id → 疑點 id，"who" → 人的 id。沒填的格子不在裡面。交卷被退回後內容保留。
      */
     slots: Record<string, string>;
+    /**
+     * 這是第幾次指認：每次指認進到結局（指錯人），或指認通過（人和每一格都對），算一次；
+     * 交卷被退回的不算。回到指認之前不會歸零。
+     */
+    count: number;
+    /**
+     * 人指對了、但有格子放錯而進入「站不住」結局時，放錯的是哪幾格（照提問順序）。其他時候是空的。
+     * 結局內文裡 "{rebuttals}" 那一行要照這個換成對應的句子（用 endingText 組）。
+     */
+    wrongFields: string[];
   };
+  /**
+   * 經過指認進入的結局才有（指錯人、人對但格子放錯、破案），玩家選「回到指認之前」就回到這裡。其他時候是 null。
+   * - 指錯人、人對但格子放錯：交出去之前那一刻（電量、疑點、各人階梯、填好的格子都在），只有指認次數是加過一的。
+   * - 破案：指認已經通過、還沒選交給誰的那一刻，可以改交給別人。
+   */
+  rewind: GameState | null;
   /** 結局 id */
   ended: string | null;
 }
@@ -153,6 +169,11 @@ export type Action =
   | { type: 'test'; card: CardId; target: CharacterId }
   /** 再想想：對手上的某個疑點（或還在「在意的地方」階段的）要下一句提示 */
   | { type: 'think'; card: CardId }
+  /**
+   * 結局之後回到指認之前。不扣電。只有經過指認進入的結局可以用：
+   * 指錯人回到交出去前那一刻；破案回到「指認通過、還沒選交給誰」那一刻。沒電、被查到醫院不行。
+   */
+  | { type: 'rewindChallenge' }
   /** 掛斷正在響的來電。對方馬上知道被按掉。 */
   | { type: 'declineCall' }
   /** 放著讓來電響完，變成未接來電。 */
@@ -203,13 +224,18 @@ export type Outcome =
   | { kind: 'ladder'; character: CharacterId; from: number; to: number; auto: boolean }
   /** 指認兇手這一題答得對不對。question 是欄位 id 或 "who"；answer 是疑點或人的 id；選錯疑點會扣 cost。 */
   | { kind: 'challengeAnswer'; question: string; answer: string; right: boolean; cost: number }
-  /** 一次交卷被退回：人指對了，但 fields 這幾格放的疑點不對。扣 cost，格子內容保留。 */
+  /**
+   * 一次交卷被退回：人指對了，但 fields 這幾格放的疑點不對。扣 cost，格子內容保留。
+   * 資料有寫「人對但格子放錯」的結局（trigger.fieldsWrong）時不會退回，改成直接進那個結局。
+   */
   | { kind: 'challengeRejected'; fields: string[]; cost: number }
   /** 一次交卷通過了：人和每一格都對，接下來選交給誰（handOver）。 */
   | { kind: 'challengePassed' }
   /** 在背景 App 裡逛太久的提醒。不擋操作、不扣電。 */
   | { kind: 'wander'; text: string }
   | { kind: 'ending'; ending: string }
+  /** 回到指認之前了。count 是到目前為止指認過幾次。 */
+  | { kind: 'rewound'; count: number }
   | { kind: 'invalid'; reason: string };
 
 export interface StepResult {
@@ -220,6 +246,10 @@ export interface StepResult {
 /** 目前能做的事。畫面和文字版照這個列選項，自動檢查照這個產生動作。 */
 export interface Menu {
   cover: boolean;
+  /** 現在的結局能不能「回到指認之前」（指錯人和破案的結局可以；沒電、被查到醫院不行） */
+  canRewind: boolean;
+  /** 到目前為止指認過幾次（見 GameState.accusation.count）。破案時就是「第 N 次指認」。 */
+  accusations: number;
   prompt: { event: EventId; options: string[] } | null;
   /** 正在響的來電。有值的時候只能送 declineCall 或 letRing，其他動作都會被擋下。助理不能說話，所以沒有接聽。 */
   call: { event: EventId; from: CharacterId; declineCost: number; ringCost: number } | null;

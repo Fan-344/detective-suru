@@ -3,7 +3,7 @@
 // 這裡的字串只有介面用語；劇情文字全部來自資料檔。
 
 import type { CaseContent, ImageRef, Item, Message, Signal } from '../content/types';
-import { createEngine, memo, spotOf, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
+import { createEngine, endingText, isSolvedEnding, memo, spotOf, type Action, type AppendedMessage, type Engine, type GameState, type Outcome } from '../engine';
 
 export interface Choice {
   label: string;
@@ -46,7 +46,20 @@ export class TextGame {
 
   choices(): Choice[] {
     const s = this.state;
-    if (s.phase === 'ended') return [{ label: '重新開始', run: () => this.restart() }];
+    if (s.phase === 'ended') {
+      const list: Choice[] = [];
+      // 經過指認進入的結局可以回去：指錯人回到交出去之前；破案回到選交給誰之前（可以改交給別人）
+      const ended = this.content.endings.endings.find((e) => e.id === s.ended);
+      const solved = ended !== undefined && isSolvedEnding(this.content, ended);
+      if (this.engine.menu(s).canRewind) list.push({ label: solved ? '回到選交給誰之前' : '回到指認之前', run: () => void this.act({ type: 'rewindChallenge' }) });
+      // 「我想知道真相」：直接看資料指定的那個破案結局（只在指錯人的結局出現）
+      const truth = this.content.endings.endings.find((e) => e.id === this.content.endings.truthEnding);
+      if (truth && this.engine.menu(s).canRewind && !solved) {
+        list.push({ label: '我想知道真相', run: () => this.say('', `════ ${truth.title} ════`, '', ...endingText(truth).flatMap((p) => [p, ''])) });
+      }
+      list.push({ label: '重新開始', run: () => this.restart() });
+      return list;
+    }
     if (s.phase === 'cover') return [{ label: '送出', run: () => this.act({ type: 'sendCover' }) }];
     const call = this.engine.menu(s).call;
     if (call) {
@@ -229,14 +242,21 @@ export class TextGame {
         break;
       case 'ending': {
         const e = this.content.endings.endings.find((x) => x.id === o.ending);
-        if (e) this.say('', `════ 結局：${e.title} ════`, '', ...e.text.flatMap((p) => [p, '']));
+        if (e) this.say('', `════ 結局：${e.title} ════`, '', ...endingText(e, this.state).flatMap((p) => [p, '']));
         // 解答篇：只有指對兇手的結局才接著印
         const solution = this.content.endings.solution;
-        if (e && solution && e.trigger.kind === 'challenge' && e.trigger.accused === this.content.endings.challenge.culprit) {
+        if (e && solution && isSolvedEnding(this.content, e)) {
           this.say(`──── ${solution.title} ────`, '', ...solution.text.flatMap((p) => [p, '']));
         }
         break;
       }
+      case 'rewound':
+        this.say('', this.engine.menu(this.state).challenge?.form?.passed ? '（回到選交給誰之前。）' : '（回到指認之前。這是第 ' + (o.count + 1) + ' 次指認。）');
+        this.screen = this.suru;
+        break;
+      case 'challengePassed':
+        this.say('', '（第 ' + this.state.accusation.count + ' 次指認，這次對了。）');
+        break;
       case 'noReply':
         this.say('（' + this.name(o.character) + '已讀，沒有回。）');
         break;

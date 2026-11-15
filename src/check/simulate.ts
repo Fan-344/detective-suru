@@ -3,7 +3,7 @@
 // （格式對不對是 src/content/validate.ts 的事；這裡管的是到不到得了。）
 
 import type { CaseContent } from '../content/types';
-import { createEngine, routesReached, type Action, type Engine, type GameState } from '../engine';
+import { createEngine, isSolvedEnding, isWeakEnding, routesReached, type Action, type Engine, type GameState } from '../engine';
 
 export interface Check {
   name: string;
@@ -288,6 +288,8 @@ const describe = (a: Action): string => {
       return `視窗 ${a.option ?? '不理'}`;
     case 'answerChallenge':
       return `回答 ${a.answer}`;
+    case 'rewindChallenge':
+      return '回到指認之前';
     case 'declineCall':
       return '掛斷來電';
     case 'letRing':
@@ -376,10 +378,12 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   report.push(`模擬 ${runs.length} 局。各結局出現次數：`);
   for (const e of content.endings.endings) report.push(`　${e.id}（${e.title}）：${runs.filter((r) => r.final.ended === e.id).length}`);
 
-  const solvedIds = content.endings.endings.filter((e) => e.trigger.kind === 'challenge' && e.trigger.accused === culprit).map((e) => e.id);
+  const solvedIds = content.endings.endings.filter((e) => isSolvedEnding(content, e)).map((e) => e.id);
+  const weakIds = content.endings.endings.filter(isWeakEnding).map((e) => e.id);
   const wrongIds = content.endings.endings.filter((e) => e.trigger.kind === 'challenge' && e.trigger.accused !== undefined && e.trigger.accused !== culprit).map((e) => e.id);
   const count = (ids: string[]) => runs.filter((r) => r.final.ended !== null && ids.includes(r.final.ended)).length;
   report.push('', `破案（指對人、答完全部題目）：${count(solvedIds)} 局（${pct(count(solvedIds), runs.length)}）。指錯人：${count(wrongIds)} 局（${pct(count(wrongIds), runs.length)}）。`);
+  if (weakIds.length) report.push('　人指對了但有格子放錯（站不住）：' + count(weakIds) + ' 局（' + pct(count(weakIds), runs.length) + '）。');
   const tries = runs.filter((r) => r.final.ended !== null && solvedIds.includes(r.final.ended)).map((r) => r.final.challengeTries);
   if (tries.length) report.push(`　破案的那些局，途中答錯的次數：中位數 ${median(tries)}、最多 ${Math.max(...tries)}。`);
 

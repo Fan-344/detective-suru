@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadCase } from '../content';
-import { createEngine, isRightSpot, memo, reachedConclusions, spotOf, type Action, type Engine, type GameState, type Outcome } from './index';
+import { createEngine, endingText, isRightSpot, isSolvedEnding, isWeakEnding, memo, reachedConclusions, spotOf, type Action, type Engine, type GameState, type Outcome } from './index';
 
 const content = loadCase('case01');
 const engine = createEngine(content);
@@ -344,6 +344,8 @@ describe('engine', () => {
     // 用副本打開「一次交卷」，不依賴資料檔現在開不開
     const copy = structuredClone(content);
     copy.endings.challenge.submitAll = true;
+    // 這裡測的是「格子不對就退回」的做法，所以把「人對但格子放錯」的結局拿掉（那個做法另外有測試）
+    copy.endings.endings = copy.endings.endings.filter((e) => !isWeakEnding(e));
     const e2 = createEngine(copy);
     const ch = copy.endings.challenge;
     const sequence = ch.sequence ?? [...ch.fields.map((f) => f.id), 'who'];
@@ -399,6 +401,110 @@ describe('engine', () => {
     expect(e2.menu(s).challenge!.ask).toMatchObject({ question: null, options: ch.recipients });
     expect(e2.step(s, { type: 'fillChallenge', question: 'who', answer: innocent }).outcomes[0].kind).toBe('invalid');
     expect(e2.step(s, { type: 'handOver', givenTo: 'pinyu' }).state.ended).toBe('end_pinyu');
+  });
+
+  it('指認進入的結局可以回到指認之前：電量、疑點、階梯、格子都照舊，不扣電；指認次數不歸零；沒電的結局不能回', () => {
+    const copy = structuredClone(content);
+    copy.endings.challenge.submitAll = true;
+    // 中間有一步要測「被退回的不算一次指認」，所以用退回的做法
+    copy.endings.endings = copy.endings.endings.filter((e) => !isWeakEnding(e));
+    const e2 = createEngine(copy);
+    const ch = copy.endings.challenge;
+    const sequence = ch.sequence ?? [...ch.fields.map((f) => f.id), 'who'];
+    const fieldIds = sequence.filter((q) => q !== 'who');
+    const innocent = ch.suspects.find((x) => x !== ch.culprit)!;
+    let s: GameState = { ...afterCover(), concerns: [], cards: copy.cards.map((c) => c.id) };
+    expect(e2.menu(s)).toMatchObject({ canRewind: false, accusations: 0 });
+    expect(e2.step(s, { type: 'rewindChallenge' }).outcomes[0].kind).toBe('invalid');
+    for (const q of fieldIds) s = e2.step(s, { type: 'fillChallenge', question: q, answer: ch.fields.find((f) => f.id === q)!.cards[0] }).state;
+    s = e2.step(s, { type: 'fillChallenge', question: 'who', answer: innocent }).state;
+    const before = s;
+    // 第一次：指錯人，進結局
+    const wrong = e2.step(s, { type: 'submitChallenge' }).state;
+    expect(wrong.ended).toBe('end_wrong_' + innocent);
+    expect(e2.menu(wrong)).toMatchObject({ canRewind: true, accusations: 1 });
+    // 回到指認之前：跟交出去前一模一樣，只有次數加一
+    const back = e2.step(wrong, { type: 'rewindChallenge' });
+    expect(back.outcomes).toEqual([{ kind: 'rewound', count: 1 }]);
+    expect(back.state).toEqual({ ...before, accusation: { ...before.accusation, count: 1 } });
+    expect(back.state.battery).toBe(before.battery);
+    expect(back.state.accusation.slots.who).toBe(innocent);
+    s = back.state;
+    expect(e2.menu(s)).toMatchObject({ canRewind: false, accusations: 1 });
+    // 被退回的不算一次
+    const wrongCard = s.cards.find((id) => !ch.fields.find((f) => f.id === fieldIds[0])!.cards.includes(id))!;
+    s = e2.step(s, { type: 'fillChallenge', question: 'who', answer: ch.culprit }).state;
+    s = e2.step(e2.step(s, { type: 'fillChallenge', question: fieldIds[0], answer: wrongCard }).state, { type: 'submitChallenge' }).state;
+    expect(s.accusation.count).toBe(1);
+    // 第二次指對：次數是 2
+    s = e2.step(s, { type: 'fillChallenge', question: fieldIds[0], answer: ch.fields.find((f) => f.id === fieldIds[0])!.cards[0] }).state;
+    s = e2.step(s, { type: 'submitChallenge' }).state;
+    expect(e2.menu(s).accusations).toBe(2);
+    const choosing = s;
+    const first = e2.step(s, { type: 'handOver', givenTo: ch.recipients[0] }).state;
+    expect(first.phase).toBe('ended');
+    expect(e2.menu(first)).toMatchObject({ canRewind: true, accusations: 2 });
+    // 破案的結局也能回：回到選交給誰之前，不用重新指認，可以改交給別人看別的結局
+    const again = e2.step(first, { type: 'rewindChallenge' });
+    expect(again.outcomes).toEqual([{ kind: 'rewound', count: 2 }]);
+    expect(again.state).toEqual(choosing);
+    expect(e2.menu(again.state).challenge?.form?.passed).toBe(true);
+    const second = e2.step(again.state, { type: 'handOver', givenTo: ch.recipients[ch.recipients.length - 1] }).state;
+    expect(second.phase).toBe('ended');
+    expect(second.ended).not.toBe(first.ended);
+    expect(e2.menu(second).accusations).toBe(2);
+    // 沒電的結局也不能回
+    const dead = e2.step({ ...afterCover(), battery: 0.1 }, { type: 'openApp', app: copy.apps.apps.find((a) => !a.background && a.view !== 'chat')!.id }).state;
+    if (dead.phase === 'ended') expect(e2.step(dead, { type: 'rewindChallenge' }).outcomes[0].kind).toBe('invalid');
+  });
+
+  it('資料有寫「人對但格子放錯」的結局時：不退回，直接進那個結局；記下放錯的格子、算一次指認、可以回到指認之前', () => {
+    const copy = structuredClone(content);
+    copy.endings.challenge.submitAll = true;
+    const ch = copy.endings.challenge;
+    const sequence = ch.sequence ?? [...ch.fields.map((f) => f.id), 'who'];
+    const fieldIds = sequence.filter((q) => q !== 'who');
+    copy.endings.endings = copy.endings.endings.filter((e) => !isWeakEnding(e));
+    const weak = {
+      id: 'end_weak_test',
+      title: '站不住',
+      trigger: { kind: 'challenge', accused: ch.culprit, fieldsWrong: true },
+      text: ['開頭', '{rebuttals}', '結尾'],
+      rebuttals: Object.fromEntries(fieldIds.map((q) => [q, ['反駁 ' + q]])),
+    };
+    copy.endings.endings.unshift(weak as unknown as (typeof copy.endings.endings)[number]);
+    const e2 = createEngine(copy);
+    const right = (q: string) => ch.fields.find((f) => f.id === q)!.cards[0];
+    let s: GameState = { ...afterCover(), concerns: [], cards: copy.cards.map((c) => c.id) };
+    const wrongCard = (q: string) => s.cards.find((id) => !ch.fields.find((f) => f.id === q)!.cards.includes(id))!;
+    // 第一格和最後一格放錯，其餘放對，人指對
+    const bad = [...new Set([fieldIds[0], fieldIds[fieldIds.length - 1]])];
+    for (const q of fieldIds) s = e2.step(s, { type: 'fillChallenge', question: q, answer: bad.includes(q) ? wrongCard(q) : right(q) }).state;
+    s = e2.step(s, { type: 'fillChallenge', question: 'who', answer: ch.culprit }).state;
+    const before = s;
+    const r = e2.step(s, { type: 'submitChallenge' });
+    expect(r.outcomes.some((o) => o.kind === 'challengeRejected')).toBe(false);
+    expect(r.outcomes).toContainEqual({ kind: 'ending', ending: 'end_weak_test' });
+    expect(r.state.battery).toBe(before.battery);
+    expect(r.state.accusation.wrongFields).toEqual(bad);
+    expect(e2.menu(r.state)).toMatchObject({ canRewind: true, accusations: 1 });
+    // 結局內文：{rebuttals} 換成放錯的那幾格的句子，照提問順序
+    const ending = copy.endings.endings.find((e) => e.id === 'end_weak_test')!;
+    expect(endingText(ending, r.state)).toEqual(['開頭', ...bad.map((q) => '反駁 ' + q), '結尾']);
+    expect(isWeakEnding(ending)).toBe(true);
+    expect(isSolvedEnding(copy, ending)).toBe(false);
+    // 回到指認之前，改對之後照常通過；交出證據不會選到「站不住」那個結局
+    s = e2.step(r.state, { type: 'rewindChallenge' }).state;
+    expect(s.accusation.wrongFields).toEqual([]);
+    for (const q of bad) s = e2.step(s, { type: 'fillChallenge', question: q, answer: right(q) }).state;
+    s = e2.step(s, { type: 'submitChallenge' }).state;
+    expect(e2.menu(s).accusations).toBe(2);
+    const solved = e2.step(s, { type: 'handOver', givenTo: ch.recipients[0] }).state;
+    expect(solved.ended).not.toBe('end_weak_test');
+    expect(isSolvedEnding(copy, copy.endings.endings.find((e) => e.id === solved.ended)!)).toBe(true);
+    // 人指錯的時候不管格子，照舊進那個人的結局
+    const innocent = ch.suspects.find((x) => x !== ch.culprit)!;
+    expect(e2.step(e2.step(before, { type: 'fillChallenge', question: 'who', answer: innocent }).state, { type: 'submitChallenge' }).state.ended).toBe('end_wrong_' + innocent);
   });
 
   it('只能自己想、但要先指出哪裡有問題的疑點：先進在意的地方，指對才成立，成立後可以放進指認的格子', () => {
