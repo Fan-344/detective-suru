@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Calculator, Calendar, Camera, Clock, Music, Settings } from '../apps/Extras';
 import { Finder } from '../apps/Finder';
+import { CallScreen } from '../screens/Call';
+import { PromptDialog } from '../screens/Prompt';
 import { SuruBanner } from '../suru/Suru';
 import { ChatList, ChatRoom, ImageBlock } from '../layouts/Chat';
 import type { ZoomTarget } from '../layouts/Chat';
@@ -162,7 +164,12 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
         <ChatRoom
           thread={thread}
           selfId={data.selfId}
-          onChoose={(optionId) => actions.onChooseReply(thread.id, optionId)}
+          onChoose={(optionId) => {
+            // 「ask::疑點::對象」是拿疑點來問，其他是回覆等著回的訊息
+            const [kind, card, target] = optionId.split('::');
+            if (kind === 'ask' && card && target) actions.onProbe(card, target);
+            else actions.onChooseReply(thread.id, optionId);
+          }}
           onSendPrefill={() => actions.onSendPrefill(thread.id)}
           onZoom={onZoom}
           onProfile={(memberId) => openProfile(memberId, thread.id)}
@@ -304,6 +311,15 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
           </button>
         )}
         <div className="phone__veil" aria-hidden="true" />
+        {data.prompt &&
+          !data.call &&
+          (data.prompt.waiting ? <div className="call-wait" aria-hidden="true" /> : <PromptDialog prompt={data.prompt} onAnswer={actions.onAnswerPrompt} />)}
+        {data.call &&
+          (data.call.waiting ? (
+            <div className="call-wait" aria-hidden="true" />
+          ) : (
+            <CallScreen key={data.call.id} call={data.call} onDecline={actions.onDeclineCall} onRing={actions.onLetRing} />
+          ))}
         {data.notice && (
           <SuruBanner
             key={data.notice.id}

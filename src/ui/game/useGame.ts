@@ -4,7 +4,7 @@ import { createEngine, spotOf, type Action, type Engine, type GameState, type Ou
 import { S } from '../strings';
 import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
 import { clearSave, fingerprint, loadSave, writeSave } from './save';
-import { buildPhoneData, EMPTY_UI, type GameUi } from './view';
+import { buildPhoneData, EMPTY_UI, markNoReply, type GameUi } from './view';
 
 // 把畫面接到遊戲規則上的控制器。
 // 規則全部在 src/engine：這裡只做三件事——把玩家的點擊變成動作交給 engine、
@@ -131,10 +131,25 @@ export function useGame(caseId = 'case01') {
     [],
   );
 
+  // 來電或系統視窗擋著的時候，先留著等之後補送的動作
+  const deferred = useRef<Action[]>([]);
   const act = (action: Action): Outcome[] => {
     if (!engine || !latest.current) return [];
-    const { state, outcomes } = engine.step(latest.current.game, action);
-    update((s) => ({ game: state, ui: settle(engine, state, reactTo(engine, s.ui, outcomes)) }));
+    // 電話在響、或系統視窗開著的時候，玩家只能先處理它。
+    // 畫面自己會送的小動作（捲到訊息、捲到動態）這時候先留著，等處理完再補送：
+    // 電話響的時候送會被擋，視窗開著的時候送會被規則當成「不理它」而把視窗關掉
+    const now = latest.current.game;
+    const blocked = (now.call && action.type !== 'declineCall' && action.type !== 'letRing') || (!now.call && now.prompt && action.type !== 'answerPrompt');
+    if (blocked) {
+      if (action.type === 'seeMessages' || action.type === 'seeItems') deferred.current.push(action);
+      return [];
+    }
+    const { state, outcomes } = engine.step(now, action);
+    update((s) => ({ game: state, ui: settle(engine, state, markNoReply(reactTo(engine, s.ui, outcomes), state, outcomes)) }));
+    if (!state.call && !state.prompt && deferred.current.length) {
+      const waiting = deferred.current.splice(0);
+      waiting.forEach((a) => act(a));
+    }
     return outcomes;
   };
 
@@ -244,6 +259,15 @@ export function useGame(caseId = 'case01') {
           const noticed = openThread ? { ...s.ui.noticed, [openThread]: s.ui.revealed[openThread] ?? 0 } : s.ui.noticed;
           return { game: s.game, ui: { ...s.ui, openThread, noticed } };
         }),
+      onAnswerPrompt: (option) => {
+        if (latest.current?.game.prompt) act({ type: 'answerPrompt', option });
+      },
+      onDeclineCall: () => {
+        if (latest.current?.game.call) act({ type: 'declineCall' });
+      },
+      onLetRing: () => {
+        if (latest.current?.game.call) act({ type: 'letRing' });
+      },
       onAccuseFill: (slotId, answer) => {
         if (!playing()) return;
         act({ type: 'fillChallenge', question: slotId, answer });
@@ -299,7 +323,19 @@ export function useGame(caseId = 'case01') {
     actions,
     intro: (content?.meta.intro ?? []) as IntroSegment[],
     afterIntro: (resumedInPlay ? { app: null, detail: null } : { app: chatApp, detail: content?.meta.coverThread ?? null }) as Nav,
-    ending: ended ? { title: ended.title, text: ended.text } : undefined,
+    ending: ended
+      ? {
+          title: ended.title,
+          text: ended.text,
+          // 內文裡有人說話的段落要配頭像：名字對到角色
+          speakers: Object.fromEntries((content?.characters ?? []).map((c) => [c.name, c.id])),
+          // 解答篇只給指對兇手的結局；指錯人、沒電、被查到的結局不給，免得講破答案
+          solution:
+            content?.endings.solution && ended.trigger.kind === 'challenge' && (ended.trigger.accused === undefined || ended.trigger.accused === content.endings.challenge.culprit)
+              ? content.endings.solution
+              : undefined,
+        }
+      : undefined,
     /** 開場的通知段落要用哪個 App 的圖示：標籤開頭是 App 的名字就用它的；講到來電就用電話的 */
     noticeIcon: (label: string): IconId | undefined => {
       const apps = content?.apps.apps ?? [];
@@ -311,6 +347,7 @@ export function useGame(caseId = 'case01') {
       if (!engine) return;
       coverSeen.current.clear();
       noticeQueue.current = [];
+      deferred.current = [];
       window.clearTimeout(noticeTimer.current);
       noticeTimer.current = undefined;
       // 重新開始：存檔清掉，從頭來

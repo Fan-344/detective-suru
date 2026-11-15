@@ -301,9 +301,11 @@ describe('接上遊戲規則', () => {
     openApp('suru');
     // Suru 只有疑點和時間軸兩個分頁
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([S.suruCards, S.suruTimeline]);
-    // 在意的地方的小卡片上是那句話本身，不露出疑點的標題
+    // 在意的地方的小卡片上是那筆資料本身，不露出疑點的標題
     expect(screen.queryByText(card.title)).toBeNull();
-    const concern = [...document.querySelectorAll('.doubt--concern')].find((el) => el.textContent?.includes(subject.body)) as HTMLElement;
+    // 小卡片上印的是那筆資料的名字（說法是那句話，紀錄是它的標題）和要問的那一句
+    const label = subject.kind === 'statement' ? subject.body.split('\n')[0] : (subject.title ?? subject.body.split('\n')[0]);
+    const concern = [...document.querySelectorAll('.doubt--concern')].find((el) => el.textContent?.includes(label) && el.textContent?.includes(spot.prompt!)) as HTMLElement;
     fireEvent.click(concern);
     expect(screen.getByText(spot.prompt!)).toBeTruthy();
     // 指錯扣電、跳一句提示，那個選項不能再選
@@ -467,6 +469,32 @@ describe('接上遊戲規則', () => {
     fireEvent.click(screen.getByRole('radio', { name: nameOfPerson(to) }));
     fireEvent.click(screen.getByRole('button', { name: S.accuseSubmit }));
     expect(screen.getByRole('button', { name: S.endingRestart })).toBeTruthy();
+    // 結局裡寫成「名字：「一句」「又一句」」的段落排成訊息：一對引號一則泡泡，其餘是旁白
+    // 可能有兩個結局同名，所以連內文一起比：畫面上有它每一段裡的字才算
+    const onScreen = document.querySelector('.ending__scroll')?.textContent ?? '';
+    const lastBit = (l: string) => [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]).pop() ?? l;
+    const shown = content.endings.endings.find((e) => document.querySelector('.ending__title')?.textContent === e.title && e.text.every((l) => onScreen.includes(lastBit(l))))!;
+    // 冒號前面是角色的名字才算對話
+    const isSaid = (l: string) => content.characters.some((c) => new RegExp('^' + c.name + '：(?:「[^」]*」\\s*)+$').test(l.trim()));
+    const quotes = shown.text.flatMap((l) => (isSaid(l) ? [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]) : []));
+    expect([...document.querySelectorAll('.endchat__bubble')].map((el) => el.textContent)).toEqual(quotes);
+    const narration = shown.text.filter((l) => !isSaid(l));
+    expect([...document.querySelectorAll('.ending__scroll > p')].map((el) => el.textContent)).toEqual(narration);
+    // 指對兇手的結局：看完可以接著看解答篇，再回到結局
+    const solution = content.endings.solution;
+    if (solution) {
+      expect(document.querySelector('.report')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: S.endingSolution.replace('{title}', solution.title) }));
+      expect(screen.getByRole('heading', { name: solution.title })).toBeTruthy();
+      // 排成報告：【】裡的字是欄位標籤，後面是內容；每一行的字都在
+      const page = document.querySelector('.report')!;
+      const strip = (t: string) => t.replace(/[【】：:\s]/g, '');
+      for (const line of solution.text) expect(strip(page.textContent ?? '')).toContain(strip(line));
+      const labels = solution.text.flatMap((l) => (/^【(.+?)】/.exec(l)?.[1] ? [/^【(.+?)】/.exec(l)![1]] : []));
+      expect([...page.querySelectorAll('.report__row h2')].map((el) => el.textContent)).toEqual(labels);
+      fireEvent.click(screen.getByRole('button', { name: S.endingBack }));
+      expect(document.querySelector('.report')).toBeNull();
+    }
   });
 
   it('指認兇手：人指錯了，交出去就直接進那個人的結局', () => {
@@ -477,6 +505,8 @@ describe('接上遊戲規則', () => {
     fireEvent.click(handIn());
     const ending = content.endings.endings.find((e) => e.trigger.kind === 'challenge' && e.trigger.accused === innocent)!;
     expect(screen.getByText(ending.title)).toBeTruthy();
+    // 指錯人的結局沒有解答篇，不講破答案
+    expect(screen.queryByRole('button', { name: S.endingSolution.replace('{title}', content.endings.solution?.title ?? '') })).toBeNull();
   });
 
   it('Link 的新訊息會跳通知：正開著的聊天室不跳，別的聊天室來的才跳；點通知直接進那個聊天室', () => {
@@ -512,5 +542,113 @@ describe('接上遊戲規則', () => {
     // 點通知：通知收掉，人到了那個私訊裡
     fireEvent.click(note);
     expect(screen.getByRole('heading', { name: last })).toBeTruthy();
+  });
+
+  it('系統視窗（登入確認）：蓋在畫面上，按鈕的字來自資料；軟牆只跳提醒、視窗還在；不允許或先不處理才關', () => {
+    const event = content.events.find((e) => e.kind === 'system')!;
+    if (event.kind !== 'system') return;
+    const soft = (event.options ?? []).find((o) => o.hints?.length)!;
+    const hard = (event.options ?? []).find((o) => !o.hints?.length)!;
+    const open = () => {
+      window.localStorage.clear();
+      const engine = createEngine(content);
+      const game = engine.step(engine.start(), { type: 'sendCover' }).state;
+      const full = Object.fromEntries(Object.entries(game.threads).map(([id, t]) => [id, t.appended.length]));
+      writeSave('case01', fingerprint(content), { game: { ...game, prompt: event.id }, ui: { ...EMPTY_UI, revealed: full }, introDone: true, coverSeen: [] });
+      render(<App mode="game" />);
+    };
+    open();
+    const dialog = screen.getByRole('alertdialog', { name: event.title });
+    expect(dialog.textContent).toContain(event.lines[0]);
+    const before = battery();
+    // 軟牆那顆：跳出資料裡的第一句提醒，視窗還在，不扣電
+    fireEvent.click(screen.getByRole('button', { name: soft.label }));
+    expect(screen.getByRole('status').textContent).toBe(soft.hints![0]);
+    expect(screen.getByRole('alertdialog', { name: event.title })).toBeTruthy();
+    expect(battery()).toBe(before);
+    // 另一顆：視窗關掉
+    fireEvent.click(screen.getByRole('button', { name: hard.label }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    // 重來一次，點視窗外面（先不處理）也會關
+    cleanup();
+    open();
+    fireEvent.click(screen.getByRole('button', { name: S.promptLater }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('有疑點可以問的時候，那個人的聊天室底部有一張上拉選單（先回完訊息才出現）；選了就送出那句話、扣電', () => {
+    // 準備一份「疑點都成立、每個聊天室都讀過」的存檔
+    const engine = createEngine(content);
+    const game = engine.step(engine.start(), { type: 'sendCover' }).state;
+    const ready = { ...game, cards: content.cards.map((c) => c.id), readThreads: content.threads.map((t) => t.id) };
+    const full = Object.fromEntries(Object.entries(ready.threads).map(([id, t]) => [id, t.appended.length]));
+    writeSave('case01', fingerprint(content), { game: ready, ui: { ...EMPTY_UI, revealed: full }, introDone: true, coverSeen: [] });
+    render(<App mode="game" />);
+    // 規則說現在能問的第一筆，以及它會在哪個聊天室送出
+    const test = engine.menu(ready).tests[0];
+    const card = content.cards.find((c) => c.id === test.card)!;
+    const target = test.targets[0];
+    const threadId = engine.testThread(card, target)!;
+    const thread = content.threads.find((t) => t.id === threadId)!;
+    const say = card.sayTo?.[target] ?? card.say!;
+    const here = engine.menu(ready).tests.flatMap((t) => t.targets.filter((who) => engine.testThread(content.cards.find((c) => c.id === t.card)!, who) === threadId)).length;
+    openApp('chat');
+    fireEvent.click(screen.getByRole('button', { name: new RegExp('^.?' + thread.title) }));
+    // 還有等著回的訊息時，疑點先不出現；回完才有
+    if (document.querySelector('.options__item')) {
+      expect(screen.queryByRole('button', { name: new RegExp(S.askHere) })).toBeNull();
+      fireEvent.click(document.querySelector('.options__item') as HTMLElement);
+      wait(20000);
+    }
+    // 底部是一條收著的把手，寫著有幾句可以問；點一下拉開，再點一下收起來
+    const handle = () => screen.getByRole('button', { name: new RegExp(S.askHere) });
+    expect(handle().textContent).toContain(String(here));
+    expect(screen.queryByRole('button', { name: say })).toBeNull();
+    fireEvent.click(handle());
+    expect(screen.getByRole('button', { name: say })).toBeTruthy();
+    fireEvent.click(handle());
+    expect(screen.queryByRole('button', { name: say })).toBeNull();
+    // 也可以用拉的：往上拉打開
+    fireEvent.touchStart(handle(), { touches: [{ clientX: 100, clientY: 500 }] });
+    fireEvent.touchEnd(handle(), { changedTouches: [{ clientX: 100, clientY: 420 }] });
+    expect(screen.getByRole('button', { name: say })).toBeTruthy();
+    const before = battery();
+    fireEvent.click(screen.getByRole('button', { name: say }));
+    expect(battery()).toBe(before - test.cost);
+    expect(screen.getAllByText(say).some((el) => el.className.includes('bubble'))).toBe(true);
+  });
+
+  it('相簿大圖：左右滑換上一張、下一張，下方一排縮圖可以直接點；滑照片不會被當成往右滑返回', () => {
+    startGame();
+    home();
+    openApp('photos');
+    const cells = [...document.querySelectorAll('.gallery__cell')] as HTMLElement[];
+    fireEvent.click(cells[0]);
+    const stage = document.querySelector('.viewer__stage') as HTMLElement;
+    const thumbs = () => [...document.querySelectorAll('.viewer__thumb')] as HTMLElement[];
+    const current = () => thumbs().findIndex((t) => t.getAttribute('aria-selected') === 'true');
+    // 縮圖跟格子一樣多，目前是第一張
+    expect(thumbs().length).toBe(cells.length);
+    expect(current()).toBe(0);
+    const swipe = (from: number, to: number) => {
+      fireEvent.touchStart(stage, { touches: [{ clientX: from, clientY: 300 }] });
+      fireEvent.touchMove(stage, { touches: [{ clientX: to, clientY: 304 }] });
+      fireEvent.touchEnd(stage, { changedTouches: [{ clientX: to, clientY: 304 }] });
+    };
+    // 往左滑：下一張；往右滑：回上一張，而且人還在大圖裡（沒有被當成返回）
+    swipe(260, 60);
+    expect(current()).toBe(1);
+    swipe(40, 240);
+    expect(current()).toBe(0);
+    expect(document.querySelector('.viewer')).toBeTruthy();
+    // 第一張再往右滑，不會動
+    swipe(40, 240);
+    expect(current()).toBe(0);
+    // 滑得太短不算
+    swipe(200, 180);
+    expect(current()).toBe(0);
+    // 點縮圖直接跳過去
+    fireEvent.click(thumbs()[3]);
+    expect(current()).toBe(3);
   });
 });

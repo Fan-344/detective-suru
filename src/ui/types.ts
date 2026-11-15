@@ -103,6 +103,8 @@ export interface ChatMessage {
   image?: ImagePlaceholder;
   /** 不是訊息，而是夾在訊息之間的一行小字（例如「已讀後過了很久才回」） */
   note?: string;
+  /** 這行小字靠自己這一側（例如自己那句話底下的「已讀」） */
+  noteMine?: boolean;
   /** 這則舊訊息同時是資料裡的一筆（線索）。捲進畫面時要告訴遊戲規則「看到了」 */
   itemId?: string;
 }
@@ -127,6 +129,8 @@ export interface ChatThread {
   options?: ReplyOption[];
   /** 輸入框裡已經有一句話，玩家只能按送出 */
   prefill?: string;
+  /** 現在可以在這個聊天室裡拿去問人的疑點：會送出的那句話、是哪一張疑點、問誰、耗多少電 */
+  asks?: { id: string; text: string; card: string; target: string; title: string; to?: string; cost: number; silent?: boolean }[];
   /** 官方帳號 */
   official?: boolean;
   /** 關了通知 */
@@ -378,6 +382,31 @@ export interface ClockData {
 }
 
 /** Suru 從畫面上方滑下來的一句提醒，不擋操作 */
+/** 手機自己跳出來的系統視窗（例如登入確認） */
+export interface SystemPrompt {
+  id: string;
+  title: string;
+  lines: string[];
+  options: { id: string; label: string }[];
+  /** 要不要附一張示意地圖；有的話這是寫在地圖上的地點名稱 */
+  map?: string;
+  /** 對方的訊息還在一則一則出現：等它們出完再跳，這段時間畫面先擋住不給按 */
+  waiting?: boolean;
+}
+
+/** 正在響的來電 */
+export interface IncomingCall {
+  id: string;
+  name: string;
+  avatar?: string;
+  /** 掛斷要耗多少電 */
+  declineCost: number;
+  /** 放著響完要耗多少電 */
+  ringCost: number;
+  /** 對方的訊息還在一則一則出現：先等它們出完再響，這段時間畫面先擋住不給按 */
+  waiting?: boolean;
+}
+
 export interface SuruNotice {
   id: number;
   text: string;
@@ -407,6 +436,10 @@ export interface PhoneData {
   calendar: CalendarData;
   clock: ClockData;
   notice?: SuruNotice;
+  /** 有人打來：蓋住整個畫面，只能掛斷或等它響完 */
+  call?: IncomingCall;
+  /** 系統視窗：要先處理才能做別的事 */
+  prompt?: SystemPrompt;
 }
 
 export interface PhoneActions {
@@ -417,6 +450,12 @@ export interface PhoneActions {
   onOpenSuru(): void;
   onOpenApp(appId: string): void;
   onDismissNotice(): void;
+  /** 系統視窗：按了某一顆按鈕；null 是不處理、關掉 */
+  onAnswerPrompt(option: string | null): void;
+  /** 來電：掛斷 */
+  onDeclineCall(): void;
+  /** 來電：沒人按，響完了 */
+  onLetRing(): void;
   onAccuseAnswer(stepId: string, value: string): void;
   /** 指認兇手的表：在某一格放上一張疑點或一個人 */
   onAccuseFill(slotId: string, answer: string): void;

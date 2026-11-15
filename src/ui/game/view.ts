@@ -2,7 +2,7 @@
 // 能做什麼、要扣多少電，一律問 engine；這裡只決定「怎麼排給畫面看」。
 
 import type { CaseContent, ImageRef, Item } from '../../content';
-import { memo, spotOf, type Engine, type GameState, type Menu } from '../../engine';
+import { memo, spotOf, type Engine, type GameState, type Menu, type Outcome } from '../../engine';
 import { S } from '../strings';
 import type {
   AccuseData,
@@ -51,9 +51,26 @@ export interface GameUi {
   accuseAnswers: string[];
   /** 指認兇手的表上次被退回時，站不住的那幾格 */
   accuseRejected: string[];
+  /** 對方已讀但沒有回的那幾句：每個聊天室裡，自己送出的第幾則（照送出的順序數） */
+  readNoReply: Record<string, number[]>;
 }
 
-export const EMPTY_UI: GameUi = { revealed: {}, noticed: {}, openThread: null, voiceLog: [], voiceRead: 0, accuseAnswers: [], accuseRejected: [] };
+export const EMPTY_UI: GameUi = { revealed: {}, noticed: {}, openThread: null, voiceLog: [], voiceRead: 0, accuseAnswers: [], accuseRejected: [], readNoReply: {} };
+
+/**
+ * 規則說「對方已讀但沒有回」的時候，記下是哪一句：就是那個聊天室裡剛送出的最後一則。
+ * 之後那句話底下會一直掛著「已讀」。
+ */
+export function markNoReply(ui: GameUi, state: GameState, outcomes: Outcome[]): GameUi {
+  let marks = ui.readNoReply ?? {};
+  for (const o of outcomes) {
+    if (o.kind !== 'noReply') continue;
+    const at = (state.threads[o.thread]?.appended.length ?? 0) - 1;
+    if (at < 0 || (marks[o.thread] ?? []).includes(at)) continue;
+    marks = { ...marks, [o.thread]: [...(marks[o.thread] ?? []), at] };
+  }
+  return marks === (ui.readNoReply ?? {}) ? ui : { ...ui, readNoReply: marks };
+}
 
 const UTILITY_LAYOUT: Record<string, LayoutKind> = {
   calculator: 'calculator',
@@ -133,6 +150,8 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
       const sig = m.signal;
       const note = sig ? [sig.readDelay, sig.typingStops ? S.signalTypingStops : undefined, sig.noReply ? S.signalNoReply : undefined].filter(Boolean).join('，') : '';
       if (note) messages.push({ id: `${t.id}-a${i}-sig`, from: m.from, day: S.today, time: '', note });
+      // 對方已讀、沒有回：在自己那句話底下掛一個「已讀」
+      if (ui.readNoReply?.[t.id]?.includes(i)) messages.push({ id: `${t.id}-a${i}-read`, from: m.from, day: S.today, time: '', note: S.readMark, noteMine: true });
     });
     const next = appended[revealed];
     const settled = revealed >= appended.length;
@@ -152,6 +171,31 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
       typing: next && next.from !== selfId ? next.from : undefined,
       options,
       prefill: state.phase === 'cover' && menu.cover && t.id === content.meta.coverThread ? content.meta.coverStory : undefined,
+      // 可以在這個聊天室問的疑點：跟 Suru 裡「拿去問誰」是同一份清單，只是從聊天室這頭進來。
+      // 對方的訊息還在出的時候先不給
+      asks: settled
+        ? menu.tests.flatMap((test) => {
+            const card = content.cards.find((c) => c.id === test.card);
+            if (!card) return [];
+            return test.targets.flatMap((target) => {
+              const text = card.sayTo?.[target] ?? card.say;
+              if (!text || engine.testThread(card, target) !== t.id) return [];
+              return [
+                {
+                  id: `ask::${card.id}::${target}`,
+                  text,
+                  card: card.id,
+                  target,
+                  title: card.title,
+                  // 群組裡要寫清楚是問誰
+                  to: t.members.length > 1 ? nameOf(target) : undefined,
+                  cost: test.cost,
+                  silent: menu.silent?.includes(target),
+                },
+              ];
+            });
+          })
+        : [],
     };
   });
 
@@ -202,7 +246,8 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
       dock: a.dock,
       folder: a.folder,
       background: a.background,
-      unread: layout === 'suru' ? (assistantNew ? 1 : 0) : layout === 'chat' ? undefined : badge,
+      // 電話的紅點再加上遊戲中沒接到的來電
+      unread: layout === 'suru' ? (assistantNew ? 1 : 0) : layout === 'chat' ? undefined : badge + (a.icon === 'phone' ? menu.missedCalls.length : 0),
     };
   });
 
@@ -232,6 +277,21 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
           fields: item.fields,
           image: item.image ? toImage(item.image, item.id, item.id) : undefined,
         },
+      });
+    }
+    // 電話：遊戲中沒接到的來電排在最上面，最新的在前
+    if (a.icon === 'phone' && menu.missedCalls.length) {
+      groups.unshift({
+        label: S.callMissedGroup,
+        rows: menu.missedCalls
+          .map((c, i) => ({
+            id: `missed-${i}`,
+            title: nameOf(c.from),
+            subtitle: S.callMissed,
+            unread: true,
+            detail: { title: nameOf(c.from), lines: [S.callMissed] },
+          }))
+          .reverse(),
       });
     }
     lists[a.id] = groups;
@@ -333,6 +393,8 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     alarms: (content.flavor?.alarms ?? []).map((a, i) => ({ id: `alarm${i}`, time: a.time, label: `${a.label}・${a.repeat}`, on: a.on })),
   };
 
+  // 對方的訊息是不是還在一則一則出現（來電和系統視窗都等它們出完再跳）
+  const stillArriving = Object.entries(state.threads).some(([id, t]) => (ui.revealed[id] ?? 0) < t.appended.length);
   return {
     // 開局那句話一定要先送出，送出前不能做別的事
     locked: state.phase === 'cover',
@@ -353,6 +415,31 @@ export function buildPhoneData(engine: Engine, state: GameState, ui: GameUi): Ph
     calendar,
     clock,
     notice: ui.notice,
+    prompt: (() => {
+      const e = menu.prompt ? content.events.find((x) => x.id === menu.prompt?.event) : undefined;
+      if (!menu.prompt || e?.kind !== 'system') return undefined;
+      return {
+        id: e.id,
+        title: e.title,
+        lines: e.lines,
+        // 只列規則說現在能按的那幾顆，字用資料裡寫的
+        options: (e.options ?? []).filter((o) => menu.prompt?.options.includes(o.id)).map((o) => ({ id: o.id, label: o.label })),
+        // 資料在事件上寫了 map.label 才畫示意地圖
+        map: e.map?.label,
+        waiting: stillArriving,
+      };
+    })(),
+    call: menu.call
+      ? {
+          id: menu.call.event,
+          name: nameOf(menu.call.from),
+          avatar: menu.call.from,
+          declineCost: menu.call.declineCost,
+          ringCost: menu.call.ringCost,
+          // 她通常是先傳了幾句才打來：等那幾句出完再響
+          waiting: stillArriving,
+        }
+      : undefined,
   };
 }
 
@@ -471,7 +558,8 @@ function buildSuru(engine: Engine, state: GameState, ui: GameUi, menu: Menu, n: 
               text,
               title: card.title,
               // 同一張疑點問不同的人，可能在不同的聊天室送出：多人的聊天室就寫出名字，否則是私訊
-              where: inGroup(threadId) ? S.probeIn.replace('{thread}', n.threadTitle(threadId as string)) : S.probeDm,
+              // 已經不理人的對象照樣可以問，只是先標出來：問了只會已讀不回
+              where: (inGroup(threadId) ? S.probeIn.replace('{thread}', n.threadTitle(threadId as string)) : S.probeDm) + (menu.silent?.includes(c.id) ? '・' + S.silentTag : ''),
               cost: t.cost,
               threadId,
             },

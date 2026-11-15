@@ -5,7 +5,7 @@ import type { GameUi } from './view';
 // 瀏覽器的儲存空間可能不能用（無痕模式、空間滿、被關掉），所以讀寫全部包起來，失敗就當作沒有存檔。
 
 /** 存檔格式本身改了（多存或少存東西）就把這個數字加一，舊存檔會直接作廢 */
-const FORMAT = 1;
+const FORMAT = 2;
 
 export interface Saved {
   game: GameState;

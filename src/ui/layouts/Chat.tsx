@@ -125,6 +125,11 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
   const scroller = useRef<HTMLDivElement>(null);
   // 聊天室一打開停在最新的訊息。上面還有舊訊息時，頂端給一個提示，點一下往上翻一頁
   const [older, setOlder] = useState(false);
+  const asks = thread.asks ?? [];
+  // 「拿疑點來問」的上拉選單：平常收著，點把手或往上拉才打開
+  const [asksOpen, setAsksOpen] = useState(false);
+  const pullFrom = useRef<number | null>(null);
+  const dragged = useRef(false);
   // 哪些是線索的舊訊息已經回報過「看到了」
   const reported = useRef(new Set<string>());
   const reportSeen = () => {
@@ -180,7 +185,7 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
           <div key={`${group.day}-${gi}`}>
             <div className="room__day"><span>{group.day}</span></div>
             {group.items.map((m, i) => {
-              if (m.note) return <div key={m.id} className="room__note">{m.note}</div>;
+              if (m.note) return <div key={m.id} className={'room__note' + (m.noteMine ? ' room__note--mine' : '')}>{m.note}</div>;
               const mine = m.from === selfId;
               const prev = group.items[i - 1]?.note ? undefined : group.items[i - 1];
               const next = group.items[i + 1]?.note ? undefined : group.items[i + 1];
@@ -231,6 +236,62 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
           {thread.options.map((o) => (
             <button key={o.id} className="options__item" onClick={() => onChoose(o.id)}>{o.text}</button>
           ))}
+        </div>
+      ) : asks.length > 0 ? (
+        // 等著回的訊息都回完了，手上的疑點才出現：一張從底部往上拉的選單，平常收成一條
+        <div className="asksheet-slot">
+        <div className={'asksheet' + (asksOpen ? ' asksheet--open' : '')}>
+          <button
+            className="asksheet__handle"
+            aria-expanded={asksOpen}
+            onClick={() => {
+              // 剛剛是用拖的，就不要再當成點一下
+              if (dragged.current) dragged.current = false;
+              else setAsksOpen(!asksOpen);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              pullFrom.current = e.touches[0]?.clientY ?? null;
+              dragged.current = false;
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              const from = pullFrom.current;
+              pullFrom.current = null;
+              const to = e.changedTouches[0]?.clientY;
+              if (from === null || to === undefined || Math.abs(to - from) < 24) return;
+              // 往上拉打開，往下拉收起來
+              dragged.current = true;
+              setAsksOpen(to < from);
+            }}
+          >
+            <span className="asksheet__grab" aria-hidden="true" />
+            <span className="asksheet__title">{S.askHere}（{asks.length}）</span>
+          </button>
+          {asksOpen && (
+            <div className="asksheet__list">
+              {asks.map((a) => (
+                <button
+                  key={a.id}
+                  className="options__item options__item--ask"
+                  onClick={() => {
+                    setAsksOpen(false);
+                    onChoose(a.id);
+                  }}
+                  aria-label={a.text}
+                >
+                  <span className="options__ask-text">{a.text}</span>
+                  <span className="options__ask-meta">
+                    {a.to ? S.askTo.replace('{name}', a.to) + '・' : ''}
+                    {a.title}
+                    {a.cost ? '・－' + a.cost + '%' : ''}
+                    {a.silent ? '・' + S.silentTag : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         </div>
       ) : null}
     </div>
