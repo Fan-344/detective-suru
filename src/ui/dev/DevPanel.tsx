@@ -9,10 +9,15 @@ interface Props {
   onResetData?(): void;
   onShowcase?(): void;
   onVoice?(): void;
+  /** 直接看結局：只在本機開發模式給，打包出去的版本沒有 */
+  endings?: { id: string; title: string }[];
+  onEnding?(id: string): void;
+  /** 結局快轉：剩下的段落立刻全部出現。只在本機開發模式、結局畫面時給 */
+  onSkipEnding?(): void;
 }
 
 /** 驗收用的小面板，只在開發模式或網址帶 ?dev 時出現。不是遊戲的一部分。 */
-export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUnread, onResetData, onShowcase, onVoice }: Props) {
+export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUnread, onResetData, onShowcase, onVoice, endings, onEnding, onSkipEnding }: Props) {
   const [open, setOpen] = useState(false);
   return (
     <aside className={`dev ${open ? 'dev--open' : ''}`}>
@@ -41,7 +46,26 @@ export function DevPanel({ battery, onBattery, onSkipIntro, onRestart, onClearUn
             {onResetData && <button onClick={onResetData}>還原假資料</button>}
             {onShowcase && <button onClick={onShowcase}>Suru 樣式</button>}
             {onVoice && <button onClick={onVoice}>心聲通知</button>}
+            {onSkipEnding && <button onClick={onSkipEnding}>結局快轉</button>}
           </div>
+          {endings && onEnding && (
+            <label className="dev__row">
+              <span>直接看結局</span>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onEnding(e.target.value);
+                }}
+              >
+                <option value="">選一個結局…</option>
+                {endings.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.id}　{x.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       )}
     </aside>

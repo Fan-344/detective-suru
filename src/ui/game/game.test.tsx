@@ -45,6 +45,13 @@ function startGame() {
   wait(20000);
 }
 
+/** 結局照節奏一段一段出現：用開發面板的「結局快轉」讓剩下的段落全部出現 */
+function showWholeEnding() {
+  fireEvent.click(screen.getByRole('button', { name: 'DEV' }));
+  fireEvent.click(screen.getByRole('button', { name: '結局快轉' }));
+  fireEvent.click(screen.getByRole('button', { name: '×' }));
+}
+
 describe('接上遊戲規則', () => {
   it('開場文字來自資料檔，結束後停在群組，輸入框是固定的掩護說法', () => {
     render(<App mode="game" />);
@@ -457,6 +464,7 @@ describe('接上遊戲規則', () => {
       // 不扣電；結局裡只有放錯的那一格對應的反駁，沒放錯的不會出現
       expect(battery()).toBe(before);
       expect(screen.getByRole('heading', { name: weak.title })).toBeTruthy();
+      showWholeEnding();
       const page = () => document.querySelector('.ending__scroll')?.textContent ?? '';
       const said = (l: string) => [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]);
       const rebuttals = (weak as { rebuttals?: Record<string, string[]> }).rebuttals ?? {};
@@ -470,6 +478,7 @@ describe('接上遊戲規則', () => {
       cleanup();
       render(<App mode="game" />);
       expect(screen.getByRole('heading', { name: weak.title })).toBeTruthy();
+      showWholeEnding();
       fireEvent.click(screen.getByRole('button', { name: S.endingRetry }));
       expect(battery()).toBe(before);
       if (!document.querySelector('.aform')) {
@@ -498,18 +507,19 @@ describe('接上遊戲規則', () => {
     const to = ch.recipients[0];
     fireEvent.click(screen.getByRole('radio', { name: nameOfPerson(to) }));
     fireEvent.click(screen.getByRole('button', { name: S.accuseSubmit }));
+    showWholeEnding();
     expect(screen.getByRole('button', { name: S.endingRestart })).toBeTruthy();
     // 結局裡寫成「名字：「一句」「又一句」」的段落排成訊息：一對引號一則泡泡，其餘是旁白
     // 可能有兩個結局同名，所以連內文一起比：畫面上有它每一段裡的字才算
     const onScreen = document.querySelector('.ending__scroll')?.textContent ?? '';
     const lastBit = (l: string) => [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]).pop() ?? l;
     const shown = content.endings.endings.find((e) => document.querySelector('.ending__title')?.textContent === e.title && e.text.every((l) => onScreen.includes(lastBit(l))))!;
-    // 冒號前面是角色的名字才算對話
-    const isSaid = (l: string) => content.characters.some((c) => new RegExp('^' + c.name + '：(?:「[^」]*」\\s*)+$').test(l.trim()));
+    // 整段是「你／角色名：「…」「…」」才算對話（你是 Suru 自己傳出去的）
+    const isSaid = (l: string) => new RegExp('^(' + [S.endingSelf, ...content.characters.map((c) => c.name)].join('|') + ')：(「[^」]*」)+$').test(l);
     const quotes = shown.text.flatMap((l) => (isSaid(l) ? [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]) : []));
     expect([...document.querySelectorAll('.endchat__bubble')].map((el) => el.textContent)).toEqual(quotes);
     const narration = shown.text.filter((l) => !isSaid(l));
-    expect([...document.querySelectorAll('.ending__scroll > p:not(.ending__note)')].map((el) => el.textContent)).toEqual(narration);
+    expect([...document.querySelectorAll('.ending__seg > p')].map((el) => el.textContent)).toEqual(narration);
     // 破案的結局寫出這是第幾次指認、還剩多少電（被退回不算；進過「站不住」的結局算一次）
     expect(screen.getByText(S.endingSolved.replace('{n}', weak ? '2' : '1').replace('{battery}', String(battery())))).toBeTruthy();
     // 破案的結局也能回到指認之前：不用重新指認，直接回到「交給誰」那一步，可以改交給別人看別的結局
@@ -521,24 +531,11 @@ describe('接上遊戲規則', () => {
     const other = ch.recipients[ch.recipients.length - 1];
     fireEvent.click(screen.getByRole('radio', { name: nameOfPerson(other) }));
     fireEvent.click(screen.getByRole('button', { name: S.accuseSubmit }));
+    showWholeEnding();
     expect(screen.getByRole('button', { name: S.endingRestart })).toBeTruthy();
     // 改交給別人不算多一次指認
     expect(screen.getByText(S.endingSolved.replace('{n}', weak ? '2' : '1').replace('{battery}', String(battery())))).toBeTruthy();
     // 指對兇手的結局：看完可以接著看解答篇，再回到結局
-    const solution = content.endings.solution;
-    if (solution) {
-      expect(document.querySelector('.report')).toBeNull();
-      fireEvent.click(screen.getByRole('button', { name: S.endingSolution.replace('{title}', solution.title) }));
-      expect(screen.getByRole('heading', { name: solution.title })).toBeTruthy();
-      // 排成報告：【】裡的字是欄位標籤，後面是內容；每一行的字都在
-      const page = document.querySelector('.report')!;
-      const strip = (t: string) => t.replace(/[【】：:\s]/g, '');
-      for (const line of solution.text) expect(strip(page.textContent ?? '')).toContain(strip(line));
-      const labels = solution.text.flatMap((l) => (/^【(.+?)】/.exec(l)?.[1] ? [/^【(.+?)】/.exec(l)![1]] : []));
-      expect([...page.querySelectorAll('.report__row h2')].map((el) => el.textContent)).toEqual(labels);
-      fireEvent.click(screen.getByRole('button', { name: S.endingBack }));
-      expect(document.querySelector('.report')).toBeNull();
-    }
   });
 
   it('指認兇手：人指錯了，交出去就直接進那個人的結局', () => {
@@ -549,6 +546,7 @@ describe('接上遊戲規則', () => {
     fireEvent.click(handIn());
     const ending = content.endings.endings.find((e) => e.trigger.kind === 'challenge' && e.trigger.accused === innocent)!;
     expect(screen.getByText(ending.title)).toBeTruthy();
+    showWholeEnding();
     // 指錯人的結局可以回到指認之前：回到那張表，格子（含指錯的人）都還在，電量沒變，可以改了再交
     const beforeRewind = battery();
     fireEvent.click(screen.getByRole('button', { name: S.endingRetry }));
@@ -559,10 +557,10 @@ describe('接上遊戲規則', () => {
     // 再交一次（還是指錯）回到同一個結局
     fireEvent.click(handIn());
     expect(screen.getByText(ending.title)).toBeTruthy();
+    showWholeEnding();
     // 指錯人的結局只有「回到指認之前」和「重新開始」
     expect([...document.querySelectorAll('.ending > button')].map((el) => el.textContent)).toEqual([S.endingRetry, S.endingRestart]);
     // 指錯人的結局沒有解答篇，不講破答案
-    expect(screen.queryByRole('button', { name: S.endingSolution.replace('{title}', content.endings.solution?.title ?? '') })).toBeNull();
   });
 
   it('Link 的新訊息會跳通知：正開著的聊天室不跳，別的聊天室來的才跳；點通知直接進那個聊天室', () => {

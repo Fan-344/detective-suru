@@ -89,6 +89,7 @@ ul, ol { list-style: none; }
 
 /* 機身下緣與實體 home 鍵：舊式手機的造型，圓鍵上是一個小圓點，不用任何品牌的記號 */
 .chin {
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
@@ -277,11 +278,13 @@ ul, ol { list-style: none; }
   inset: 0;
   /* 她的桌布：以晴自己畫的窗邊貓 */
   background: #a98bd6 url('./assets/wallpaper.jpg') center bottom / cover no-repeat;
+  /* 主畫面的圖示大小看畫面高度：矮的螢幕上圖示縮小 */
+  container-type: size;
 }
 .homewrap--close { animation: home-in 0.26s ease-out; }
 @keyframes home-in { from { opacity: 0; transform: scale(1.06); } }
 
-.home { height: 100%; display: flex; flex-direction: column; padding: 22px 16px 0; position: relative; color: #fff; }
+.home { height: 100%; display: flex; flex-direction: column; padding: 16px 16px 0; position: relative; color: #fff; }
 .home__grid {
   flex: 1;
   display: grid;
@@ -289,7 +292,13 @@ ul, ol { list-style: none; }
   grid-auto-rows: min-content;
   gap: 22px 6px;
   align-content: start;
+  /* 畫面不夠高時，上面的圖示自己捲，最下排 Dock 一定看得到 */
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding-top: 6px;
 }
+.home__grid::-webkit-scrollbar { display: none; }
 .home__dots { flex: none; display: flex; justify-content: center; gap: 8px; padding: 10px 0; }
 .home__dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); }
 .home__dots span.on { background: #fff; }
@@ -466,7 +475,8 @@ ul, ol { list-style: none; }
 .viewer__img.img--photo { background: #000; }
 
 .room { position: relative; }
-.room__older { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 6px 14px; border-radius: 16px; background: rgba(40, 42, 50, 0.82); color: #fff; font-size: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); white-space: nowrap; }
+/* 「上面還有較早的訊息」佔自己一列，放在訊息上方，不蓋住任何一則 */
+.room__older { flex: none; display: block; width: 100%; padding: 6px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; text-align: center; white-space: nowrap; }
 .room__note { text-align: center; margin: 8px 0 2px; font-size: 12px; color: var(--muted); }
 .detail__img { width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius); margin-top: 18px; }
 .detail__img.img--photo { aspect-ratio: auto; }
@@ -1215,15 +1225,6 @@ ul, ol { list-style: none; }
 .ending__scroll::-webkit-scrollbar { display: none; }
 
 /* 解答篇：排成一份調查報告。表頭兩行、之後每個項目一格，項目名稱是標籤 */
-.report { font-family: -apple-system, "PingFang TC", sans-serif; }
-.report__head { margin: -8px 0 20px; padding: 12px 14px; border: 1px solid var(--s-line); border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
-.report__head div { display: flex; gap: 12px; padding: 4px 0; font-size: 14px; line-height: 1.6; }
-.report__head dt { flex: none; width: 4em; color: var(--s-dim); }
-.report__head dd { flex: 1; min-width: 0; color: #e8eaf2; }
-.report__row { padding: 14px 0; border-top: 1px solid var(--s-line); }
-.report__row h2 { margin-bottom: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: var(--s-accent); }
-.ending__scroll .report__row p, .ending__scroll .report__plain, .ending__scroll .report__head p { margin: 0; font-size: 15.5px; line-height: 1.8; font-weight: 400; color: #e8eaf2; }
-.ending__scroll .report__plain { padding: 14px 0; border-top: 1px solid var(--s-line); }
 
 /* 結局裡的群組對話：排成訊息的樣子，用 Suru 這一層的深色 */
 .endchat { display: flex; gap: 10px; margin-bottom: 4px; font-family: -apple-system, "PingFang TC", sans-serif; }
@@ -1374,3 +1375,61 @@ ul, ol { list-style: none; }
 .gpic--time b:nth-child(2) { width: 70%; }
 .gpic--time b::before { content: ""; position: absolute; left: -14.500px; top: -2px; width: 8px; height: 8px; border-radius: 50%; background: #8b6bff; }
 .gpic--accuse { height: 28px; padding: 0 10px; border-radius: 14px; align-items: center; font-size: 10.500px; letter-spacing: 0.1em; color: #fff; white-space: nowrap; border: 1.500px solid transparent; background: linear-gradient(#0c0e16, #0c0e16) padding-box, var(--s-grad) border-box; }
+
+/* 矮的螢幕（有網址列的小手機、橫放的平板框）：主畫面圖示和間距縮小 */
+@container (max-height: 600px) {
+  .home .app-icon:not(.app-icon--sm) { width: 50px; height: 50px; }
+  .home .home__grid { gap: 12px 6px; }
+  .home .home__dots { padding: 6px 0; }
+  .home .home__dock { padding: 8px 16px 6px; }
+}
+@container (max-height: 460px) {
+  .home .app-icon:not(.app-icon--sm) { width: 44px; height: 44px; }
+  .home .tile { gap: 4px; }
+  .home .home__dots { display: none; }
+}
+
+/* 機身下緣右邊的喇叭：音效開關 */
+.chin__sound { position: absolute; right: 22px; top: calc(50% - env(safe-area-inset-bottom) / 2); transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #8a8f9c; }
+.chin__sound--off { color: #555a66; }
+.chin__sound:active { transform: translateY(-50%) scale(0.9); }
+
+/* 結局跟開場同一套：段落用 .intro__seg（講過的變淡），最新的一段停在畫面中間 */
+.ending__scroll { cursor: pointer; }
+.ending__scroll .ending__seg { margin-bottom: 26px; }
+.ending__scroll .ending__seg p { margin: 0; font-size: 18px; line-height: 2; }
+.ending__end { height: 46vh; }
+.ending .ending__scroll { padding-top: 26vh; }
+/*
+ * 螢幕暗下（手機沒電）：四周往中間壓一個大暗角，整個畫面慢慢褪成黑白，之後一直維持。
+ * 暗角壓到最深之後稍微退回一點，讓後面的字讀得清楚。
+ */
+.ending--off { animation: screen-off 2.4s ease-in-out forwards; }
+@keyframes screen-off {
+  0% { filter: none; }
+  70% { filter: grayscale(1) brightness(0.45) contrast(1.15); }
+  100% { filter: grayscale(1) brightness(0.72) contrast(1.1); }
+}
+.ending__vignette { position: absolute; inset: -10%; z-index: 3; pointer-events: none; background: radial-gradient(ellipse 62% 56% at 50% 46%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.78) 78%, #000 100%); animation: vignette-in 2.4s ease-in-out both; }
+/* 按鈕和小字一樣是黑白，但不被暗角蓋住，要看得清楚 */
+.ending--off > button { position: relative; z-index: 4; }
+.ending--off .ending__minor, .ending__scroll .ending--off .ending__note, .ending--off .ending__note { color: #b4b8c4; }
+@keyframes vignette-in {
+  0% { opacity: 0; transform: scale(1.8); }
+  70% { opacity: 1; transform: scale(0.88); }
+  100% { opacity: 0.9; transform: scale(1); }
+}
+
+/* 開發工具直接跳進來的結局 */
+.ending__scroll .ending__dev { display: inline-block; margin: 0 0 12px; padding: 2px 8px; border: 1px dashed #e0a040; border-radius: 6px; font-size: 11px; line-height: 1.6; letter-spacing: 0.1em; color: #e0a040; font-weight: 600; }
+.dev select { max-width: 100%; font-size: 12px; }
+
+/* 「點一下繼續」：開場和結局都一律用點的，提示要看得清楚；結局暗下之後也不被暗角蓋住 */
+.intro__hint { font-size: 13px; color: #c3c7d6; }
+.ending--off > .intro__hint { position: relative; z-index: 4; }
+
+/* 結局的對話段落：一段一則（同一個人那一次的所有泡泡）。「你」是 Suru 傳出去的，靠右、用自己這一方的顏色 */
+.ending__seg--chat .endchat { margin: 0; }
+.endchat--mine { justify-content: flex-end; }
+.endchat--mine .endchat__main { align-items: flex-end; }
+.endchat--mine .endchat__bubble { max-width: 86%; background: var(--tint); color: #fff; border-radius: 17px 6px 17px 17px; }

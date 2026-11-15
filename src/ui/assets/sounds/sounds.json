@@ -1,0 +1,14 @@
+{
+  "_說明": "音效清單。檔案是 <id>.m4a，都由 _source/make_sounds.py 合成，沒有外部素材。volume 是建議播放音量（0–1）；vibrate 是 navigator.vibrate 的參數，iPhone 不支援，沒有就不震；loop 為 true 的要循環播放到事件結束。",
+  "sounds": [
+    { "id": "wake", "when": "開場 Suru 被喚醒（玩家第一次點擊之後）", "volume": 0.8 },
+    { "id": "clue_spotted", "when": "出現新的「在意的地方」", "volume": 0.7 },
+    { "id": "clue_found", "when": "在意的地方答對，翻成疑點", "volume": 0.8, "vibrate": [40] },
+    { "id": "clue_wrong", "when": "在意的地方答錯（扣電）", "volume": 0.7 },
+    { "id": "call_ring", "when": "來電畫面出現（含連環來電），掛斷或響完就停", "volume": 0.7, "loop": true, "vibrate": [450, 200, 450, 1300] },
+    { "id": "login_alert", "when": "跳出登入確認視窗（附位置地圖）", "volume": 0.8, "vibrate": [80, 120, 80] },
+    { "id": "solved", "when": "指認靖雯且全對，進入選擇把證據交給誰", "volume": 0.8 },
+    { "id": "case_failed", "when": "指錯人結局、站不住結局開始時", "volume": 0.8 },
+    { "id": "power_off", "when": "電量歸零，或結局逐段顯示到螢幕暗下那一段", "volume": 0.8, "vibrate": [100, 110, 100, 130, 300], "note": "一路往下滑的音高上打三下，快沒電的感覺" }
+  ]
+}

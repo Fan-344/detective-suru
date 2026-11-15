@@ -55,17 +55,23 @@ interface AvatarProps {
   onOpen?(): void;
 }
 
+/** 沒有圖的頭像要放的那個字：先拿掉括號裡的補充（像「（月光雜誌）」「（214）」），再取最後一個字 */
+export function avatarChar(name: string): string {
+  const bare = name.replace(/[（(［\[【][^）)］\]】]*[）)］\]】]?/g, '').trim();
+  return Array.from(bare || name).slice(-1)[0] ?? '';
+}
+
 /** 頭像：有圖用圖，沒有就用名字最後一個字。給了 onZoom 就能點開看大圖 */
 export function Avatar({ name, avatar, onZoom, onOpen }: AvatarProps) {
   const src = avatarUrl(avatar);
   if (onOpen) {
     return (
       <button className={'avatar' + (src ? ' avatar--img' : '')} onClick={onOpen} aria-label={S.profileOpen + '：' + name}>
-        {src ? <img src={src} alt="" draggable={false} /> : name.slice(-1)}
+        {src ? <img src={src} alt="" draggable={false} /> : avatarChar(name)}
       </button>
     );
   }
-  if (!src) return <span className="avatar" aria-hidden="true">{name.slice(-1)}</span>;
+  if (!src) return <span className="avatar" aria-hidden="true">{avatarChar(name)}</span>;
   const img = <img src={src} alt="" draggable={false} />;
   return onZoom ? (
     <button className="avatar avatar--img" onClick={() => onZoom({ src, alt: name })} aria-label={`${S.zoomOpen}：${name}`}>
@@ -149,15 +155,33 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
     fresh.forEach((id) => reported.current.add(id));
     onSeen(fresh);
   };
+  // 「上面還有較早的訊息」只在剛打開聊天室時提示幾秒；玩家自己往上捲、送出或收到新訊息就收起來，
+  // 不會一直蓋在最上面那則訊息上
   const checkOlder = () => {
     const el = scroller.current;
-    if (el) setOlder(el.scrollTop > 24);
+    if (el && el.scrollHeight - el.clientHeight - el.scrollTop > 40) setOlder(false);
     reportSeen();
   };
   useEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
-    checkOlder();
+    setOlder(!!el && el.scrollTop > 24);
+    reportSeen();
+    const timer = window.setTimeout(() => setOlder(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [thread.id]);
+  const lastSeen = useRef('');
+  useEffect(() => {
+    const key = `${thread.id}|${thread.messages.length}|${thread.typing ?? ''}`;
+    const sameRoom = lastSeen.current.startsWith(thread.id + '|');
+    const changed = lastSeen.current !== key;
+    lastSeen.current = key;
+    // 同一個聊天室裡有新訊息或輸入中：捲到最底、收起提示（剛打開時交給上面那段）
+    if (!sameRoom || !changed) return;
+    const el = scroller.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setOlder(false);
+    reportSeen();
   }, [thread.id, thread.messages.length, thread.typing]);
   const pageUp = () => {
     const el = scroller.current;
@@ -175,7 +199,7 @@ export function ChatRoom({ thread, selfId, onChoose, onSendPrefill, onZoom, onPr
   return (
     <div className="room">
       {older && (
-        <button className="room__older" onClick={pageUp}>
+        <button className="room__older" onClick={() => { setOlder(false); pageUp(); }}>
           <span aria-hidden="true">↑ </span>
           {S.olderMessages}
         </button>

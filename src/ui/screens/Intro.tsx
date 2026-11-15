@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { AppIcon } from '../shell/icons';
 import { S } from '../strings';
 import { SuruHeader, SuruMark } from '../suru/Suru';
 import type { IconId, IntroSegment } from '../types';
+import { useBringIntoView } from './paced';
 
 interface Props {
   title: string;
@@ -62,16 +63,8 @@ export function Intro({ title, segments, onDone, noticeIcon, dock = [] }: Props)
   const scroller = useRef<HTMLDivElement>(null);
   const current = useRef<HTMLDivElement>(null);
 
-  // 只捲動這個區塊本身，讓最新的一段停在畫面上方三分之一處。
-  // 不用 scrollIntoView：它會連外層的頁面一起捲，在電腦上會整個跑掉。
-  useEffect(() => {
-    const box = scroller.current;
-    const el = current.current;
-    if (!box || !el) return;
-    const top = Math.max(0, el.offsetTop - box.clientHeight * 0.28);
-    if (typeof box.scrollTo === 'function') box.scrollTo({ top, behavior: 'smooth' });
-    else box.scrollTop = top;
-  }, [shown]);
+  // 讓最新的一段停在畫面上方三分之一處
+  useBringIntoView(scroller, current, shown, 0.28);
 
   const advance = () => {
     if (shown >= segments.length) onDone();

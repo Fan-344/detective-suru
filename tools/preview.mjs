@@ -375,15 +375,6 @@ if (endingsFile) {
       p();
     }
   }
-  if (endingsFile.solution) {
-    p();
-    p(`### 解答篇：${endingsFile.solution.title}　〔指對兇手的結局之後接著顯示〕`);
-    p();
-    for (const line of endingsFile.solution.text) {
-      p(line);
-      p();
-    }
-  }
 }
 
 p();

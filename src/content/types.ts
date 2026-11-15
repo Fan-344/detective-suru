@@ -568,8 +568,17 @@ export interface ChallengeField {
 export interface Ending {
   id: string;
   title: string;
-  /** 結局文字，一段一個元素 */
+  /**
+   * 結局文字，一段一個元素。
+   * 整段寫成「名字：「…」「…」」（名字是 你／品妤／宗翰／靖雯／阿澤，冒號是全形）的，畫面顯示成對話泡泡：
+   * 每組「」一個泡泡，「你」靠右（Suru 傳出去的），其他人靠左並標名字。其餘段落照敘述顯示。
+   */
   text: string[];
+  /**
+   * 手機螢幕暗下的那一段，必須和 text 裡某一段一字不差。
+   * 畫面逐段顯示結局，顯示到這一段時播 power_off 並讓畫面暗下。沒有就不做這個效果。
+   */
+  screenOff?: string;
   /**
    * 觸發條件。
    * - battery：電量歸零

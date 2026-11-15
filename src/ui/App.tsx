@@ -8,6 +8,7 @@ import { Dead } from './screens/Dead';
 import { Ending } from './screens/Ending';
 import { Intro } from './screens/Intro';
 import { Phone } from './shell/Phone';
+import { SoundToggle } from './shell/SoundToggle';
 import { S } from './strings';
 import { Showcase } from './suru/Showcase';
 import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from './types';
@@ -112,6 +113,7 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
           >
             <span />
           </button>
+          <SoundToggle />
         </div>
       </div>
       <div className="rotate" role="alert">
@@ -126,6 +128,8 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
 /** 真的遊戲：內容來自 content/，規則來自 src/engine */
 function GameApp() {
   const game = useGame();
+  // 開發用：結局快轉（按一次，剩下的段落全部出現）
+  const [endingSkip, setEndingSkip] = useState(0);
   if (game.stage === 'error') {
     return (
       <div className="stage">
@@ -146,10 +150,10 @@ function GameApp() {
       onIntroDone={game.finishIntro}
       noticeIcon={game.noticeIcon}
       onRestart={game.restart}
-      overlay={game.ending ? <Ending title={game.ending.title} text={game.ending.text} solution={game.ending.solution} note={game.ending.note} onRetry={game.ending.canRetry ? game.rewind : undefined} speakers={game.ending.speakers} onRestart={game.restart} /> : undefined}
+      overlay={game.ending ? <Ending key={`${game.run}-${game.ending.id}`} devBadge={game.ending.dev ? 'DEV 模擬' : undefined} devSkip={import.meta.env.DEV ? endingSkip : undefined} screenOff={game.ending.screenOff} title={game.ending.title} text={game.ending.text} note={game.ending.note} onRetry={game.ending.canRetry ? game.rewind : undefined} speakers={game.ending.speakers} onRestart={game.restart} /> : undefined}
       dev={
         devEnabled() ? (
-          <DevPanel battery={game.battery} onBattery={game.setBattery} onSkipIntro={game.finishIntro} onRestart={game.restart} />
+          <DevPanel battery={game.battery} onBattery={game.setBattery} onSkipIntro={game.finishIntro} onRestart={game.restart} endings={import.meta.env.DEV ? game.endingList : undefined} onEnding={import.meta.env.DEV ? game.devEnding : undefined} onSkipEnding={import.meta.env.DEV && game.ending ? () => setEndingSkip((n) => n + 1) : undefined} />
         ) : undefined
       }
     />

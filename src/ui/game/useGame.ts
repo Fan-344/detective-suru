@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadCase } from '../../content';
-import { createEngine, endingText, isSolvedEnding, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
+import { playSound, stopAllSounds, stopSound, unlockSound } from '../sound';
+import { createEngine, endingText, isSolvedEnding, isWeakEnding, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
 import { S } from '../strings';
 import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
 import { clearSave, fingerprint, loadSave, writeSave } from './save';
@@ -79,6 +80,29 @@ function reactTo(engine: Engine, ui: GameUi, outcomes: Outcome[]): GameUi {
   return next;
 }
 
+/**
+ * 這一步該出什麼聲音：看規則回報的結果和前後的狀態。規則本身不知道有聲音。
+ * 訊息、群組、按鈕、提示都不出聲。
+ */
+function soundFor(engine: Engine, before: GameState, after: GameState, outcomes: Outcome[]) {
+  // 新出現「在意的地方」
+  if (after.concerns.some((c) => !before.concerns.some((x) => x.card === c.card))) playSound('clue_spotted');
+  for (const o of outcomes) {
+    if (o.kind === 'spot') playSound(o.right ? 'clue_found' : 'clue_wrong');
+    else if (o.kind === 'call') playSound('call_ring');
+    else if (o.kind === 'callEnded') stopSound('call_ring');
+    else if (o.kind === 'prompt') playSound('login_alert');
+    else if (o.kind === 'challengePassed') playSound('solved');
+    else if (o.kind === 'ending') {
+      stopSound('call_ring');
+      const ending = engine.content.endings.endings.find((e) => e.id === o.ending);
+      if (!ending) continue;
+      if (ending.trigger.kind === 'battery') playSound('power_off');
+      else if (!isSolvedEnding(engine.content, ending)) playSound('case_failed');
+    }
+  }
+}
+
 export function useGame(caseId = 'case01') {
   const booted = useMemo(() => boot(caseId), [caseId]);
   const engine = 'engine' in booted ? booted.engine : null;
@@ -92,10 +116,35 @@ export function useGame(caseId = 'case01') {
     return { game: engine.start(), ui: EMPTY_UI };
   });
   const [introDone, setIntroDone] = useState(() => !!resumed?.introDone);
+  // 開發用：現在這個結局是不是用 DEV 工具直接跳進來的（狀態是假的）
+  const [devEnded, setDevEnded] = useState<string | null>(null);
   const [run, setRun] = useState(0);
   // 這一輪是不是從存檔接回來、而且已經過了開局：是的話回到主畫面，不是停在群組
   const [resumedInPlay, setResumedInPlay] = useState(() => !!resumed?.introDone && resumed.game.phase !== 'cover');
   const latest = useRef(session);
+  const inIntro = useRef(!introDone);
+  inIntro.current = !introDone;
+  const runNow = useRef(run);
+  runNow.current = run;
+  // 這一輪的開場已經播過喚醒聲了沒：重播開場、重新開始都是新的一輪，第一次點畫面要再響一次
+  const wokeRun = useRef<number | null>(null);
+  useEffect(() => {
+    const first = () => {
+      // 每次點都試著把聲音環境叫醒（第一次是建立；之後是手機鎖過螢幕、切過 App 被暫停時恢復）
+      unlockSound();
+      if (inIntro.current && wokeRun.current !== runNow.current) {
+        wokeRun.current = runNow.current;
+        playSound('wake');
+      }
+    };
+    document.addEventListener('click', first, true);
+    document.addEventListener('keydown', first, true);
+    return () => {
+      document.removeEventListener('click', first, true);
+      document.removeEventListener('keydown', first, true);
+      stopAllSounds();
+    };
+  }, []);
   // 開局還沒送出那句話之前，群組裡已經捲進畫面的舊訊息。送出時一起告訴規則
   const coverSeen = useRef(new Set<string>(resumed?.coverSeen ?? []));
   latest.current = session;
@@ -145,6 +194,7 @@ export function useGame(caseId = 'case01') {
       return [];
     }
     const { state, outcomes } = engine.step(now, action);
+    soundFor(engine, now, state, outcomes);
     update((s) => ({ game: state, ui: settle(engine, state, markNoReply(reactTo(engine, s.ui, outcomes), state, outcomes)) }));
     if (!state.call && !state.prompt && deferred.current.length) {
       const waiting = deferred.current.splice(0);
@@ -330,7 +380,11 @@ export function useGame(caseId = 'case01') {
             const solved = isSolvedEnding(content, ended);
             const menu = engine?.menu(session.game);
             return {
+              id: ended.id,
+              dev: devEnded === ended.id,
               title: ended.title,
+              // 內文裡「螢幕暗下」的那一段：畫面出現到這段時播關機音、暗一下
+              screenOff: ended.screenOff,
               // 內文用規則組好的：有的結局會照玩家放錯的那幾格插進對應的句子
               text: endingText(ended, session.game),
               // 內文裡有人說話的段落要配頭像：名字對到角色
@@ -339,8 +393,6 @@ export function useGame(caseId = 'case01') {
               canRetry: !!menu?.canRewind,
               // 破案的結局：這是第幾次指認、還剩多少電
               note: solved ? S.endingSolved.replace('{n}', String(menu?.accusations ?? 1)).replace('{battery}', String(Math.ceil(session.game.battery))) : undefined,
-              // 解答篇只給破案的結局，免得講破答案
-              solution: solved ? content.endings.solution : undefined,
             };
           })()
       : undefined,
@@ -354,11 +406,14 @@ export function useGame(caseId = 'case01') {
     /** 回到指認之前：回到交出去前那一刻，電量和進度照舊。上次被退回的提示不留 */
     rewind: () => {
       if (!latest.current) return;
+      setDevEnded(null);
       act({ type: 'rewindChallenge' });
       update((s) => ({ game: s.game, ui: { ...s.ui, accuseRejected: [] } }));
     },
     restart: () => {
       if (!engine) return;
+      stopAllSounds();
+      setDevEnded(null);
       coverSeen.current.clear();
       noticeQueue.current = [];
       deferred.current = [];
@@ -372,6 +427,38 @@ export function useGame(caseId = 'case01') {
       setSession(fresh);
       setIntroDone(false);
       setRun((n) => n + 1);
+    },
+    /** 開發面板用：所有結局的編號和標題 */
+    endingList: (content?.endings.endings ?? []).map((e) => ({ id: e.id, title: e.title })),
+    /**
+     * 開發面板用：直接進某個結局，看結局畫面。狀態是拼出來的：
+     * 指認類的結局給一個「回到指認之前」可以回去的點（就是跳進來之前的樣子，格子不一定填好）；
+     * 「站不住」的結局假裝第一個有反駁句的格子放錯；破案的結局指認次數至少算 1。
+     */
+    devEnding: (id: string) => {
+      const s = latest.current;
+      const ending = content?.endings.endings.find((e) => e.id === id);
+      if (!engine || !s || !ending) return;
+      const base: GameState = s.game.phase === 'ended' ? (s.game.rewind ?? { ...s.game, phase: 'play', ended: null }) : s.game;
+      const viaChallenge = ending.trigger.kind === 'challenge';
+      const wrongFields = isWeakEnding(ending) ? Object.keys(ending.rebuttals ?? {}).slice(0, 1) : [];
+      const game: GameState = {
+        ...base,
+        phase: 'ended',
+        ended: ending.id,
+        prompt: null,
+        call: null,
+        // 先跳過沒電的結局再跳別的，不要把 0% 帶過去
+        battery: ending.trigger.kind === 'battery' ? 0 : base.battery || content!.meta.battery.start,
+        accusation: { ...base.accusation, count: Math.max(1, (base.accusation.count ?? 0) + (viaChallenge ? 1 : 0)), wrongFields },
+        rewind: viaChallenge ? structuredClone(base) : null,
+      };
+      stopAllSounds();
+      // 直接跳進破案的結局會跳過「指認通過、選交給誰」那一刻，過關音在那一刻才會響，這裡補播，DEV 才聽得到
+      soundFor(engine, base, game, isSolvedEnding(engine.content, ending) ? [{ kind: 'challengePassed' }, { kind: 'ending', ending: ending.id }] : [{ kind: 'ending', ending: ending.id }]);
+      setIntroDone(true);
+      setDevEnded(ending.id);
+      update((x) => ({ game, ui: x.ui }));
     },
     /** 開發面板用：直接改電量，看畫面在不同電量下的樣子 */
     setBattery: (value: number) =>
