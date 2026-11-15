@@ -137,6 +137,8 @@ export class TextGame {
     for (const seg of this.content.meta.intro ?? []) {
       if (seg.kind === 'notice') this.say(`［${seg.label}］`, ...seg.lines);
       else if (seg.kind === 'quote') this.say('————', ...seg.lines, ...(seg.signature ? [`　　　　　　${seg.signature}`] : []), '————');
+      // 工具介紹：標題、說明，每個項目一行
+      else if (seg.kind === 'guide') this.say('── ' + seg.title + ' ──', ...seg.lines, ...seg.items.map((item) => '・' + item.label + '：' + item.text));
       else this.say(...seg.lines);
       this.say('');
     }
