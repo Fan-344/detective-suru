@@ -1,11 +1,74 @@
 [
   {
+    "id": "sms_fl_bank_in",
+    "app": "sms",
+    "kind": "record",
+    "when": "上週四 10:15",
+    "title": "聯信銀行",
+    "body": "【聯信銀行】您的帳戶 ****3051 於 11/05 入帳 NT$8,000，摘要：稿費。",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_dentist",
+    "app": "sms",
+    "kind": "record",
+    "when": "上週四 18:00",
+    "title": "和平牙醫診所",
+    "body": "【和平牙醫診所】沈小姐您好，提醒您明日（11/6）10:30 洗牙，請提前 10 分鐘報到。如需改期請來電。",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_card",
+    "app": "sms",
+    "kind": "record",
+    "when": "週二 15:02",
+    "title": "聯信銀行",
+    "body": "【聯信銀行】您尾號 3051 的信用卡於 11/10 網路消費 NT$1,280（青田美術社）。非本人交易請立即來電。",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_telecom",
+    "app": "sms",
+    "kind": "record",
+    "when": "週三 10:02",
+    "title": "澄星電信",
+    "body": "【澄星電信】您 11 月帳單金額 699 元，繳費期限 11/25。本月行動上網已使用 8.2GB。",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_otp",
+    "app": "sms",
+    "kind": "record",
+    "when": "週四 21:14",
+    "title": "發票雲",
+    "body": "【發票雲】您的驗證碼為 482913，10 分鐘內有效。請勿將驗證碼提供給他人。",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_parcel",
+    "app": "sms",
+    "kind": "record",
+    "when": "週五 14:30",
+    "title": "日日超商",
+    "body": "【日日超商】您的包裹已到店，請於 11/20 前攜帶證件取件，逾期將退回。",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_freight",
+    "app": "sms",
+    "kind": "record",
+    "when": "週五 16:05",
+    "title": "捷達貨運",
+    "body": "【捷達貨運】已受理您 11/17（二）的到府收件預約，收件地：新北市永和區。司機到府前會先來電。",
+    "flavor": true
+  },
+  {
     "id": "sms_repair_done",
     "app": "sms",
     "kind": "record",
     "when": "週六 18:20",
     "title": "快修通訊",
-    "body": "【快修通訊】您送修的手機已完成電池更換並通過開機測試，可於營業時間內至大安店取件，尾款於取件時支付。"
+    "body": "【快修通訊】您送修的手機已完成螢幕更換並通過開機測試，可於營業時間內至大安店取件，尾款於取件時支付。"
   },
   {
     "id": "sms_er",
@@ -56,12 +119,30 @@
     ]
   },
   {
+    "id": "sms_fl_promo",
+    "app": "sms",
+    "kind": "record",
+    "when": "週日 12:00",
+    "title": "樂購網",
+    "body": "【樂購網】年終暖身，全館滿千折百，只到今晚！退訂請回 N",
+    "flavor": true
+  },
+  {
+    "id": "sms_fl_missed",
+    "app": "sms",
+    "kind": "record",
+    "when": "週一 09:00",
+    "title": "澄星電信",
+    "body": "【澄星電信】漏接來電通知：您未接聽期間共有 8 通來電，詳情請至通話紀錄查看。",
+    "flavor": true
+  },
+  {
     "id": "note_instruction",
     "app": "notes",
     "kind": "record",
     "when": "週六 16:20",
-    "title": "給助理",
-    "body": "如果我兩天沒回來解鎖，你就醒來。\n先不要讓任何人知道你在。\n今晚我要一個人去問一個人一件事。\n我不確定對方會怎麼反應。\n也不確定還能相信誰。\n查清楚，再決定交給誰。"
+    "title": "請 Suru 提醒",
+    "body": "週日 10:00　去拿手機\n週二　舊家 貨運來收箱子\n週五　訂媽生日的餐廳"
   },
   {
     "id": "note_todo",
@@ -85,7 +166,7 @@
     "kind": "record",
     "when": "週六 16:28",
     "title": "快修通訊 大安店",
-    "body": "電池更換訂金 ×1",
+    "body": "螢幕更換訂金 ×1",
     "fields": [
       {
         "label": "發票號碼",
@@ -454,6 +535,135 @@
     }
   },
   {
+    "id": "call_fl_pinyu",
+    "app": "phone",
+    "kind": "record",
+    "when": "上週日 22:05",
+    "title": "品妤",
+    "body": "撥出，通話 23 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥出"
+      },
+      {
+        "label": "通話時間",
+        "value": "23 分鐘"
+      }
+    ],
+    "flavor": true
+  },
+  {
+    "id": "call_fl_dentist",
+    "app": "phone",
+    "kind": "record",
+    "when": "上週三 11:05",
+    "title": "和平牙醫診所",
+    "body": "撥入，通話 1 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥入"
+      },
+      {
+        "label": "通話時間",
+        "value": "1 分鐘"
+      }
+    ],
+    "flavor": true
+  },
+  {
+    "id": "call_fl_spam",
+    "app": "phone",
+    "kind": "record",
+    "when": "週二 14:22",
+    "title": "未顯示號碼",
+    "body": "未接來電 1 通。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "未接"
+      }
+    ],
+    "flavor": true
+  },
+  {
+    "id": "call_fl_editor",
+    "app": "phone",
+    "kind": "record",
+    "when": "週四 17:10",
+    "title": "小安（月光雜誌）",
+    "body": "撥入，通話 4 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥入"
+      },
+      {
+        "label": "通話時間",
+        "value": "4 分鐘"
+      }
+    ],
+    "flavor": true
+  },
+  {
+    "id": "call_fl_mom",
+    "app": "phone",
+    "kind": "record",
+    "when": "週四 20:10",
+    "title": "媽媽",
+    "body": "撥入，通話 12 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥入"
+      },
+      {
+        "label": "通話時間",
+        "value": "12 分鐘"
+      }
+    ],
+    "flavor": true
+  },
+  {
+    "id": "call_fl_repair",
+    "app": "phone",
+    "kind": "record",
+    "when": "週六 13:40",
+    "title": "快修通訊",
+    "body": "撥出，通話 1 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥出"
+      },
+      {
+        "label": "通話時間",
+        "value": "1 分鐘"
+      }
+    ],
+    "flavor": true
+  },
+  {
+    "id": "call_fl_freight",
+    "app": "phone",
+    "kind": "record",
+    "when": "週五 16:00",
+    "title": "捷達貨運",
+    "body": "撥出，通話 3 分鐘。",
+    "fields": [
+      {
+        "label": "方向",
+        "value": "撥出"
+      },
+      {
+        "label": "通話時間",
+        "value": "3 分鐘"
+      }
+    ],
+    "flavor": true
+  },
+  {
     "id": "call_jw_1602",
     "app": "phone",
     "kind": "record",
@@ -488,6 +698,10 @@
     "body": "未接來電 2 通。",
     "fields": [
       {
+        "label": "方向",
+        "value": "未接"
+      },
+      {
         "label": "週日",
         "value": "00:25、00:41"
       }
@@ -501,6 +715,10 @@
     "title": "媽媽",
     "body": "未接來電 6 通。",
     "fields": [
+      {
+        "label": "方向",
+        "value": "未接"
+      },
       {
         "label": "週日",
         "value": "01:10、01:12、06:30、13:05"

@@ -7,6 +7,12 @@
       "on": true
     },
     {
+      "time": "10:00",
+      "label": "去拿手機",
+      "repeat": "週日",
+      "on": true
+    },
+    {
       "time": "13:00",
       "label": "吃飯 真的要吃",
       "repeat": "每天",
