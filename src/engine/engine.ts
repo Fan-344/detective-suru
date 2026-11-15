@@ -36,7 +36,7 @@ export type Spot = NonNullable<Card['spot']>;
 
 /** 「人指對了、但有格子放錯」的結局（trigger.fieldsWrong）。它的 accused 是真兇，但不算破案。 */
 export function isWeakEnding(ending: Ending): boolean {
-  return ending.trigger.kind === 'challenge' && (ending.trigger as { fieldsWrong?: boolean }).fieldsWrong === true;
+  return ending.trigger.kind === 'challenge' && ending.trigger.fieldsWrong === true;
 }
 
 /** 這個結局算不算破案：指對人、每一格都對、交出了證據 */
@@ -50,7 +50,7 @@ export function isSolvedEnding(content: CaseContent, ending: Ending): boolean {
  * 畫面和文字版都用這個，不要自己組。state 給結局當下的狀態；看別的結局（例如「我想知道真相」）時不給。
  */
 export function endingText(ending: Ending, state?: GameState): string[] {
-  const rebuttals = (ending as { rebuttals?: Record<string, string[]> }).rebuttals ?? {};
+  const rebuttals = ending.rebuttals ?? {};
   const wrong = state?.ended === ending.id ? (state.accusation.wrongFields ?? []) : [];
   return ending.text.flatMap((line) => (line === '{rebuttals}' ? wrong.flatMap((field) => rebuttals[field] ?? []) : [line]));
 }

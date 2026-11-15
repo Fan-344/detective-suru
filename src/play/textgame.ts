@@ -52,11 +52,6 @@ export class TextGame {
       const ended = this.content.endings.endings.find((e) => e.id === s.ended);
       const solved = ended !== undefined && isSolvedEnding(this.content, ended);
       if (this.engine.menu(s).canRewind) list.push({ label: solved ? '回到選交給誰之前' : '回到指認之前', run: () => void this.act({ type: 'rewindChallenge' }) });
-      // 「我想知道真相」：直接看資料指定的那個破案結局（只在指錯人的結局出現）
-      const truth = this.content.endings.endings.find((e) => e.id === this.content.endings.truthEnding);
-      if (truth && this.engine.menu(s).canRewind && !solved) {
-        list.push({ label: '我想知道真相', run: () => this.say('', `════ ${truth.title} ════`, '', ...endingText(truth).flatMap((p) => [p, ''])) });
-      }
       list.push({ label: '重新開始', run: () => this.restart() });
       return list;
     }
