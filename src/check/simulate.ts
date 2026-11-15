@@ -3,7 +3,7 @@
 // （格式對不對是 src/content/validate.ts 的事；這裡管的是到不到得了。）
 
 import type { CaseContent } from '../content/types';
-import { createEngine, isSolvedEnding, isWeakEnding, routesReached, type Action, type Engine, type GameState } from '../engine';
+import { createEngine, isSolvedEnding, isWeakEnding, routesReached, type Action, type Engine, type GameState, type Menu } from '../engine';
 
 export interface Check {
   name: string;
@@ -15,6 +15,8 @@ export interface CheckResult {
   checks: Check[];
   /** 不算通過或失敗、給人看的數值觀察 */
   report: string[];
+  /** 模擬了幾局 */
+  runs: number;
 }
 
 /** 玩法的傾向。每一種都帶隨機性，跑很多次來涵蓋各種走法。 */
@@ -38,8 +40,9 @@ function rng(seed: number) {
 const isMessage = (a: Action) => a.type === 'reply' || a.type === 'test';
 
 /** 目前所有能做的具體動作（不含挑戰書；比對只列資料裡有結果、還沒比過的組合） */
-export function concreteActions(engine: Engine, s: GameState): Action[] {
-  const m = engine.menu(s);
+export function concreteActions(engine: Engine, s: GameState, menu?: Menu): Action[] {
+  // 呼叫的地方已經算過選單就直接用，不用再算一次（模擬很花時間的就是這個）
+  const m = menu ?? engine.menu(s);
   // 電話在響的時候只有兩件事能做
   if (m.call) return [{ type: 'declineCall' }, { type: 'letRing' }];
   if (m.cover) {
@@ -146,12 +149,14 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
   const run: Run = { profile, final: s, actions: [], login: null, solvableAt: null, sentMessage: false, stuck: false, softDead: false, usedReactions: new Set(), raises: 0, autoRaises: 0 };
 
   for (let guard = 0; guard < 400 && s.phase !== 'ended'; guard++) {
-    const everything = concreteActions(engine, s);
+    // 選單在同一步裡結果都一樣，只算一次
+    const m = engine.menu(s);
+    const everything = concreteActions(engine, s, m);
     const options = profile === 'silent' ? everything.filter((a) => !isMessage(a)) : everything;
     const fields = correctFields(content, s);
     if (fields && run.solvableAt === null) run.solvableAt = s.spent;
     const costly = options.filter((a) => a.type !== 'viewImage');
-    const canChallenge = engine.menu(s).challenge !== null;
+    const canChallenge = m.challenge !== null;
 
     let action: Action | null = null;
     if (canChallenge && s.phase === 'play' && !s.prompt && !s.call) {
@@ -159,8 +164,8 @@ function playOnce(engine: Engine, seed: number, profile: Profile): Run {
       const nothingLeft = costly.length === 0;
       // 死路要看「遊戲還允許做什麼」，不是這種玩法自己願意做什麼
       if (!fields && everything.every((a) => a.type === 'viewImage')) run.softDead = true;
-      const ask = engine.menu(s).challenge!.ask;
-      const form = engine.menu(s).challenge!.form;
+      const ask = m.challenge!.ask;
+      const form = m.challenge!.form;
       {
         if ((wantsToSolve && ready && rand() < submitChance) || nothingLeft) accusing = true;
         if (accusing && form && !form.passed) {
@@ -366,6 +371,26 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
     content.endings.challenge.fields.filter((f) => !f.cards.some((id) => cards.has(id))).map((f) => f.id),
   );
 
+  // 6. 斷電那一段要跟結局內文某一段一字不差，不然畫面找不到那一段、不會播斷電音效（改結局文字時容易漏改）
+  add(
+    '結局的斷電段落（screenOff）都對得上內文',
+    content.endings.endings
+      .filter((e) => e.screenOff !== undefined && !e.text.includes(e.screenOff))
+      .map((e) => `${e.id}（${e.title}）：「${e.screenOff}」不是內文裡的任何一段`),
+  );
+
+  // 7. 結局裡的對話段落要完全符合「名字：「……」」格式，畫面才會畫成對話泡泡；段末多了句號、名字打錯都會變回一般文字
+  const speakers = ['你', ...content.characters.map((c) => c.name)].map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const dialogue = new RegExp(`^(${speakers.join('|')})：(「[^」]*」)+$`);
+  add(
+    '結局的對話段落格式正確（名字：「……」）',
+    content.endings.endings.flatMap((e) =>
+      e.text
+        .filter((line) => line.includes('：「') && !dialogue.test(line))
+        .map((line) => `${e.id}（${e.title}）：${line.length > 40 ? line.slice(0, 40) + '…' : line}`),
+    ),
+  );
+
   // ── 數值觀察 ──
   const report: string[] = [];
   const pct = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : '—');
@@ -443,5 +468,5 @@ export function runChecks(content: CaseContent, options: { runs?: number } = {})
   if (dead[0]) report.push(`沒電結局的一個例子（${dead[0].profile}）：共 ${dead[0].actions.length} 個動作，結束時靖雯在第 ${dead[0].final.ladder[culprit]} 級。`);
   report.push(`被查到醫院的那些局，結束時剩餘電量：中位數 ${tidy(start - median(runs.filter((r) => r.final.ended === found?.id).map((r) => r.final.spent)))}%。`);
 
-  return { checks, report };
+  return { checks, report, runs: total };
 }
