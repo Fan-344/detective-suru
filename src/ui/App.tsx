@@ -75,7 +75,14 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
         </div>
         <div className="screen">
           {stage === 'intro' || !data ? (
-            <Intro key={run} title="SURU" segments={intro} onDone={onIntroDone} noticeIcon={noticeIcon} />
+            <Intro
+              key={run}
+              title="SURU"
+              segments={intro}
+              onDone={onIntroDone}
+              noticeIcon={noticeIcon}
+              dock={(data?.apps ?? []).filter((a) => a.dock).map((a) => ({ id: a.id, name: a.name, icon: a.icon, suru: a.layout === 'suru' }))}
+            />
           ) : (
             <Phone
               key={run}

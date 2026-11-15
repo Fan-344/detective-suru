@@ -10,6 +10,45 @@ interface Props {
   onDone(): void;
   /** 通知段落要用哪個 App 的圖示。查不到就不畫圖示 */
   noticeIcon?(label: string): IconId | undefined;
+  /** 主畫面最下面那一排的 App，介紹頁用來示意 Suru 在哪裡 */
+  dock?: { id: string; name: string; icon: IconId; suru: boolean }[];
+}
+
+/**
+ * 介紹頁每個項目旁邊的小圖：用遊戲裡真的會看到的元件縮小來畫，玩家進去才認得。
+ * 靠項目的名稱對到是哪一種；對不到就不畫。
+ */
+function GuidePic({ label }: { label: string }) {
+  if (label === S.concernsLabel) {
+    return (
+      <span className="gpic gpic--card gpic--concern">
+        <i>{S.concernsLabel}</i>
+        <b />
+        <b />
+      </span>
+    );
+  }
+  if (label === S.doubtsLabel) {
+    return (
+      <span className="gpic gpic--card gpic--doubt">
+        <i>{S.doubtsLabel}</i>
+        <b />
+        <b />
+      </span>
+    );
+  }
+  if (label === S.thinkMore) return <span className="gpic gpic--hint">{S.thinkMore}</span>;
+  if (label === S.suruTimeline) {
+    return (
+      <span className="gpic gpic--time">
+        <b />
+        <b />
+        <b />
+      </span>
+    );
+  }
+  if (label === S.accuseEntry) return <span className="gpic gpic--accuse">{S.accuseEntry}</span>;
+  return null;
 }
 
 const two = (n: number) => String(n).padStart(2, '0');
@@ -18,7 +57,7 @@ const two = (n: number) => String(n).padStart(2, '0');
  * 開場：Suru 這一層的畫面。一段一段宣告，點一下前進；
  * 目前這一段最亮，講過的退到後面。手機上的通知則畫成通知卡片的樣子。文字全部來自資料。
  */
-export function Intro({ title, segments, onDone, noticeIcon }: Props) {
+export function Intro({ title, segments, onDone, noticeIcon, dock = [] }: Props) {
   const [shown, setShown] = useState(1);
   const scroller = useRef<HTMLDivElement>(null);
   const current = useRef<HTMLDivElement>(null);
@@ -64,36 +103,42 @@ export function Intro({ title, segments, onDone, noticeIcon }: Props) {
     );
   }
 
-  // Suru App 的介紹也自己佔一頁：圖示和名字、兩句說明、幾個項目。項目的標籤用跟實際畫面一樣的樣子
+  // Suru App 的介紹也自己佔一頁：先用主畫面最下面那一排示意 Suru 在哪裡，
+  // 再用遊戲裡真的會看到的元件（縮小版）說明每一樣東西
   if (last?.kind === 'guide') {
     return (
       <button className="suru intro intro--goal" onClick={advance} aria-label={S.tapToContinue}>
         <SuruHeader title={title} counter={two(shown) + ' / ' + two(segments.length)} />
         <div className="guide">
           <div className="guide__in">
-          <div className="guide__head">
-            <AppIcon icon="suru" size="sm" />
-            <span className="guide__title">{last.title}</span>
-          </div>
-          <div className="guide__lines">
-            {last.lines.map((line, j) => (
-              <p key={j}>{line}</p>
-            ))}
-          </div>
-          <ul className="guide__items">
-            {last.items.map((it, j) => (
-              <li key={j} style={{ animationDelay: 0.2 + j * 0.18 + 's' }}>
-                <span
-                  className={
-                    'guide__label' + (it.label === S.concernsLabel ? ' guide__label--concern' : it.label === S.doubtsLabel ? ' guide__label--card' : '')
-                  }
-                >
-                  {it.label}
-                </span>
-                <span className="guide__text">{it.text}</span>
-              </li>
-            ))}
-          </ul>
+            {dock.length > 0 && (
+              <div className="guide__dock" role="img" aria-label={last.title}>
+                {dock.map((a) => (
+                  <span key={a.id} className={'guide__app' + (a.suru ? ' guide__app--suru' : '')}>
+                    <AppIcon icon={a.icon} size="sm" />
+                    {a.suru && <span className="guide__here">{a.name}</span>}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="guide__lines">
+              {last.lines.map((line, j) => (
+                <p key={j}>{line}</p>
+              ))}
+            </div>
+            <ul className="guide__items">
+              {last.items.map((it, j) => (
+                <li key={j} style={{ animationDelay: 0.2 + j * 0.18 + 's' }}>
+                  <span className="guide__pic" aria-hidden="true">
+                    <GuidePic label={it.label} />
+                  </span>
+                  <span className="guide__main">
+                    <span className="guide__name">{it.label}</span>
+                    <span className="guide__text">{it.text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
         <div className="intro__hint">
