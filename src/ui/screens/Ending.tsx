@@ -10,6 +10,10 @@ interface Props {
   solution?: { title: string; text: string[] };
   /** 內文裡出現的人：名字對到頭像。寫成「名字：「一句」」的段落會排成那個人傳的訊息 */
   speakers?: Record<string, string>;
+  /** 結局內文最後多放一行小字（例如第幾次指認、剩多少電） */
+  note?: string;
+  /** 回到指認之前。規則有提供才給，沒給就不顯示那顆按鈕 */
+  onRetry?(): void;
   onRestart(): void;
 }
 
@@ -87,9 +91,12 @@ function Report({ lines }: { lines: string[] }) {
 
 /**
  * 結局：Suru 那一層的畫面。標題和內文都來自資料檔。
- * 有解答篇的結局，看完之後多一步可以接著看事情的全貌；沒有的（指錯人、沒電）就只有結局本身，不講破答案。
+ * 看完結局之後：
+ * - 回到指認之前（經過指認進入的結局才有，由規則決定）
+ * - 重新開始
+ * 資料有解答篇時，破案的結局可以多看一頁。沒電、被查到的結局只有重新開始。
  */
-export function Ending({ title, text, solution, speakers = {}, onRestart }: Props) {
+export function Ending({ title, text, solution, note, speakers = {}, onRetry, onRestart }: Props) {
   const [page, setPage] = useState<'ending' | 'solution'>('ending');
   const scroller = useRef<HTMLDivElement>(null);
   // 換頁之後從頭讀起
@@ -97,24 +104,29 @@ export function Ending({ title, text, solution, speakers = {}, onRestart }: Prop
     if (scroller.current) scroller.current.scrollTop = 0;
   }, [page]);
 
-  const showing = page === 'solution' && solution ? solution : { title, text };
+  const onSolution = page === 'solution' && !!solution;
   return (
     <div className="suru ending">
-      <SuruHeader title="SURU" counter={solution ? (page === 'ending' ? '01 / 02' : '02 / 02') : undefined} />
+      <SuruHeader title="SURU" counter={solution ? (onSolution ? '02 / 02' : '01 / 02') : undefined} />
       <div className="ending__scroll" ref={scroller} key={page}>
-        <h1 className="ending__title">{showing.title}</h1>
-        {page === 'solution' ? <Report lines={showing.text} /> : <Story lines={showing.text} speakers={speakers} />}
+        <h1 className="ending__title">{onSolution && solution ? solution.title : title}</h1>
+        {onSolution && solution ? (
+          <Report lines={solution.text} />
+        ) : (
+          <>
+            <Story lines={text} speakers={speakers} />
+            {note && <p className="ending__note">{note}</p>}
+          </>
+        )}
       </div>
-      {solution && page === 'ending' ? (
-        <button className="suru-button" onClick={() => setPage('solution')}>{S.endingSolution.replace('{title}', solution.title)}</button>
-      ) : (
-        <button className="suru-button" onClick={onRestart}>{S.endingRestart}</button>
-      )}
+
+      {onRetry && <button className="suru-button" onClick={onRetry}>{S.endingRetry}</button>}
       {solution && (
-        <button className="ending__minor" onClick={page === 'ending' ? onRestart : () => setPage('ending')}>
-          {page === 'ending' ? S.endingRestart : S.endingBack}
+        <button className={onRetry ? 'ending__minor' : 'suru-button'} onClick={() => setPage(onSolution ? 'ending' : 'solution')}>
+          {onSolution ? S.endingBack : S.endingSolution.replace('{title}', solution.title)}
         </button>
       )}
+      <button className={onRetry || solution ? 'ending__minor' : 'suru-button'} onClick={onRestart}>{S.endingRestart}</button>
     </div>
   );
 }

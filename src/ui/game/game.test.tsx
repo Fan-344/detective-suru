@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadCase } from '../../content';
-import { createEngine } from '../../engine';
+import { createEngine, isWeakEnding } from '../../engine';
 import { App } from '../App';
 import { fingerprint, writeSave } from './save';
 import { EMPTY_UI } from './view';
@@ -431,7 +431,7 @@ describe('接上遊戲規則', () => {
   const who = (id: string) => fireEvent.click(screen.getByRole('radio', { name: nameOfPerson(id) }));
   const handIn = () => screen.getByRole('button', { name: S.accuseHandIn }) as HTMLButtonElement;
 
-  it('指認兇手：四格都填好才能交；有格子站不住會被退回、扣電、顯示提示，內容留著；全對後交出證據進結局', () => {
+  it('指認兇手：四格都填好才能交；人對但有格子放錯會進「站不住」的結局（可回到指認之前改）；全對後交出證據進結局', () => {
     startWithAllCards();
     // 開頭是 Suru 講明的前提，再來是說明
     for (const line of (ch as { premise?: string[] }).premise ?? []) expect(screen.getByText(line)).toBeTruthy();
@@ -448,19 +448,47 @@ describe('接上遊戲規則', () => {
     expect(battery()).toBe(before);
     expect(screen.queryByRole('note')).toBeNull();
     expect(handIn().disabled).toBe(false);
-    // 交出去：被退回，扣一次電，站不住的那一格旁邊出現提示，填的還在
+    // 交出去。人指對、但有格子放錯：資料有「站不住」的結局就直接進結局（不退回，免得洩漏人指對了）；沒有才退回
+    const weak = content.endings.endings.find((e) => isWeakEnding(e));
     fireEvent.click(handIn());
-    expect(battery()).toBe(before - (cost.challengeRetry ?? 0));
-    expect(screen.getAllByRole('note').map((el) => el.textContent)).toEqual([first.hint]);
-    expect(screen.getByText(titleOf(wrong))).toBeTruthy();
-    // 重新整理，格子和提示都還在
-    cleanup();
-    render(<App mode="game" />);
-    openApp('suru');
-    fireEvent.click(screen.getByRole('button', { name: S.accuseEntry }));
-    expect(screen.getByText(titleOf(wrong))).toBeTruthy();
-    expect(screen.getAllByRole('note').length).toBe(1);
-    // 換成對的那一張，提示收起來；再交就通過，接著選把證據交給誰
+    if (weak) {
+      // 不扣電；結局裡只有放錯的那一格對應的反駁，沒放錯的不會出現
+      expect(battery()).toBe(before);
+      expect(screen.getByRole('heading', { name: weak.title })).toBeTruthy();
+      const page = () => document.querySelector('.ending__scroll')?.textContent ?? '';
+      const said = (l: string) => [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]);
+      const rebuttals = (weak as { rebuttals?: Record<string, string[]> }).rebuttals ?? {};
+      for (const l of rebuttals[first.id] ?? []) for (const q of said(l)) expect(page()).toContain(q);
+      for (const f of cardFields.slice(1)) for (const l of rebuttals[f.id] ?? []) for (const q of said(l)) expect(page()).not.toContain(q);
+      expect(page()).not.toContain('{rebuttals}');
+      // 這種結局不算破案：沒有「第幾次指認」；可以回到指認之前或重新開始
+      expect(screen.queryByText(new RegExp(S.endingSolved.split('{n}')[0]))).toBeNull();
+      expect([...document.querySelectorAll('.ending > button')].map((el) => el.textContent)).toEqual([S.endingRetry, S.endingRestart]);
+      // 重新整理還在這個結局；回到指認之前，格子都還在
+      cleanup();
+      render(<App mode="game" />);
+      expect(screen.getByRole('heading', { name: weak.title })).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: S.endingRetry }));
+      expect(battery()).toBe(before);
+      if (!document.querySelector('.aform')) {
+        openApp('suru');
+        fireEvent.click(screen.getByRole('button', { name: S.accuseEntry }));
+      }
+      expect(screen.getByText(titleOf(wrong))).toBeTruthy();
+    } else {
+      // 被退回，扣一次電，站不住的那一格旁邊出現提示，填的還在
+      expect(battery()).toBe(before - (cost.challengeRetry ?? 0));
+      expect(screen.getAllByRole('note').map((el) => el.textContent)).toEqual([first.hint]);
+      expect(screen.getByText(titleOf(wrong))).toBeTruthy();
+      // 重新整理，格子和提示都還在
+      cleanup();
+      render(<App mode="game" />);
+      openApp('suru');
+      fireEvent.click(screen.getByRole('button', { name: S.accuseEntry }));
+      expect(screen.getByText(titleOf(wrong))).toBeTruthy();
+      expect(screen.getAllByRole('note').length).toBe(1);
+    }
+    // 換成對的那一張再交就通過，接著選把證據交給誰
     fill(first.id, first.cards![0]);
     expect(screen.queryByRole('note')).toBeNull();
     fireEvent.click(handIn());
@@ -479,7 +507,21 @@ describe('接上遊戲規則', () => {
     const quotes = shown.text.flatMap((l) => (isSaid(l) ? [...l.matchAll(/「([^」]*)」/g)].map((m) => m[1]) : []));
     expect([...document.querySelectorAll('.endchat__bubble')].map((el) => el.textContent)).toEqual(quotes);
     const narration = shown.text.filter((l) => !isSaid(l));
-    expect([...document.querySelectorAll('.ending__scroll > p')].map((el) => el.textContent)).toEqual(narration);
+    expect([...document.querySelectorAll('.ending__scroll > p:not(.ending__note)')].map((el) => el.textContent)).toEqual(narration);
+    // 破案的結局寫出這是第幾次指認、還剩多少電（被退回不算；進過「站不住」的結局算一次）
+    expect(screen.getByText(S.endingSolved.replace('{n}', weak ? '2' : '1').replace('{battery}', String(battery())))).toBeTruthy();
+    // 破案的結局也能回到指認之前：不用重新指認，直接回到「交給誰」那一步，可以改交給別人看別的結局
+    const solvedBattery = battery();
+    fireEvent.click(screen.getByRole('button', { name: S.endingRetry }));
+    expect(screen.queryByRole('button', { name: S.endingRestart })).toBeNull();
+    expect(screen.getByTestId('accuse-prompt').textContent).toBe(S.accuseGivePrompt);
+    expect(battery()).toBe(solvedBattery);
+    const other = ch.recipients[ch.recipients.length - 1];
+    fireEvent.click(screen.getByRole('radio', { name: nameOfPerson(other) }));
+    fireEvent.click(screen.getByRole('button', { name: S.accuseSubmit }));
+    expect(screen.getByRole('button', { name: S.endingRestart })).toBeTruthy();
+    // 改交給別人不算多一次指認
+    expect(screen.getByText(S.endingSolved.replace('{n}', weak ? '2' : '1').replace('{battery}', String(battery())))).toBeTruthy();
     // 指對兇手的結局：看完可以接著看解答篇，再回到結局
     const solution = content.endings.solution;
     if (solution) {
@@ -505,6 +547,18 @@ describe('接上遊戲規則', () => {
     fireEvent.click(handIn());
     const ending = content.endings.endings.find((e) => e.trigger.kind === 'challenge' && e.trigger.accused === innocent)!;
     expect(screen.getByText(ending.title)).toBeTruthy();
+    // 指錯人的結局可以回到指認之前：回到那張表，格子（含指錯的人）都還在，電量沒變，可以改了再交
+    const beforeRewind = battery();
+    fireEvent.click(screen.getByRole('button', { name: S.endingRetry }));
+    expect(screen.queryByText(ending.title)).toBeNull();
+    expect(battery()).toBe(beforeRewind);
+    expect(screen.getByRole('radio', { name: nameOfPerson(innocent) }).getAttribute('aria-checked')).toBe('true');
+    for (const f of cardFields) expect(screen.getByText(titleOf(f.cards![0]))).toBeTruthy();
+    // 再交一次（還是指錯）回到同一個結局
+    fireEvent.click(handIn());
+    expect(screen.getByText(ending.title)).toBeTruthy();
+    // 指錯人的結局只有「回到指認之前」和「重新開始」
+    expect([...document.querySelectorAll('.ending > button')].map((el) => el.textContent)).toEqual([S.endingRetry, S.endingRestart]);
     // 指錯人的結局沒有解答篇，不講破答案
     expect(screen.queryByRole('button', { name: S.endingSolution.replace('{title}', content.endings.solution?.title ?? '') })).toBeNull();
   });
@@ -633,6 +687,8 @@ describe('接上遊戲規則', () => {
     const swipe = (from: number, to: number) => {
       fireEvent.touchStart(stage, { touches: [{ clientX: from, clientY: 300 }] });
       fireEvent.touchMove(stage, { touches: [{ clientX: to, clientY: 304 }] });
+      // 滑的過程中圖片不會跟著動
+      expect((document.querySelector('.viewer__slide') as HTMLElement).style.transform).toBe('');
       fireEvent.touchEnd(stage, { changedTouches: [{ clientX: to, clientY: 304 }] });
     };
     // 往左滑：下一張；往右滑：回上一張，而且人還在大圖裡（沒有被當成返回）
@@ -650,5 +706,54 @@ describe('接上遊戲規則', () => {
     // 點縮圖直接跳過去
     fireEvent.click(thumbs()[3]);
     expect(current()).toBe(3);
+  });
+
+  it('簡訊：一列一個寄件者，同一個寄件者的併成一串，點進去是一則一則的泡泡；可以搜尋', () => {
+    startGame();
+    home();
+    openApp('sms');
+    const sms = content.items.filter((x) => x.app === 'sms' && !x.hidden);
+    const senders = [...new Set(sms.map((x) => x.title!))];
+    expect(document.querySelectorAll('.comm-row').length).toBe(senders.length);
+    // 最新的那一則的寄件者排最上面
+    expect(document.querySelector('.comm-row__name')!.textContent).toBe(sms[sms.length - 1].title);
+    // 找一個有不只一則的寄件者：列上有則數，點進去每一則各一個泡泡
+    const many = senders.find((name) => sms.filter((x) => x.title === name).length > 1)!;
+    const theirs = sms.filter((x) => x.title === many);
+    fireEvent.click(screen.getByRole('button', { name: many }));
+    expect(screen.getByRole('heading', { name: many })).toBeTruthy();
+    expect(document.querySelectorAll('.sms-msg__bubble').length).toBe(theirs.length);
+    expect(document.querySelector('.sms-thread')!.textContent).toContain(theirs[0].body.split('\n')[0]);
+    // 回到清單，搜尋只留下符合的寄件者
+    fireEvent.click(screen.getByRole('button', { name: S.back }));
+    fireEvent.change(screen.getByRole('searchbox', { name: S.search }), { target: { value: many } });
+    expect(document.querySelectorAll('.comm-row').length).toBe(1);
+  });
+
+  it('電話：最近通話（新的在上、未接用另一種樣子、可只看未接）、聯絡人、鍵盤；鍵盤撥號打不出去', () => {
+    startGame();
+    home();
+    openApp('phone');
+    const calls = content.items.filter((x) => x.app === 'phone' && !x.hidden);
+    const isMissed = (x: (typeof calls)[number]) => (x.fields?.find((f) => f.label === S.callDirectionField)?.value ?? x.body).includes('未接');
+    const rows = () => [...document.querySelectorAll('.comm-row--call')];
+    expect(rows().length).toBe(calls.length);
+    expect(rows()[0].querySelector('.comm-row__name')!.textContent).toBe(calls[calls.length - 1].title);
+    expect(document.querySelectorAll('.comm-row--missed').length).toBe(calls.filter(isMissed).length);
+    fireEvent.click(screen.getByRole('tab', { name: S.callMissedOnly }));
+    expect(rows().length).toBe(calls.filter(isMissed).length);
+    // 聯絡人分頁列出四個人
+    fireEvent.click(screen.getByRole('tab', { name: S.callContacts }));
+    for (const c of content.characters) expect(screen.getAllByText(c.name).length).toBeGreaterThan(0);
+    // 鍵盤可以按、可以刪；按撥號只會跳一句打不出去
+    fireEvent.click(screen.getByRole('tab', { name: S.callKeypad }));
+    for (const k of ['0', '9', '1']) fireEvent.click(screen.getByRole('button', { name: k }));
+    expect(screen.getByTestId('keypad-digits').textContent).toBe('091');
+    fireEvent.click(screen.getByRole('button', { name: S.callDelete }));
+    expect(screen.getByTestId('keypad-digits').textContent).toBe('09');
+    const before = battery();
+    fireEvent.click(screen.getByRole('button', { name: S.callDial }));
+    expect(screen.getByRole('status').textContent).toBe(S.callBlocked);
+    expect(battery()).toBe(before);
   });
 });

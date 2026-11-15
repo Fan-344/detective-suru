@@ -86,7 +86,8 @@ function layoutOf(app: CaseContent['apps']['apps'][number]): LayoutKind {
     case 'chat':
       return 'chat';
     case 'list':
-      return 'list';
+      // 簡訊和電話的資料也是一列一列的，但畫成各自 App 的樣子
+      return app.icon === 'sms' ? 'sms' : app.icon === 'phone' ? 'dialer' : 'list';
     case 'gallery':
       // 有社群資訊的相簿類 App（Instory）畫成動態牆
       return app.id === 'moments' ? 'photofeed' : 'gallery';

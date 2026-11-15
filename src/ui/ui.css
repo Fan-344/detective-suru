@@ -689,15 +689,26 @@ ul, ol { list-style: none; }
 .home__grid { gap: 18px 6px; }
 
 /* 計算機 */
-.calc { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; background: #000; padding: 0 14px 16px; }
-.calc__display { color: #fff; font-size: 64px; font-weight: 300; text-align: right; padding: 0 10px 8px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.calc__keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
-.calc__key { aspect-ratio: 1; border-radius: 50%; font-size: 28px; text-align: center; color: #fff; background: #333336; }
+/* 計算機：按鍵大小同時看寬和高，矮的螢幕上按鍵會縮小，不會往上頂到數字 */
+.calc { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; background: #000; padding: 0 14px 16px; container-type: size; overflow: hidden; }
+.calc__display { flex: none; height: 84px; line-height: 84px; color: #fff; font-size: 64px; font-weight: 300; text-align: right; padding: 0 10px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.calc__keys {
+  /* 四欄五排：取「照寬度算」和「照剩下的高度算」比較小的那個 */
+  --gap: 11px;
+  --k: min((100cqw - 28px - 3 * var(--gap)) / 4, (100cqh - 16px - 84px - 4 * var(--gap)) / 5);
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, var(--k));
+  grid-auto-rows: var(--k);
+  gap: var(--gap);
+  justify-content: center;
+}
+.calc__key { border-radius: 999px; font-size: min(28px, calc(var(--k) * 0.42)); text-align: center; color: #fff; background: #333336; }
 .calc__key:active { filter: brightness(1.4); }
-.calc__key--fn { background: #a5a5a9; color: #000; font-size: 23px; }
-.calc__key--op { background: #f59a1b; font-size: 32px; }
+.calc__key--fn { background: #a5a5a9; color: #000; font-size: min(23px, calc(var(--k) * 0.36)); }
+.calc__key--op { background: #f59a1b; font-size: min(32px, calc(var(--k) * 0.48)); }
 .calc__key--on { background: #fff; color: #f59a1b; }
-.calc__key--wide { grid-column: span 2; aspect-ratio: auto; border-radius: 999px; text-align: left; padding-left: 28px; }
+.calc__key--wide { grid-column: span 2; text-align: left; padding-left: calc(var(--k) * 0.38); }
 
 /* 時鐘（碼錶） */
 .watch { height: 100%; display: flex; flex-direction: column; background: #000; color: #fff; padding: 0 20px; }
@@ -754,27 +765,24 @@ ul, ol { list-style: none; }
 .sysnote__title + .sysnote__text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @keyframes banner-in { from { opacity: 0; transform: translateY(-120%); } }
 
-/* 找裝置 */
-.finder { min-height: 100%; display: flex; flex-direction: column; }
-.finder__map {
-  flex: none;
-  height: 34vh;
-  position: relative;
-  background:
-    linear-gradient(0deg, transparent 46%, #d9e3d2 46%, #d9e3d2 54%, transparent 54%),
-    linear-gradient(90deg, transparent 30%, #e9e4d6 30%, #e9e4d6 34%, transparent 34%, transparent 68%, #e9e4d6 68%, #e9e4d6 71%, transparent 71%),
-    linear-gradient(0deg, transparent 22%, #e9e4d6 22%, #e9e4d6 25%, transparent 25%, transparent 78%, #e9e4d6 78%, #e9e4d6 81%, transparent 81%),
-    #f1efe8;
-}
-.finder__pin { position: absolute; width: 18px; height: 18px; margin: -9px; border-radius: 50%; background: #2fb457; border: 3px solid #fff; box-shadow: 0 0 0 10px rgba(47, 180, 87, 0.2), 0 2px 5px rgba(0, 0, 0, 0.3); }
-.finder__list { padding: 14px 12px 24px; display: flex; flex-direction: column; gap: 12px; }
-.finder__device { padding: 14px 16px; border-radius: var(--radius); background: var(--surface); }
-.finder__head { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+/* 找裝置：整個畫面是地圖，下面一張深色面板列出裝置 */
+.finder { position: relative; height: 100%; overflow: hidden; background: #1a252e; color: #eef2f6; }
+.finder__city { position: absolute; inset: 0; width: 100%; height: 100%; }
+.finder__pin { position: absolute; width: 44px; height: 44px; margin: -22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #2c3a45; color: #fff; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 9px rgba(86, 196, 130, 0.22), 0 4px 10px rgba(0, 0, 0, 0.45); }
+.finder__sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 58%; display: flex; flex-direction: column; padding: 8px 0 0; border-radius: 22px 22px 0 0; background: rgba(24, 34, 42, 0.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35); }
+.finder__grab { flex: none; align-self: center; width: 38px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.28); }
+.finder__title { flex: none; padding: 10px 20px 6px; font-size: 24px; font-weight: 700; }
+.finder__list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 22px; }
+.finder__device { padding: 12px 0; }
+.finder__device + .finder__device { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.finder__head { display: flex; align-items: center; gap: 12px; min-height: 46px; }
+.finder__icon { flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.1); }
+.finder__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .finder__name { font-size: 17px; font-weight: 600; }
-.finder__locate { height: 34px; padding: 0 16px; border-radius: 17px; background: #2fb457; color: #fff; font-size: 14px; font-weight: 600; }
-.finder__idle { margin-top: 4px; font-size: 14px; color: var(--muted); }
-.finder__history { margin-top: 8px; border-left: 2px solid #2fb457; padding-left: 12px; }
-.finder__history li { padding: 5px 0; font-size: 15px; line-height: 1.5; }
+.finder__sub { font-size: 13.500px; color: #9aa7b2; }
+.finder__locate { flex: none; height: 34px; padding: 0 16px; border-radius: 17px; background: #2fb457; color: #fff; font-size: 14px; font-weight: 600; }
+.finder__history { margin: 8px 0 2px 56px; border-left: 2px solid #2fb457; padding-left: 12px; }
+.finder__history li { padding: 4px 0; font-size: 14.500px; line-height: 1.5; color: #dbe3ea; }
 
 /* 行事曆 */
 .cal { padding: 14px 14px 24px; background: var(--surface); min-height: 100%; }
@@ -1234,7 +1242,7 @@ ul, ol { list-style: none; }
 
 /* 相簿大圖：左右滑換張，下方一排縮圖 */
 .viewer__stage { position: relative; flex: 1; min-height: 0; margin: 10px 10px 4px; overflow: hidden; touch-action: pan-y; }
-.viewer__slide { width: 100%; height: 100%; transition: transform 0.2s ease-out; }
+.viewer__slide { width: 100%; height: 100%; }
 .viewer__arrow { position: absolute; top: 50%; width: 34px; height: 52px; margin-top: -26px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); color: #fff; font-size: 26px; line-height: 1; text-align: center; }
 .viewer__arrow--prev { left: 4px; }
 .viewer__arrow--next { right: 4px; }
@@ -1262,3 +1270,67 @@ ul, ol { list-style: none; }
 .asksheet--open .asksheet__title::after { content: " ▾"; }
 .asksheet__list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; padding: 0 12px 14px; animation: asksheet-up 0.22s ease-out; }
 @keyframes asksheet-up { from { max-height: 0; opacity: 0; } }
+
+/* 音樂的按鈕：圖示置中 */
+.music__controls button { display: flex; align-items: center; justify-content: center; color: #1a1b1f; }
+.music__controls .music__play { color: #fff; }
+
+/* 分段切換（全部／未接） */
+.segment { display: flex; margin: 8px 14px 6px; padding: 2px; border-radius: 9px; background: var(--surface-2); }
+.segment button { flex: 1; height: 30px; border-radius: 7px; font-size: 13px; text-align: center; color: #4a4c55; }
+.segment button.on { background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); font-weight: 600; color: #1a1b1f; }
+
+/* 簡訊和電話共用的列 */
+.comm-list { padding-top: 4px; }
+.comm-search { display: flex; align-items: center; gap: 6px; margin: 8px 14px 6px; padding: 0 10px; height: 34px; border-radius: 10px; background: var(--surface-2); color: #7b7e88; }
+.comm-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 15px; color: #1a1b1f; }
+.comm-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 16px; text-align: left; }
+.comm-row + .comm-row { box-shadow: inset 0 1px 0 var(--line); }
+.comm-row:active { background: var(--surface-2); }
+.comm-badge { flex: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; font-weight: 600; }
+.comm-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.comm-row__top { display: flex; justify-content: space-between; gap: 10px; }
+.comm-row__name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comm-row__when { flex: none; font-size: 12.500px; color: var(--muted); }
+.comm-row__preview { font-size: 13.500px; line-height: 1.4; color: #6b6e78; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.comm-row__count { flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--surface-2); font-size: 12px; line-height: 20px; text-align: center; color: #6b6e78; }
+.comm-row__dir { flex: none; width: 22px; display: flex; justify-content: center; color: #8a8d96; }
+.comm-row--call .comm-row__preview { -webkit-line-clamp: 1; }
+.comm-row--missed .comm-row__name, .comm-row--missed .comm-row__dir { color: #d0342c; }
+
+/* 簡訊的一串：灰色泡泡靠左，上面是時間 */
+.sms-thread { padding: 10px 14px 24px; }
+.sms-msg { margin-bottom: 14px; }
+.sms-msg__when { text-align: center; font-size: 11.500px; color: var(--muted); margin-bottom: 6px; }
+.sms-msg__bubble { max-width: 86%; padding: 10px 13px; border-radius: 6px 18px 18px 18px; background: var(--surface-2); font-size: 15.500px; line-height: 1.55; }
+.sms-msg__bubble p + p { margin-top: 4px; }
+.sms-msg__fields { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13.500px; }
+.sms-msg__fields div { display: flex; gap: 10px; padding: 3px 0; }
+.sms-msg__fields dt { flex: none; color: var(--muted); }
+.sms-thread__end { margin-top: 22px; text-align: center; font-size: 12px; color: var(--muted); }
+
+/* 電話：上面是內容，下面三個分頁 */
+.dialer { height: 100%; display: flex; flex-direction: column; }
+.dialer__body { flex: 1; min-height: 0; overflow-y: auto; }
+.dialer__tabs { flex: none; display: flex; border-top: 1px solid var(--line); background: #f8f8fa; }
+.dialer__tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 9px; font-size: 11px; color: #8a8d96; }
+.dialer__tabs button.on { color: var(--tint); }
+.keypad { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 0 0 18px; container-type: size; }
+.keypad__digits { height: 56px; line-height: 56px; font-size: 32px; font-weight: 300; letter-spacing: 0.04em; white-space: pre; }
+.keypad__keys, .keypad__bottom { --k: min(72px, (100cqh - 56px - 18px - 5 * 12px) / 5); display: grid; grid-template-columns: repeat(3, var(--k)); gap: 12px 22px; }
+.keypad__bottom { margin-top: 12px; align-items: center; justify-items: center; }
+.keypad__key { height: var(--k); border-radius: 50%; background: var(--surface-2); font-size: min(28px, calc(var(--k) * 0.4)); text-align: center; }
+.keypad__key:active { background: #d4d5da; }
+.keypad__call { width: var(--k); height: var(--k); border-radius: 50%; background: #34c05a; display: flex; align-items: center; justify-content: center; }
+.keypad__del { width: var(--k); height: var(--k); display: flex; align-items: center; justify-content: center; color: #6b6e78; }
+.keypad__del:disabled { opacity: 0; }
+
+.finder__list { scrollbar-width: none; }
+.finder__list::-webkit-scrollbar { display: none; }
+/* 開場裡的通知卡：字要夠深、不要跟著旁白變細 */
+.intro .sysnote--static { color: #1a1b1f; font-weight: 400; }
+.intro .sysnote--static .sysnote__app { color: #6b6e78; }
+
+/* 結局：看真相之前的確認，和內文最後的小字 */
+.ending__scroll .ending__note { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--s-line); font-size: 13px; line-height: 1.6; color: var(--s-dim); }
+.ending .suru-button + .ending__minor, .ending .ending__minor + .ending__minor { margin-top: -6px; }

@@ -5,6 +5,10 @@
 export type LayoutKind =
   | 'chat'
   | 'list'
+  /** 簡訊：寄件者清單和對話泡泡 */
+  | 'sms'
+  /** 電話：最近通話、聯絡人、鍵盤 */
+  | 'dialer'
   | 'gallery'
   | 'placeholder'
   | 'contacts'

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { Dialer, Sms } from '../apps/Comms';
 import { Calculator, Calendar, Camera, Clock, Music, Settings } from '../apps/Extras';
 import { Finder } from '../apps/Finder';
 import { CallScreen } from '../screens/Call';
@@ -203,6 +204,29 @@ export function Phone({ data, battery, actions, initialNav, homePress = 0, assis
         />
       );
     }
+  } else if (app?.layout === 'sms') {
+    // 簡訊：detail 是「寄件者的名字」，開著的是那個寄件者的那一串
+    if (nav.detail) title = nav.detail;
+    body = <Sms groups={data.lists[app.id] ?? []} sender={nav.detail} onOpen={openDetail} />;
+  } else if (app?.layout === 'dialer') {
+    const groups = data.lists[app.id] ?? [];
+    const row = groups.flatMap((g) => g.rows).find((r) => r.id === nav.detail);
+    const contactsApp = data.apps.find((a) => a.layout === 'contacts');
+    body = row ? (
+      <DetailView detail={row.detail} onZoom={onZoom} />
+    ) : (
+      <Dialer
+        groups={groups}
+        cast={data.contacts}
+        onOpenRow={(id) => {
+          actions.onOpenRow(app.id, id);
+          openDetail(id);
+        }}
+        onOpenContact={(name) => contactsApp && go({ app: contactsApp.id, detail: name }, 'push')}
+        // 鍵盤撥號沒有對象；結果一樣是打不出去的那句提示
+        onCall={() => actions.onCall('')}
+      />
+    );
   } else if (app?.layout === 'gallery') {
     const items = data.galleries[app.id] ?? [];
     body = nav.detail ? (

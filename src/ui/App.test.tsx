@@ -181,11 +181,11 @@ describe('外觀框架（假資料示範）', () => {
     passIntro();
     home();
     fireEvent.click(screen.getByRole('button', { name: /時鐘/ }));
-    expect(screen.getByTestId('world-time').textContent).toBe('16:20:00');
+    expect(screen.getByTestId('world-time').textContent).toBe('16:20');
     act(() => {
       vi.advanceTimersByTime(61000);
     });
-    expect(screen.getByTestId('world-time').textContent).toBe('16:21:01');
+    expect(screen.getByTestId('world-time').textContent).toBe('16:21');
     fireEvent.click(screen.getByRole('tab', { name: S.clockAlarm }));
     expect(screen.getByText(fixture.phone.clock.alarms[0].label)).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: S.clockWatch }));

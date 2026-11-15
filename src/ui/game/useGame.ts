@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadCase } from '../../content';
-import { createEngine, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
+import { createEngine, endingText, isSolvedEnding, spotOf, type Action, type Engine, type GameState, type Outcome } from '../../engine';
 import { S } from '../strings';
 import type { IconId, IntroSegment, Nav, PhoneActions, PhoneData } from '../types';
 import { clearSave, fingerprint, loadSave, writeSave } from './save';
@@ -323,18 +323,26 @@ export function useGame(caseId = 'case01') {
     actions,
     intro: (content?.meta.intro ?? []) as IntroSegment[],
     afterIntro: (resumedInPlay ? { app: null, detail: null } : { app: chatApp, detail: content?.meta.coverThread ?? null }) as Nav,
-    ending: ended
-      ? {
-          title: ended.title,
-          text: ended.text,
-          // 內文裡有人說話的段落要配頭像：名字對到角色
-          speakers: Object.fromEntries((content?.characters ?? []).map((c) => [c.name, c.id])),
-          // 解答篇只給指對兇手的結局；指錯人、沒電、被查到的結局不給，免得講破答案
-          solution:
-            content?.endings.solution && ended.trigger.kind === 'challenge' && (ended.trigger.accused === undefined || ended.trigger.accused === content.endings.challenge.culprit)
-              ? content.endings.solution
-              : undefined,
-        }
+    ending:
+      ended && content && session
+        ? (() => {
+            // 算不算破案由規則判斷：人指對、但有格子站不住的那種結局不算
+            const solved = isSolvedEnding(content, ended);
+            const menu = engine?.menu(session.game);
+            return {
+              title: ended.title,
+              // 內文用規則組好的：有的結局會照玩家放錯的那幾格插進對應的句子
+              text: endingText(ended, session.game),
+              // 內文裡有人說話的段落要配頭像：名字對到角色
+              speakers: Object.fromEntries(content.characters.map((c) => [c.name, c.id])),
+              // 規則說這個結局能不能回到指認之前
+              canRetry: !!menu?.canRewind,
+              // 破案的結局：這是第幾次指認、還剩多少電
+              note: solved ? S.endingSolved.replace('{n}', String(menu?.accusations ?? 1)).replace('{battery}', String(Math.ceil(session.game.battery))) : undefined,
+              // 解答篇只給破案的結局，免得講破答案
+              solution: solved ? content.endings.solution : undefined,
+            };
+          })()
       : undefined,
     /** 開場的通知段落要用哪個 App 的圖示：標籤開頭是 App 的名字就用它的；講到來電就用電話的 */
     noticeIcon: (label: string): IconId | undefined => {
@@ -343,6 +351,12 @@ export function useGame(caseId = 'case01') {
       return hit?.icon as IconId | undefined;
     },
     finishIntro: () => setIntroDone(true),
+    /** 回到指認之前：回到交出去前那一刻，電量和進度照舊。上次被退回的提示不留 */
+    rewind: () => {
+      if (!latest.current) return;
+      act({ type: 'rewindChallenge' });
+      update((s) => ({ game: s.game, ui: { ...s.ui, accuseRejected: [] } }));
+    },
     restart: () => {
       if (!engine) return;
       coverSeen.current.clear();

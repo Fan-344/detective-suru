@@ -139,7 +139,7 @@ function GameApp() {
       onIntroDone={game.finishIntro}
       noticeIcon={game.noticeIcon}
       onRestart={game.restart}
-      overlay={game.ending ? <Ending title={game.ending.title} text={game.ending.text} solution={game.ending.solution} speakers={game.ending.speakers} onRestart={game.restart} /> : undefined}
+      overlay={game.ending ? <Ending title={game.ending.title} text={game.ending.text} solution={game.ending.solution} note={game.ending.note} onRetry={game.ending.canRetry ? game.rewind : undefined} speakers={game.ending.speakers} onRestart={game.restart} /> : undefined}
       dev={
         devEnabled() ? (
           <DevPanel battery={game.battery} onBattery={game.setBattery} onSkipIntro={game.finishIntro} onRestart={game.restart} />

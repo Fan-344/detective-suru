@@ -103,7 +103,6 @@ function WorldClock({ clock }: { clock: ClockData }) {
             </span>
             <span className="world__time" data-testid={i === 0 ? 'world-time' : undefined}>
               {two(Math.floor(inDay / 3600))}:{two(Math.floor(inDay / 60) % 60)}
-              {i === 0 && <small>:{two(inDay % 60)}</small>}
             </span>
           </li>
         );
@@ -312,11 +311,19 @@ export function Music({ tracks }: { tracks: MusicTrack[] }) {
       <div className="music__bar"><span style={{ width: `${(pos / track.seconds) * 100}%` }} /></div>
       <div className="music__times"><span>{formatTrackTime(pos)}</span><span>{formatTrackTime(track.seconds)}</span></div>
       <div className="music__controls">
-        <button onClick={() => go(-1)} aria-label={S.musicPrev}>⏮</button>
-        <button className="music__play" onClick={() => setPlaying(!playing)} aria-label={playing ? S.musicPause : S.musicPlay}>
-          {playing ? '⏸' : '▶'}
+        <button onClick={() => go(-1)} aria-label={S.musicPrev}>
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M6 5h2.400v14H6zM20 5.600v12.800c0 .5-.6.8-1 .5L9.800 12.500a.6.6 0 0 1 0-1L19 5.100c.4-.3 1 0 1 .5z" /></svg>
         </button>
-        <button onClick={() => go(1)} aria-label={S.musicNext}>⏭</button>
+        <button className="music__play" onClick={() => setPlaying(!playing)} aria-label={playing ? S.musicPause : S.musicPlay}>
+          {playing ? (
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M7 5h3.500v14H7zM13.500 5H17v14h-3.500z" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M8 5.300v13.400c0 .6.600.900 1.100.6l10.300-6.700a.7.7 0 0 0 0-1.200L9.100 4.700C8.600 4.400 8 4.700 8 5.300z" /></svg>
+          )}
+        </button>
+        <button onClick={() => go(1)} aria-label={S.musicNext}>
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M15.600 5H18v14h-2.400zM4 5.600v12.800c0 .5.600.8 1 .5l9.200-6.400a.6.6 0 0 0 0-1L5 5.100c-.4-.3-1 0-1 .5z" /></svg>
+        </button>
       </div>
       <ul className="rows rows--card music__list">
         {tracks.map((t, i) => (
