@@ -1399,6 +1399,14 @@ ul, ol { list-style: none; }
 .ending__scroll .ending__seg { margin-bottom: 26px; }
 .ending__scroll .ending__seg p { margin: 0; font-size: 18px; line-height: 2; }
 .ending__end { height: 46vh; }
+/*
+ * 遊戲結束（結局、沒電）之後，底下的手機畫面不再接收任何點擊，淡入做完就整個藏起來。
+ * iPhone 上聊天室這類捲動區塊是獨立的圖層，有時會比蓋在上面的結局先吃到點擊。
+ */
+.screen--over > .phone { pointer-events: none; animation: under-gone 0s linear 1.3s forwards; }
+@keyframes under-gone { to { visibility: hidden; } }
+/* 還沒出完的時候整個結局畫面都是「點一下繼續」 */
+.ending--tap { cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
 .ending .ending__scroll { padding-top: 26vh; }
 /*
  * 螢幕暗下（手機沒電）：四周往中間壓一個大暗角，整個畫面慢慢褪成黑白，之後一直維持。

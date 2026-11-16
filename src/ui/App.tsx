@@ -74,7 +74,7 @@ function Shell({ stage, run, battery, startBattery, data, actions, intro, afterI
           <span className="bezel__lens" />
           <span className="bezel__speaker" />
         </div>
-        <div className="screen">
+        <div className={stage === 'over' ? 'screen screen--over' : 'screen'}>
           {stage === 'intro' || !data ? (
             <Intro
               key={run}

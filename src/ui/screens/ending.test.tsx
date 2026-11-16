@@ -31,6 +31,19 @@ describe('結局逐段出現', () => {
     expect(screen.queryByText(S.tapToContinue)).toBeNull();
   });
 
+  it('點標題列、點下方「點一下繼續」那行、暗角邊緣也會換下一段；按鈕出現後點畫面不會再動', () => {
+    const restart = vi.fn();
+    render(<Ending title="T" text={text} screenOff="螢幕暗了下去。" onRestart={restart} />);
+    act(() => document.querySelector<HTMLElement>('.suru-head')!.click());
+    expect(screen.getByText('螢幕暗了下去。')).toBeTruthy();
+    act(() => document.querySelector<HTMLElement>('.intro__hint')!.click());
+    expect(screen.getByText('第三段。')).toBeTruthy();
+    act(() => document.querySelector<HTMLElement>('.ending')!.click());
+    expect(document.querySelectorAll('.ending__seg')).toHaveLength(3);
+    screen.getByRole('button', { name: S.endingRestart }).click();
+    expect(restart).toHaveBeenCalledTimes(1);
+  });
+
   it('點到「螢幕暗下」那一段之後一直是黑白加暗角，按鈕也在同樣的狀態下出現', () => {
     render(<Ending title="T" text={text} screenOff="螢幕暗了下去。" onRestart={() => undefined} />);
     const root = document.querySelector('.ending')!;

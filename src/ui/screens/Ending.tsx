@@ -85,7 +85,7 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 /**
  * 結局：Suru 那一層的畫面，跟開場同一套演出。標題和內文都來自資料檔。
- * 新的一段出現在畫面中間，舊的往上退、變淡；一律點一下才換下一段，不會自己往下跑。
+ * 新的一段出現在畫面中間，舊的往上退、變淡；一律點一下（畫面任何地方）才換下一段，不會自己往下跑。
  * 全部出完之後：
  * - 回到指認之前（經過指認進入的結局才有，由規則決定）
  * - 重新開始
@@ -119,16 +119,17 @@ export function Ending({ title, text, note, speakers = {}, onRetry, onRestart, s
     if (!done) setShown((n) => Math.min(text.length, n + 1));
   };
 
+  // 跟開場一樣整個畫面都能點：上方標題列、下方「點一下繼續」那行、暗角邊緣都算。
+  // 全部出完之後才出現按鈕，那時候 next 不做事，不會跟按鈕搶
   return (
-    <div className={'suru ending' + (off ? ' ending--off' : '')}>
+    <div
+      className={'suru ending' + (off ? ' ending--off' : '') + (done ? '' : ' ending--tap')}
+      onClick={next}
+      role={done ? undefined : 'button'}
+      aria-label={done ? undefined : S.tapToContinue}
+    >
       <SuruHeader title="SURU" counter={two(shown) + ' / ' + two(text.length)} />
-      <div
-        className="intro__scroll ending__scroll"
-        ref={scroller}
-        onClick={next}
-        role={done ? undefined : 'button'}
-        aria-label={done ? undefined : S.tapToContinue}
-      >
+      <div className="intro__scroll ending__scroll" ref={scroller}>
         {devBadge && <p className="ending__dev">{devBadge}</p>}
         <h1 className="ending__title">{title}</h1>
         <Story lines={text.slice(0, shown)} speakers={speakers} current={current} />
